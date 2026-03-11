@@ -762,8 +762,12 @@ function commitBacOverride() {
 
   if (isNaN(val) || val < 0) return; // ignore bad input
 
+  // If the entered value is within 0.002 of what the model shows, treat as no-op
+  const modelVal = parseFloat(numEl.textContent) || 0;
+  if (Math.abs(val - modelVal) < 0.002) return;
+
   const curHour = getCurrentHour();
-  bacOverride = { val, hour: curHour }; // persist until hour changes
+  bacOverride = { val, hour: curHour }; // persist until hour changes or drink logged
 
   // Replan all remaining hours from the overridden BAC
   const remaining = hours - (curHour + 1);
@@ -800,6 +804,8 @@ function commitBacOverride() {
 function logDrink(hour, upToSlot) {
   const wasPlanned = plan[hour];
   actualDrinks[hour] = upToSlot;
+  // A new drink means the model should take back over — override is stale
+  if (bacOverride !== null && bacOverride.hour === hour) bacOverride = null;
   if (upToSlot > wasPlanned && hour + 1 < hours) replanFromHour(hour + 1);
   saveSession();
   updateLiveBac();
