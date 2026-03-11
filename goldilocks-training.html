@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Goldilocks Training</title>
+<link rel="icon" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon-training.png">
+<link href="https://fonts.googleapis.com/css2?family=Anybody:wght@200;400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --space:   #08090d;
+    --deep:    #0e1018;
+    --surface: #13151f;
+    --border:  #1e2130;
+    --text:    #e8e0cc;
+    --muted:   #5a5570;
+    --gold:    #f5c842;
+    --gold2:   #e8a020;
+    --amber:   #ff8c3a;
+    --danger:  #ff5a5a;
+    --blue:    #7eb8ff;
+    --green:   #52e09c;
+    --radius:  10px;
+    --glow:    0 0 24px rgba(245,200,66,0.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--space);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    padding: 0 0 80px;
+    font-size: 12px;
+    overflow-x: hidden;
+    position: relative;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 15% 20%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 42% 8%,  rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 73% 35%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 88% 12%, rgba(255,255,255,0.2) 0%, transparent 100%),
+      radial-gradient(1px 1px at 5%  60%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 75%, rgba(255,255,255,0.2) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 88%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 95% 55%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(2px 2px at 50% 30%, rgba(82,224,156,0.2) 0%, transparent 100%),
+      radial-gradient(2px 2px at 10% 80%, rgba(126,184,255,0.15) 0%, transparent 100%);
+    pointer-events: none; z-index: 0;
+  }
+  .container { max-width: 680px; margin: 0 auto; padding: 0 16px; position: relative; z-index: 1; }
+
+  /* Hero */
+  .hero { text-align: center; padding: 48px 0 32px; position: relative; }
+  .beaker-icon { font-size: 28px; display: block; margin-bottom: 8px; filter: drop-shadow(0 0 14px rgba(82,224,156,0.7)); animation: pulse 4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{filter:drop-shadow(0 0 14px rgba(82,224,156,0.7))} 50%{filter:drop-shadow(0 0 24px rgba(82,224,156,1))} }
+  .logo { font-family:'Anybody',sans-serif; font-size:32px; font-weight:800; letter-spacing:-1px; background:linear-gradient(135deg,#52e09c 0%,#7eb8ff 60%,#52e09c 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .logo-sub { font-family:'Anybody',sans-serif; font-size:14px; font-weight:200; color:var(--muted); letter-spacing:0.3em; text-transform:uppercase; margin-top:2px; }
+  .tagline { color:var(--muted); margin-top:8px; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; }
+  .tagline em { font-style:normal; color:var(--green); opacity:0.8; }
+  .back-link { display:inline-block; margin-top:12px; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); text-decoration:none; border:1px solid var(--border); border-radius:100px; padding:4px 14px; transition:all 0.2s; }
+  .back-link:hover { color:var(--gold); border-color:var(--gold2); }
+
+  /* Cards */
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; margin-bottom:8px; position:relative; }
+  .card::before { content:''; position:absolute; inset:0; border-radius:var(--radius); background:linear-gradient(135deg,rgba(82,224,156,0.02) 0%,transparent 60%); pointer-events:none; }
+  .card.blue-card { border-color:rgba(126,184,255,0.2); }
+  .card.blue-card::before { background:linear-gradient(135deg,rgba(126,184,255,0.04) 0%,transparent 60%); }
+  .card.green-card { border-color:rgba(82,224,156,0.25); }
+  .card.green-card::before { background:linear-gradient(135deg,rgba(82,224,156,0.05) 0%,transparent 60%); }
+  .card.active-card { border-color:var(--green); box-shadow:0 0 0 1px rgba(82,224,156,0.1); }
+
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  @media(max-width:480px){.row2,.row3{grid-template-columns:1fr}}
+
+  .sec { font-size:9px; letter-spacing:0.18em; text-transform:uppercase; color:var(--green); opacity:0.7; margin-bottom:14px; }
+  .sec.blue { color:var(--blue); }
+  .sec.gold { color:var(--gold2); }
+
+  .field-label { display:block; font-size:9px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  .input-wrap { display:flex; align-items:center; background:var(--deep); border:1px solid var(--border); border-radius:7px; overflow:hidden; transition:border-color 0.2s; }
+  .input-wrap:focus-within { border-color:var(--green); box-shadow:0 0 0 2px rgba(82,224,156,0.08); }
+  .input-wrap.blue:focus-within { border-color:var(--blue); box-shadow:0 0 0 2px rgba(126,184,255,0.08); }
+  input[type="number"] { background:transparent; border:none; color:var(--text); font-family:'Space Mono',monospace; font-size:17px; padding:9px 12px; width:100%; outline:none; -moz-appearance:textfield; }
+  input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none}
+  .input-unit { color:var(--muted); font-size:10px; padding-right:11px; white-space:nowrap; flex-shrink:0; }
+  select { background:var(--deep); border:none; color:var(--text); font-family:'Space Mono',monospace; font-size:14px; padding:9px 12px; width:100%; outline:none; cursor:pointer; }
+  .select-wrap { background:var(--deep); border:1px solid var(--border); border-radius:7px; overflow:hidden; }
+  .select-wrap:focus-within { border-color:var(--blue); }
+
+  /* Protocol step */
+  .step-list { display:flex; flex-direction:column; gap:6px; }
+  .step { display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:var(--deep); border:1px solid var(--border); border-radius:8px; transition:all 0.3s; }
+  .step.active { border-color:var(--green); background:rgba(82,224,156,0.04); }
+  .step.done { border-color:rgba(82,224,156,0.2); opacity:0.6; }
+  .step.upcoming { opacity:0.4; }
+  .step-num { font-family:'Anybody',sans-serif; font-size:18px; font-weight:600; color:var(--muted); line-height:1; flex-shrink:0; width:24px; }
+  .step.active .step-num { color:var(--green); }
+  .step.done .step-num { color:var(--green); }
+  .step-body { flex:1; }
+  .step-title { font-size:11px; letter-spacing:0.06em; color:var(--text); margin-bottom:3px; }
+  .step.active .step-title { color:var(--green); }
+  .step-desc { font-size:10px; color:var(--muted); line-height:1.6; }
+  .step-check { font-size:14px; flex-shrink:0; }
+
+  /* Timer */
+  .timer-block { text-align:center; padding:20px; background:var(--deep); border:1px solid var(--border); border-radius:9px; margin-bottom:8px; }
+  .timer-num { font-family:'Anybody',sans-serif; font-size:56px; font-weight:600; line-height:1; color:var(--green); transition:color 0.5s; }
+  .timer-num.urgent { color:var(--amber); animation:tick 1s ease-in-out infinite; }
+  @keyframes tick { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .timer-label { font-size:9px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-top:6px; }
+  .timer-progress { height:3px; background:var(--border); border-radius:100px; margin-top:14px; overflow:hidden; }
+  .timer-fill { height:100%; border-radius:100px; background:linear-gradient(90deg,var(--blue),var(--green)); transition:width 1s linear; }
+
+  /* BAC input row */
+  .bac-entry { display:flex; gap:10px; align-items:flex-end; margin-top:8px; }
+  .bac-entry .input-wrap { flex:1; }
+  .bac-entry input[type="number"] { font-size:22px; }
+  .log-btn { padding:10px 18px; background:linear-gradient(135deg,rgba(82,224,156,0.15),rgba(82,224,156,0.08)); border:1px solid var(--green); border-radius:7px; color:var(--green); font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; white-space:nowrap; transition:all 0.2s; flex-shrink:0; }
+  .log-btn:hover { background:rgba(82,224,156,0.22); }
+  .log-btn:disabled { opacity:0.3; cursor:not-allowed; }
+
+  /* Readings table */
+  .readings-list { display:flex; flex-direction:column; gap:4px; }
+  .reading-row { display:grid; grid-template-columns:60px 80px 1fr 60px; gap:8px; align-items:center; padding:8px 10px; background:var(--deep); border:1px solid var(--border); border-radius:6px; font-size:11px; }
+  .reading-row.header { font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); background:transparent; border-color:transparent; padding-bottom:2px; }
+  .reading-bac { font-family:'Anybody',sans-serif; font-size:16px; font-weight:400; color:var(--green); }
+  .reading-note { font-size:9px; color:var(--muted); }
+
+  /* Results */
+  .result-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+  .result-cell { background:var(--deep); border:1px solid var(--border); border-radius:8px; padding:14px; text-align:center; }
+  .result-val { font-family:'Anybody',sans-serif; font-size:28px; font-weight:400; line-height:1; }
+  .result-val.green { color:var(--green); }
+  .result-val.blue  { color:var(--blue); }
+  .result-val.gold  { color:var(--gold); }
+  .result-lbl { font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-top:5px; }
+  .result-sub { font-size:9px; color:var(--muted); margin-top:3px; }
+
+  /* Confidence bar */
+  .confidence-wrap { margin-top:12px; }
+  .confidence-bar { height:4px; background:var(--border); border-radius:100px; overflow:hidden; margin-top:6px; }
+  .confidence-fill { height:100%; border-radius:100px; transition:width 0.8s ease; }
+  .confidence-label { font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); display:flex; justify-content:space-between; }
+
+  /* Chart */
+  .chart-wrap { position:relative; height:160px; margin:10px 0; }
+  canvas#curveChart { width:100%; height:100%; }
+
+  /* History */
+  .history-item { display:grid; grid-template-columns:80px 1fr 80px 80px 60px; gap:8px; align-items:center; padding:10px 12px; background:var(--deep); border:1px solid var(--border); border-radius:7px; margin-bottom:4px; font-size:10px; }
+  .history-item.header { font-size:9px; letter-spacing:0.09em; text-transform:uppercase; color:var(--muted); background:transparent; border-color:transparent; }
+
+  /* Buttons */
+  .primary-btn { width:100%; padding:16px; background:linear-gradient(135deg,rgba(82,224,156,0.12),rgba(82,224,156,0.06)); border:1px solid var(--green); border-radius:var(--radius); color:var(--green); font-family:'Space Mono',monospace; font-size:13px; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; margin-bottom:8px; }
+  .primary-btn:hover { background:rgba(82,224,156,0.2); }
+  .secondary-btn { width:100%; padding:12px; background:transparent; border:1px solid var(--border); border-radius:var(--radius); color:var(--muted); font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; margin-bottom:8px; }
+  .secondary-btn:hover { border-color:var(--muted); color:var(--text); }
+  .danger-btn { width:100%; padding:11px; background:transparent; border:1px solid rgba(255,90,90,0.3); border-radius:var(--radius); color:var(--danger); font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; opacity:0.6; transition:all 0.2s; margin-bottom:8px; }
+  .danger-btn:hover { opacity:1; background:rgba(255,90,90,0.05); }
+  .save-btn { width:100%; padding:16px; background:linear-gradient(135deg,rgba(245,200,66,0.14),rgba(232,160,32,0.08)); border:1px solid var(--gold2); border-radius:var(--radius); color:var(--gold); font-family:'Space Mono',monospace; font-size:13px; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; margin-bottom:8px; box-shadow:0 0 20px rgba(245,200,66,0.12); }
+  .save-btn:hover { background:rgba(245,200,66,0.2); }
+
+  .disclaimer { color:var(--muted); font-size:9px; line-height:1.8; text-align:center; margin-top:24px; opacity:0.7; }
+
+  /* Phase indicator */
+  .phase-pill { display:inline-block; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; border-radius:100px; padding:3px 12px; margin-bottom:12px; }
+  .phase-pill.setup    { background:rgba(126,184,255,0.1); border:1px solid rgba(126,184,255,0.25); color:var(--blue); }
+  .phase-pill.active   { background:rgba(82,224,156,0.1);  border:1px solid rgba(82,224,156,0.3);  color:var(--green); }
+  .phase-pill.complete { background:rgba(245,200,66,0.1);  border:1px solid rgba(245,200,66,0.25); color:var(--gold); }
+
+  /* Fasted toggle */
+  .toggle-row { display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--deep); border:1px solid var(--border); border-radius:7px; cursor:pointer; }
+  .toggle-box { width:16px; height:16px; border:1px solid var(--muted); border-radius:4px; flex-shrink:0; transition:all 0.2s; display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--space); }
+  .toggle-label { font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); }
+
+  /* Profile name input */
+  .profile-name-wrap { display:flex; gap:10px; align-items:center; }
+  .profile-name-input { background:var(--deep); border:1px solid var(--border); border-radius:7px; color:var(--text); font-family:'Space Mono',monospace; font-size:15px; padding:10px 14px; flex:1; outline:none; transition:border-color 0.2s; }
+  .profile-name-input:focus { border-color:var(--gold2); }
+
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Hero -->
+  <div class="hero">
+    <span class="beaker-icon">⚗️</span>
+    <div class="logo">Goldilocks</div>
+    <div class="logo-sub">Training Protocol</div>
+    <div class="tagline">calibrate your curve · <em>own your data</em></div>
+    <a class="back-link" href="goldilocks-zone.html">← Back to Goldilocks Zone</a>
+  </div>
+
+  <!-- ── SETUP PHASE ── -->
+  <div id="phaseSetup">
+    <!-- Profile setup -->
+    <div class="card blue-card">
+      <div class="sec blue">Your Profile</div>
+      <div class="row3">
+        <div>
+          <span class="field-label">Body Weight</span>
+          <div class="input-wrap blue">
+            <input type="number" id="weight" value="185" min="80" max="500" step="1">
+            <span class="input-unit" id="weightUnit">lbs</span>
+          </div>
+        </div>
+        <div>
+          <span class="field-label">Units</span>
+          <div class="select-wrap">
+            <select id="units" onchange="onUnitsChange()"><option value="imperial">lbs</option><option value="metric">kg</option></select>
+          </div>
+        </div>
+        <div>
+          <span class="field-label">Sex</span>
+          <div class="select-wrap">
+            <select id="sex"><option value="male">Male</option><option value="female">Female</option></select>
+          </div>
+        </div>
+      </div>
+      <!-- Widmark reference chip -->
+      <div style="margin-top:12px;padding:10px 12px;background:var(--deep);border:1px solid var(--border);border-radius:7px;display:flex;gap:20px;flex-wrap:wrap">
+        <div><span style="font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Widmark r</span><div style="font-family:'Anybody',sans-serif;font-size:16px;color:var(--blue)" id="refR">0.68</div></div>
+        <div><span style="font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Weight kg</span><div style="font-family:'Anybody',sans-serif;font-size:16px;color:var(--blue)" id="refKg">83.9</div></div>
+        <div><span style="font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Widmark BAC/std</span><div style="font-family:'Anybody',sans-serif;font-size:16px;color:var(--blue)" id="refBpd">—</div></div>
+        <div style="flex:1;min-width:120px;font-size:9px;color:var(--muted);line-height:1.6">Reference only — training will derive your actual values</div>
+      </div>
+    </div>
+
+    <!-- Drink config -->
+    <div class="card">
+      <div class="sec">Standard Drink for This Session</div>
+      <div class="row2">
+        <div>
+          <span class="field-label">Size</span>
+          <div class="input-wrap"><input type="number" id="drinkOz" value="12" min="1" max="32" step="0.5"><span class="input-unit">oz</span></div>
+        </div>
+        <div>
+          <span class="field-label">ABV</span>
+          <div class="input-wrap"><input type="number" id="drinkAbv" value="5" min="0.5" max="100" step="0.1"><span class="input-unit">%</span></div>
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:10px;color:var(--muted)">
+        Pure alcohol: <span style="color:var(--green)" id="pureAlcoz">—</span> &nbsp;·&nbsp; Standard drinks: <span style="color:var(--green)" id="stdDrinkCount">—</span>
+      </div>
+
+      <div class="toggle-row" style="margin-top:12px" onclick="toggleFasted()">
+        <div class="toggle-box" id="fastedBox"></div>
+        <span class="toggle-label">Fasted (empty stomach)</span>
+        <span style="font-size:9px;color:var(--amber);margin-left:auto" id="fastedNote"></span>
+      </div>
+    </div>
+
+    <!-- Protocol overview -->
+    <div class="card green-card">
+      <div class="sec">Session Protocol</div>
+      <div class="step-list">
+        <div class="step active">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Drink your standard drink</div>
+            <div class="step-desc">Consume it over ~10 minutes. Note the time.</div>
+          </div>
+        </div>
+        <div class="step upcoming">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Wait 45 minutes</div>
+            <div class="step-desc">Absorption phase completes. First reading at T+45.</div>
+          </div>
+        </div>
+        <div class="step upcoming">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Reading 1 — T+45 min</div>
+            <div class="step-desc">Take breathalyzer reading. Log it.</div>
+          </div>
+        </div>
+        <div class="step upcoming">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Reading 2 — T+65 min</div>
+            <div class="step-desc">20 min after first. Log it.</div>
+          </div>
+        </div>
+        <div class="step upcoming">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title">Reading 3 — T+85 min</div>
+            <div class="step-desc">20 min after second. Protocol complete.</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:14px;font-size:9px;color:var(--muted);line-height:1.7;padding:10px 12px;background:var(--deep);border-radius:7px;">
+        Optional 4th reading at T+105 improves curve confidence. You can add it even after the protocol completes.
+      </div>
+    </div>
+
+    <button class="primary-btn" onclick="startProtocol()">⊹ Begin Protocol — Start Timer</button>
+  </div>
+
+  <!-- ── ACTIVE PHASE ── -->
+  <div id="phaseActive" class="hidden">
+    <div class="phase-pill active">● Protocol Active</div>
+
+    <!-- Timer -->
+    <div class="timer-block" id="timerBlock">
+      <div class="timer-num" id="timerNum">45:00</div>
+      <div class="timer-label" id="timerLabel">Until first reading</div>
+      <div class="timer-progress"><div class="timer-fill" id="timerFill" style="width:0%"></div></div>
+    </div>
+
+    <!-- Steps live -->
+    <div class="card active-card" id="activeStepCard">
+      <div class="sec">Current Step</div>
+      <div id="activeStepText" style="font-size:13px;color:var(--green);line-height:1.6"></div>
+      <div id="activeStepSub" style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.6"></div>
+    </div>
+
+    <!-- BAC log -->
+    <div class="card">
+      <div class="sec">Log a Reading</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:10px">Enter breathalyzer value. 15+ min since last drink, water rinse recommended.</div>
+      <div class="bac-entry">
+        <div class="input-wrap" style="flex:1">
+          <input type="number" id="bacInput" step="0.001" min="0" max="0.4" placeholder="0.000">
+          <span class="input-unit">BAC</span>
+        </div>
+        <button class="log-btn" id="logBtn" onclick="logReading()">Log</button>
+      </div>
+
+      <!-- Readings so far -->
+      <div id="readingsWrap" style="margin-top:14px;display:none">
+        <div class="readings-list">
+          <div class="reading-row header">
+            <div>Time</div><div>T+min</div><div>BAC</div><div>Type</div>
+          </div>
+          <div id="readingsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live curve preview (shown after 2 readings) -->
+    <div class="card hidden" id="curvePreviewCard">
+      <div class="sec">Elimination Curve Preview</div>
+      <div class="chart-wrap"><canvas id="curveChart"></canvas></div>
+      <div id="liveStats" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:10px;color:var(--muted)"></div>
+    </div>
+
+    <button class="secondary-btn" onclick="finishEarly()" id="finishEarlyBtn">✓ Finish Protocol</button>
+    <button class="danger-btn" onclick="cancelProtocol()">✕ Cancel &amp; Discard</button>
+  </div>
+
+  <!-- ── RESULTS PHASE ── -->
+  <div id="phaseResults" class="hidden">
+    <div class="phase-pill complete">✦ Protocol Complete</div>
+
+    <!-- Key results -->
+    <div class="result-grid">
+      <div class="result-cell">
+        <div class="result-val green" id="resMetab">—</div>
+        <div class="result-lbl">Metab rate / hr</div>
+        <div class="result-sub" id="resMetabComp">Widmark ref: 0.015</div>
+      </div>
+      <div class="result-cell">
+        <div class="result-val blue" id="resRise">—</div>
+        <div class="result-lbl">Rise / std drink</div>
+        <div class="result-sub" id="resRiseComp">Widmark ref: —</div>
+      </div>
+      <div class="result-cell">
+        <div class="result-val gold" id="resPeak">—</div>
+        <div class="result-lbl">Est. peak BAC</div>
+        <div class="result-sub">Back-calculated</div>
+      </div>
+      <div class="result-cell">
+        <div class="result-val" id="resR2" style="color:var(--muted)">—</div>
+        <div class="result-lbl">Curve fit R²</div>
+        <div class="result-sub" id="resR2note">—</div>
+      </div>
+    </div>
+
+    <!-- Confidence -->
+    <div class="card">
+      <div class="confidence-wrap">
+        <div class="confidence-label">
+          <span>Curve confidence</span>
+          <span id="confLabel">—</span>
+        </div>
+        <div class="confidence-bar"><div class="confidence-fill" id="confFill" style="width:0%"></div></div>
+      </div>
+      <div id="fastedResultNote" style="display:none;margin-top:10px;padding:9px 12px;background:rgba(255,140,58,0.07);border:1px solid rgba(255,140,58,0.2);border-radius:6px;font-size:10px;color:var(--amber);line-height:1.6"></div>
+    </div>
+
+    <!-- Full curve -->
+    <div class="card">
+      <div class="sec">Elimination Curve</div>
+      <div class="chart-wrap" style="height:180px"><canvas id="resultChart"></canvas></div>
+      <div id="resultReadings" style="margin-top:10px"></div>
+    </div>
+
+    <!-- Save to Goldilocks -->
+    <div class="card green-card">
+      <div class="sec">Save Profile to Goldilocks Zone</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:12px;line-height:1.7">
+        This will add a named profile to the Goldilocks Zone dropdown. If a profile with this name already exists, this session will be averaged in.
+      </div>
+      <div style="margin-bottom:10px">
+        <span class="field-label">Profile Name</span>
+        <input class="profile-name-input" type="text" id="profileName" value="seeholmes" maxlength="24" placeholder="your name">
+      </div>
+      <button class="save-btn" onclick="saveProfile()">✦ Save Profile to Goldilocks Zone</button>
+    </div>
+
+    <!-- Session history -->
+    <div class="card" id="historyCard" style="display:none">
+      <div class="sec gold">Session History</div>
+      <div id="historyList"></div>
+    </div>
+
+    <button class="secondary-btn" onclick="resetToSetup()">⊹ Run Another Session</button>
+  </div>
+
+  <p class="disclaimer">⚗️ Training mode · For harm reduction only · Never drive after drinking<br>Elimination rate varies by individual — more sessions = higher confidence</p>
+</div>
+
+<script>
+// ── Constants ─────────────────────────────────────────────────
+const STD_DRINK_G      = 0.6 * 29.5735 * 0.789;
+const R_MALE           = 0.68;
+const R_FEMALE         = 0.55;
+const STORAGE_KEY      = 'goldilocks_training_session';
+const PROFILES_KEY     = 'goldilocks_profiles';
+// Protocol timings in minutes from T0 (drink start)
+const READING_TIMES    = [45, 65, 85, 105];
+
+// ── State ─────────────────────────────────────────────────────
+let protocolActive  = false;
+let t0              = null;   // timestamp when protocol started
+let readings        = [];     // [{tMin, bac, ts}]
+let fasted          = false;
+let timerInterval   = null;
+let currentStep     = 0;      // 0=waiting for R1, 1=waiting for R2, etc.
+let sessionAlcGrams = 0;
+let sessionWeightKg = 0;
+let sessionR        = R_MALE;
+
+// ── Setup helpers ─────────────────────────────────────────────
+function getWeightKg() {
+  const units = document.getElementById('units').value;
+  const w     = parseFloat(document.getElementById('weight').value) || 185;
+  return units === 'imperial' ? w * 0.453592 : w;
+}
+function getR() {
+  return document.getElementById('sex').value === 'male' ? R_MALE : R_FEMALE;
+}
+function getAlcGrams() {
+  const oz  = parseFloat(document.getElementById('drinkOz').value)  || 12;
+  const abv = parseFloat(document.getElementById('drinkAbv').value) || 5;
+  return oz * (abv / 100) * 29.5735 * 0.789;
+}
+function widmarkBpd(wKg, r, ag) {
+  return (ag / (wKg * 1000 * r)) * 100;
+}
+function updateSetupInfo() {
+  const wKg  = getWeightKg();
+  const r    = getR();
+  const ag   = getAlcGrams();
+  const pureOz = parseFloat(document.getElementById('drinkOz').value) * (parseFloat(document.getElementById('drinkAbv').value) / 100);
+  document.getElementById('refR').textContent      = r.toFixed(2);
+  document.getElementById('refKg').textContent     = wKg.toFixed(1);
+  document.getElementById('refBpd').textContent    = widmarkBpd(wKg, r, ag).toFixed(4);
+  document.getElementById('pureAlcoz').textContent = (pureOz || 0).toFixed(2) + ' oz';
+  document.getElementById('stdDrinkCount').textContent = (ag / STD_DRINK_G).toFixed(2) + ' std drinks';
+}
+function onUnitsChange() {
+  document.getElementById('weightUnit').textContent =
+    document.getElementById('units').value === 'metric' ? 'kg' : 'lbs';
+  updateSetupInfo();
+}
+function toggleFasted() {
+  fasted = !fasted;
+  const box  = document.getElementById('fastedBox');
+  const note = document.getElementById('fastedNote');
+  box.style.background  = fasted ? 'var(--amber)' : 'transparent';
+  box.style.borderColor = fasted ? 'var(--amber)' : 'var(--muted)';
+  box.textContent       = fasted ? '✓' : '';
+  note.textContent      = fasted ? 'Rise rate excluded from avg' : '';
+}
+
+// ── Protocol start ────────────────────────────────────────────
+function startProtocol() {
+  sessionWeightKg = getWeightKg();
+  sessionR        = getR();
+  sessionAlcGrams = getAlcGrams();
+  t0              = Date.now();
+  readings        = [];
+  currentStep     = 0;
+  protocolActive  = true;
+
+  document.getElementById('phaseSetup').classList.add('hidden');
+  document.getElementById('phaseActive').classList.remove('hidden');
+
+  updateActiveStep();
+  timerInterval = setInterval(tickTimer, 1000);
+  saveTrainingSession();
+}
+
+function getElapsedMin() {
+  return (Date.now() - t0) / 60000;
+}
+
+function tickTimer() {
+  const elapsed   = getElapsedMin();
+  const targetMin = READING_TIMES[Math.min(currentStep, READING_TIMES.length - 1)];
+  const remaining = Math.max(0, targetMin - elapsed);
+  const mins      = Math.floor(remaining);
+  const secs      = Math.floor((remaining - mins) * 60);
+
+  const numEl = document.getElementById('timerNum');
+  numEl.textContent = `${mins}:${secs.toString().padStart(2,'0')}`;
+  numEl.className   = 'timer-num' + (remaining < 60 && remaining > 0 ? ' urgent' : '');
+
+  // Progress bar toward next reading
+  const prevTarget = currentStep > 0 ? READING_TIMES[currentStep - 1] : 0;
+  const span = targetMin - prevTarget;
+  const pct  = Math.min(100, ((elapsed - prevTarget) / span) * 100);
+  document.getElementById('timerFill').style.width = Math.max(0, pct) + '%';
+
+  if (remaining === 0) {
+    document.getElementById('timerLabel').textContent = '⊹ Time for a reading!';
+  } else {
+    const label = currentStep === 0 ? 'Until first reading' : `Until reading ${currentStep + 1}`;
+    document.getElementById('timerLabel').textContent = label;
+  }
+
+  // Auto-advance step text when time is up
+  updateActiveStep();
+}
+
+function updateActiveStep() {
+  const elapsed = getElapsedMin();
+  const target  = READING_TIMES[Math.min(currentStep, READING_TIMES.length - 1)];
+  const ready   = elapsed >= target;
+
+  const titles = [
+    'Waiting — absorption phase',
+    'Waiting — 20 min between readings',
+    'Waiting — 20 min between readings',
+    'Optional: 4th reading for better confidence'
+  ];
+  const subs = [
+    `First reading available at T+45. Take it when the timer hits zero.`,
+    `Reading 2 of 3 available at T+65.`,
+    `Reading 3 of 3 available at T+85. Protocol complete after this.`,
+    `An extra reading at T+105 improves your R² confidence. Tap Finish anytime.`
+  ];
+  const readySubs = [
+    `Timer complete — take your breathalyzer reading now and log it below.`,
+    `Timer complete — take reading 2 now.`,
+    `Timer complete — take reading 3 now. You can finish after logging.`,
+    `Take optional 4th reading now, or tap Finish to complete.`
+  ];
+
+  const step = Math.min(currentStep, 3);
+  document.getElementById('activeStepText').textContent = ready
+    ? `Reading ${currentStep + 1} — ${ready ? 'ready now' : 'coming up'}`
+    : titles[step];
+  document.getElementById('activeStepSub').textContent  = ready ? readySubs[step] : subs[step];
+}
+
+// ── Log a reading ─────────────────────────────────────────────
+function logReading() {
+  const val = parseFloat(document.getElementById('bacInput').value);
+  if (isNaN(val) || val <= 0 || val > 0.4) return;
+
+  const tMin = getElapsedMin();
+  readings.push({ tMin, bac: val, ts: Date.now() });
+  document.getElementById('bacInput').value = '';
+
+  currentStep = readings.length; // advance to next reading
+  renderReadings();
+  if (readings.length >= 2) renderCurvePreview();
+  updateActiveStep();
+
+  // If 3+ readings logged, enable finish
+  if (readings.length >= 3) {
+    document.getElementById('finishEarlyBtn').textContent = '✓ Finish Protocol';
+  }
+
+  saveTrainingSession();
+}
+
+function renderReadings() {
+  const list = document.getElementById('readingsList');
+  list.innerHTML = '';
+  readings.forEach((r, i) => {
+    const row = document.createElement('div');
+    row.className = 'reading-row';
+    const ts = new Date(r.ts);
+    let h = ts.getHours(), m = ts.getMinutes();
+    const ap = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12;
+    row.innerHTML = `
+      <div>${h}:${m.toString().padStart(2,'0')}${ap}</div>
+      <div style="color:var(--muted)">T+${Math.round(r.tMin)}m</div>
+      <div class="reading-bac">${r.bac.toFixed(3)}</div>
+      <div class="reading-note">Reading ${i+1}</div>`;
+    list.appendChild(row);
+  });
+  document.getElementById('readingsWrap').style.display = readings.length > 0 ? 'block' : 'none';
+}
+
+// ── Curve math ────────────────────────────────────────────────
+function fitLine(points) {
+  // Linear regression on tMin vs bac
+  const n  = points.length;
+  const sx = points.reduce((a,p) => a + p.x, 0);
+  const sy = points.reduce((a,p) => a + p.y, 0);
+  const sxy= points.reduce((a,p) => a + p.x * p.y, 0);
+  const sx2= points.reduce((a,p) => a + p.x * p.x, 0);
+  const slope = (n * sxy - sx * sy) / (n * sx2 - sx * sx);
+  const intercept = (sy - slope * sx) / n;
+  // R²
+  const yMean = sy / n;
+  const ssTot = points.reduce((a,p) => a + Math.pow(p.y - yMean, 2), 0);
+  const ssRes = points.reduce((a,p) => a + Math.pow(p.y - (slope * p.x + intercept), 2), 0);
+  const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 1;
+  return { slope, intercept, r2 };
+}
+
+function calcResults() {
+  if (readings.length < 2) return null;
+
+  const points = readings.map(r => ({ x: r.tMin, y: r.bac }));
+  const { slope, intercept, r2 } = fitLine(points);
+
+  // slope is BAC change per minute → convert to per hour (should be negative)
+  const metabPerHr = Math.abs(slope) * 60;
+
+  // Back-calculate BAC at T+45 (first reading target) to get peak estimate
+  const bacAt45    = slope * 45 + intercept;
+  const stdDrinks  = sessionAlcGrams / STD_DRINK_G;
+
+  // Rise per std drink: peak / stdDrinks (only meaningful if not fasted)
+  const risePerStd = bacAt45 / stdDrinks;
+
+  return { metabPerHr, risePerStd, bacAt45, r2, slope, intercept, stdDrinks };
+}
+
+// ── Chart drawing ─────────────────────────────────────────────
+function drawChart(canvasId, results) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx    = canvas.getContext('2d');
+  const W      = canvas.offsetWidth || 600;
+  const H      = canvas.offsetHeight || 160;
+  canvas.width  = W * 2; canvas.height = H * 2;
+  ctx.scale(2, 2);
+
+  ctx.clearRect(0, 0, W, H);
+
+  const pad    = { top:16, right:16, bottom:28, left:44 };
+  const plotW  = W - pad.left - pad.right;
+  const plotH  = H - pad.top  - pad.bottom;
+
+  const maxT   = Math.max(...readings.map(r => r.tMin), 110);
+  const maxBac = Math.max(...readings.map(r => r.bac), 0.05) * 1.2;
+
+  const tx = t => pad.left + (t / maxT) * plotW;
+  const ty = b => pad.top  + (1 - b / maxBac) * plotH;
+
+  // Grid
+  ctx.strokeStyle = '#1e2130'; ctx.lineWidth = 1;
+  [0.02, 0.04, 0.06, 0.08].forEach(b => {
+    if (b > maxBac) return;
+    ctx.beginPath(); ctx.moveTo(pad.left, ty(b)); ctx.lineTo(pad.left + plotW, ty(b)); ctx.stroke();
+    ctx.fillStyle = '#5a5570'; ctx.font = '9px Space Mono'; ctx.textAlign = 'right';
+    ctx.fillText(b.toFixed(2), pad.left - 5, ty(b) + 3);
+  });
+  [45, 65, 85, 105].forEach(t => {
+    if (t > maxT) return;
+    ctx.beginPath(); ctx.moveTo(tx(t), pad.top); ctx.lineTo(tx(t), pad.top + plotH); ctx.stroke();
+    ctx.fillStyle = '#5a5570'; ctx.font = '9px Space Mono'; ctx.textAlign = 'center';
+    ctx.fillText(`T+${t}`, tx(t), pad.top + plotH + 14);
+  });
+
+  // Fit line
+  if (results) {
+    const { slope, intercept } = results;
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(82,224,156,0.4)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+    ctx.moveTo(tx(40), ty(Math.max(0, slope * 40 + intercept)));
+    ctx.lineTo(tx(maxT), ty(Math.max(0, slope * maxT + intercept)));
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  // Data points
+  readings.forEach((r, i) => {
+    ctx.beginPath();
+    ctx.arc(tx(r.tMin), ty(r.bac), 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#52e09c'; ctx.fill();
+    ctx.strokeStyle = '#08090d'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = '#e8e0cc'; ctx.font = '9px Space Mono'; ctx.textAlign = 'center';
+    ctx.fillText(r.bac.toFixed(3), tx(r.tMin), ty(r.bac) - 10);
+  });
+}
+
+function renderCurvePreview() {
+  document.getElementById('curvePreviewCard').classList.remove('hidden');
+  const results = calcResults();
+  setTimeout(() => drawChart('curveChart', results), 50);
+  if (results) {
+    document.getElementById('liveStats').innerHTML =
+      `<span>Metab: <span style="color:var(--green)">${results.metabPerHr.toFixed(4)}/hr</span></span>
+       <span>R²: <span style="color:var(--blue)">${results.r2.toFixed(3)}</span></span>
+       <span>Readings: <span style="color:var(--gold)">${readings.length}</span></span>`;
+  }
+}
+
+// ── Finish ────────────────────────────────────────────────────
+function finishEarly() {
+  if (readings.length < 2) {
+    alert('Need at least 2 readings to calculate elimination rate.');
+    return;
+  }
+  finishProtocol();
+}
+
+function finishProtocol() {
+  clearInterval(timerInterval);
+  protocolActive = false;
+
+  const results = calcResults();
+  if (!results) return;
+
+  document.getElementById('phaseActive').classList.add('hidden');
+  document.getElementById('phaseResults').classList.remove('hidden');
+
+  // Fill results
+  const metabColor = results.metabPerHr > 0.018 ? 'var(--amber)' : results.metabPerHr < 0.012 ? 'var(--blue)' : 'var(--green)';
+  document.getElementById('resMetab').textContent    = results.metabPerHr.toFixed(4);
+  document.getElementById('resMetab').style.color    = metabColor;
+  document.getElementById('resMetabComp').textContent= `vs Widmark ref 0.0150`;
+
+  if (!fasted) {
+    document.getElementById('resRise').textContent   = results.risePerStd.toFixed(4);
+    const widmarkRise = widmarkBpd(sessionWeightKg, sessionR, sessionAlcGrams / (sessionAlcGrams / STD_DRINK_G));
+    document.getElementById('resRiseComp').textContent = `vs Widmark ${widmarkBpd(sessionWeightKg, sessionR, STD_DRINK_G).toFixed(4)}`;
+  } else {
+    document.getElementById('resRise').textContent   = 'N/A';
+    document.getElementById('resRise').style.color   = 'var(--muted)';
+    document.getElementById('resRiseComp').textContent = 'Fasted — excluded';
+    const fn = document.getElementById('fastedResultNote');
+    fn.style.display = 'block';
+    fn.textContent   = '⚠ Fasted session: elimination rate recorded. Rise rate excluded from profile average — run a fed session to calibrate rise rate.';
+  }
+
+  document.getElementById('resPeak').textContent = results.bacAt45.toFixed(3);
+  const r2 = results.r2;
+  document.getElementById('resR2').textContent   = r2.toFixed(3);
+  document.getElementById('resR2').style.color   = r2 > 0.97 ? 'var(--green)' : r2 > 0.90 ? 'var(--gold)' : 'var(--amber)';
+  document.getElementById('resR2note').textContent = r2 > 0.97 ? 'Excellent fit' : r2 > 0.90 ? 'Good fit' : 'Fair — add a 4th reading';
+
+  // Confidence
+  const conf = r2 > 0.97 ? 90 : r2 > 0.90 ? 65 : 40;
+  const confLabel = conf > 80 ? 'High' : conf > 55 ? 'Medium' : 'Low';
+  document.getElementById('confLabel').textContent      = confLabel;
+  document.getElementById('confFill').style.width       = conf + '%';
+  document.getElementById('confFill').style.background  = conf > 80 ? 'var(--green)' : conf > 55 ? 'var(--gold)' : 'var(--amber)';
+
+  // Chart
+  setTimeout(() => drawChart('resultChart', results), 100);
+
+  // Readings table in results
+  const rDiv = document.getElementById('resultReadings');
+  rDiv.innerHTML = '<div class="readings-list"><div class="reading-row header"><div>Time</div><div>T+min</div><div>BAC</div><div>Note</div></div></div>';
+  const rl = rDiv.querySelector('.readings-list');
+  readings.forEach((r, i) => {
+    const row = document.createElement('div'); row.className = 'reading-row';
+    const ts = new Date(r.ts);
+    let h = ts.getHours(), m = ts.getMinutes();
+    const ap = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12;
+    const fitted = (results.slope * r.tMin + results.intercept).toFixed(3);
+    row.innerHTML = `<div>${h}:${m.toString().padStart(2,'0')}${ap}</div><div style="color:var(--muted)">T+${Math.round(r.tMin)}m</div><div class="reading-bac">${r.bac.toFixed(3)}</div><div class="reading-note">fit ${fitted}</div>`;
+    rl.appendChild(row);
+  });
+
+  // Show session history
+  renderHistory();
+  clearSavedTrainingSession();
+}
+
+function cancelProtocol() {
+  clearInterval(timerInterval);
+  protocolActive = false;
+  clearSavedTrainingSession();
+  document.getElementById('phaseActive').classList.add('hidden');
+  document.getElementById('phaseSetup').classList.remove('hidden');
+}
+
+// ── Save to Goldilocks profiles ───────────────────────────────
+function saveProfile() {
+  const results = calcResults();
+  if (!results) return;
+
+  const name = document.getElementById('profileName').value.trim() || 'calibrated';
+  const key  = PROFILES_KEY;
+
+  let profiles = {};
+  try { profiles = JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) {}
+
+  const existing = profiles[name];
+  const sessions = existing ? existing.sessions + 1 : 1;
+
+  // Average metab across sessions
+  const prevMetab = existing ? existing.metab : null;
+  const newMetab  = prevMetab ? (prevMetab * (sessions - 1) + results.metabPerHr) / sessions : results.metabPerHr;
+
+  // Average rise only for fed sessions
+  let newRise = existing ? existing.risePerStd : null;
+  if (!fasted && results.risePerStd > 0) {
+    const fedCount  = existing ? (existing.fedSessions || 0) + 1 : 1;
+    const prevRise  = existing ? (existing.risePerStd || results.risePerStd) : results.risePerStd;
+    newRise = prevRise ? (prevRise * (fedCount - 1) + results.risePerStd) / fedCount : results.risePerStd;
+    profiles[name] = profiles[name] || {};
+    profiles[name].fedSessions = fedCount;
+  }
+
+  const conf = sessions >= 4 ? 'high' : sessions >= 2 ? 'medium' : 'low';
+
+  profiles[name] = {
+    ...( profiles[name] || {} ),
+    name,
+    weightKg:     sessionWeightKg,
+    r:            sessionR,
+    risePerStd:   newRise || results.risePerStd,
+    metab:        newMetab,
+    useWidmark:   false,
+    calibratedAt: new Date().toISOString().slice(0,10),
+    sessions,
+    confidence:   conf,
+    lastR2:       results.r2,
+  };
+
+  try {
+    localStorage.setItem(key, JSON.stringify(profiles));
+  } catch(e) {
+    alert('Could not save — localStorage unavailable.');
+    return;
+  }
+
+  // Save to history
+  saveSessionToHistory(name, results);
+
+  // Toast
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(245,200,66,0.12);border:1px solid rgba(245,200,66,0.4);color:var(--gold);font-family:Space Mono,monospace;font-size:10px;letter-spacing:0.1em;padding:12px 20px;border-radius:8px;z-index:999;text-transform:uppercase;text-align:center;';
+  toast.innerHTML = `✦ Profile "${name}" saved<br><span style="opacity:0.6;font-size:9px">${sessions} session${sessions>1?'s':''} · ${conf} confidence · open Goldilocks Zone to use</span>`;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
+
+// ── Session history ───────────────────────────────────────────
+function saveSessionToHistory(profileName, results) {
+  const key = 'goldilocks_training_history';
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
+  history.unshift({
+    date:       new Date().toISOString().slice(0,10),
+    profile:    profileName,
+    metab:      results.metabPerHr,
+    rise:       fasted ? null : results.risePerStd,
+    r2:         results.r2,
+    readings:   readings.length,
+    fasted,
+  });
+  history = history.slice(0, 20); // keep last 20
+  try { localStorage.setItem(key, JSON.stringify(history)); } catch(e) {}
+}
+
+function renderHistory() {
+  const key = 'goldilocks_training_history';
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
+  if (!history.length) return;
+
+  const card = document.getElementById('historyCard');
+  card.style.display = 'block';
+  const list = document.getElementById('historyList');
+  list.innerHTML = `
+    <div class="history-item header">
+      <div>Date</div><div>Profile</div><div>Metab/hr</div><div>Rise/std</div><div>R²</div>
+    </div>`;
+  history.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'history-item';
+    row.innerHTML = `
+      <div style="color:var(--muted)">${s.date}</div>
+      <div>${s.profile}</div>
+      <div style="color:var(--green)">${s.metab.toFixed(4)}</div>
+      <div style="color:${s.rise ? 'var(--blue)' : 'var(--muted)'}">${s.rise ? s.rise.toFixed(4) : 'fasted'}</div>
+      <div style="color:${s.r2 > 0.95 ? 'var(--green)' : 'var(--amber)'}">${s.r2.toFixed(3)}</div>`;
+    list.appendChild(row);
+  });
+}
+
+// ── Persistence ───────────────────────────────────────────────
+function saveTrainingSession() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      t0, readings, fasted, currentStep,
+      sessionAlcGrams, sessionWeightKg, sessionR,
+      weight:   document.getElementById('weight').value,
+      units:    document.getElementById('units').value,
+      sex:      document.getElementById('sex').value,
+      drinkOz:  document.getElementById('drinkOz').value,
+      drinkAbv: document.getElementById('drinkAbv').value,
+    }));
+  } catch(e) {}
+}
+
+function clearSavedTrainingSession() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+}
+
+function loadSavedTrainingSession() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    const elapsed = (Date.now() - s.t0) / 60000;
+    if (elapsed > 130) { clearSavedTrainingSession(); return false; }
+
+    t0 = s.t0; readings = s.readings; fasted = s.fasted;
+    currentStep = s.currentStep; sessionAlcGrams = s.sessionAlcGrams;
+    sessionWeightKg = s.sessionWeightKg; sessionR = s.sessionR;
+
+    document.getElementById('weight').value   = s.weight;
+    document.getElementById('units').value    = s.units;
+    document.getElementById('sex').value      = s.sex;
+    document.getElementById('drinkOz').value  = s.drinkOz;
+    document.getElementById('drinkAbv').value = s.drinkAbv;
+    document.getElementById('weightUnit').textContent = s.units === 'metric' ? 'kg' : 'lbs';
+    if (fasted) toggleFasted();
+    return true;
+  } catch(e) { clearSavedTrainingSession(); return false; }
+}
+
+function resetToSetup() {
+  document.getElementById('phaseResults').classList.add('hidden');
+  document.getElementById('phaseSetup').classList.remove('hidden');
+  readings = []; fasted = false; currentStep = 0;
+  const box = document.getElementById('fastedBox');
+  box.style.background = 'transparent'; box.style.borderColor = 'var(--muted)'; box.textContent = '';
+  document.getElementById('fastedNote').textContent = '';
+  updateSetupInfo();
+}
+
+// ── Events ────────────────────────────────────────────────────
+['weight','units','sex','drinkOz','drinkAbv'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) { el.addEventListener('input', updateSetupInfo); el.addEventListener('change', updateSetupInfo); }
+});
+
+// ── Init ──────────────────────────────────────────────────────
+(function init() {
+  updateSetupInfo();
+  const restored = loadSavedTrainingSession();
+  if (restored && t0) {
+    document.getElementById('phaseSetup').classList.add('hidden');
+    document.getElementById('phaseActive').classList.remove('hidden');
+    protocolActive = true;
+    renderReadings();
+    if (readings.length >= 2) renderCurvePreview();
+    updateActiveStep();
+    timerInterval = setInterval(tickTimer, 1000);
+
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(82,224,156,0.1);border:1px solid rgba(82,224,156,0.3);color:var(--green);font-family:Space Mono,monospace;font-size:10px;letter-spacing:0.1em;padding:10px 18px;border-radius:8px;z-index:999;text-transform:uppercase;';
+    toast.textContent = '⚗️ Protocol restored';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+})();
+</script>
+</body>
+</html>
