@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Goldilocks Zone</title>
+<title>Goldilocks</title>
 <link rel="icon" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@200;400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -197,9 +197,13 @@
       <defs><linearGradient id="og" x1="0" y1="0" x2="320" y2="0"><stop offset="0%" stop-color="#f5c842"/><stop offset="50%" stop-color="#e8a020"/><stop offset="100%" stop-color="#ff8c3a"/></linearGradient></defs>
     </svg>
     <span class="star-icon">✦</span>
-    <div class="logo">Goldilocks Zone</div>
+    <div class="logo">Goldilocks</div>
     <div class="tagline">not too much · not too little · <em>just right</em></div>
     <a href="goldilocks-training.html" style="display:inline-block;margin-top:10px;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:4px 14px;transition:all 0.2s" onmouseover="this.style.color='var(--green)';this.style.borderColor='rgba(82,224,156,0.4)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">⚗️ Training Protocol</a>
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px">
+      <span style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted)">Theme</span>
+      <div id="themePicker" style="display:flex;gap:6px;align-items:center"></div>
+    </div>
   </div>
 
   <!-- ── Profile selector ── -->
@@ -1021,9 +1025,67 @@ function loadCalibratedProfiles() {
   } catch(e) {}
 }
 
+// ── Theme system ──────────────────────────────────────────────
+const THEMES = {
+  cosmos:    { name:'Cosmos',    dark:true,  '--space':'#08090d','--deep':'#0e1018','--surface':'#13151f','--border':'#1e2130','--text':'#e8e0cc','--muted':'#5a5570','--logo-a':'#f5c842','--logo-b':'#e8a020','--logo-c':'#ff8c3a','--accent':'#f5c842','--accent2':'#e8a020', stars:'rgba(245,200,66,0.3)' },
+  navy:      { name:'Navy',      dark:true,  '--space':'#0d1117','--deep':'#010409','--surface':'#161b22','--border':'#21262d','--text':'#e6edf3','--muted':'#484f58','--logo-a':'#f5c842','--logo-b':'#e8a020','--logo-c':'#ff8c3a','--accent':'#f5c842','--accent2':'#e8a020', stars:'rgba(245,200,66,0.25)' },
+  espresso:  { name:'Espresso',  dark:true,  '--space':'#120e0a','--deep':'#0a0705','--surface':'#1c1510','--border':'#2e2218','--text':'#e8ddd0','--muted':'#6a5040','--logo-a':'#f5c842','--logo-b':'#d4956a','--logo-c':'#c0622a','--accent':'#f5c842','--accent2':'#d4956a', stars:'rgba(212,149,106,0.3)' },
+  parchment: { name:'Parchment', dark:false, '--space':'#f5f0e8','--deep':'#ede8de','--surface':'#ffffff','--border':'#e0d8cc','--text':'#2a2420','--muted':'#a09088','--logo-a':'#c8820a','--logo-b':'#e8a020','--logo-c':'#d4600a','--accent':'#c8820a','--accent2':'#b07010', stars:'rgba(200,130,10,0.2)' },
+  honey:     { name:'Honey',     dark:false, '--space':'#fdf4e3','--deep':'#f8edd8','--surface':'#fff8ec','--border':'#f0dab0','--text':'#3a2808','--muted':'#c09050','--logo-a':'#d4700a','--logo-b':'#f5a820','--logo-c':'#e87010','--accent':'#c07010','--accent2':'#b06010', stars:'rgba(192,112,16,0.2)' },
+  slate:     { name:'Slate',     dark:false, '--space':'#eef2f8','--deep':'#e4eaf4','--surface':'#ffffff','--border':'#d0dcee','--text':'#1a2840','--muted':'#8090b0','--logo-a':'#c8820a','--logo-b':'#e8a020','--logo-c':'#ff8c3a','--accent':'#c8820a','--accent2':'#b07010', stars:'rgba(200,130,10,0.15)' },
+};
+const THEME_KEY = 'goldilocks_theme';
+
+function applyTheme(id) {
+  const t = THEMES[id] || THEMES.cosmos;
+  const root = document.documentElement;
+  ['--space','--deep','--surface','--border','--text','--muted','--accent','--accent2'].forEach(v => {
+    root.style.setProperty(v, t[v]);
+  });
+  // Logo gradient
+  const logoGrad = `linear-gradient(135deg,${t['--logo-a']} 0%,${t['--logo-b']} 50%,${t['--logo-c']} 100%)`;
+  document.querySelectorAll('.logo').forEach(el => el.style.backgroundImage = logoGrad);
+  // Adjust star colors in pseudo via a data attr + inline style trick
+  document.body.setAttribute('data-theme', id);
+  // Live BAC bar background — match space color
+  const bar = document.getElementById('liveBacBar');
+  if (bar) bar.style.background = t['--space'] + 'f2';
+  // Update gold vars to use accent
+  root.style.setProperty('--gold',  t['--accent']);
+  root.style.setProperty('--gold2', t['--accent2']);
+  // Slider thumb
+  const style = document.getElementById('themeSliderStyle') || (() => {
+    const s = document.createElement('style'); s.id = 'themeSliderStyle'; document.head.appendChild(s); return s;
+  })();
+  style.textContent = `input[type="range"]::-webkit-slider-thumb { background: ${t['--accent']} !important; box-shadow: 0 0 10px ${t['--accent']}80 !important; }`;
+  // Mark active swatch
+  document.querySelectorAll('.theme-swatch').forEach(sw => {
+    sw.style.outline = sw.dataset.theme === id ? `2px solid ${t['--accent']}` : 'none';
+    sw.style.outlineOffset = '2px';
+  });
+  try { localStorage.setItem(THEME_KEY, id); } catch(e) {}
+}
+
+function renderThemePicker() {
+  const el = document.getElementById('themePicker');
+  if (!el) return;
+  el.innerHTML = Object.entries(THEMES).map(([id, t]) =>
+    `<div class="theme-swatch" data-theme="${id}" onclick="applyTheme('${id}')" title="${t.name}"
+      style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,${t['--logo-a']},${t['--logo-b']});border:2px solid ${t['--border']};cursor:pointer;flex-shrink:0;transition:transform 0.15s" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"></div>`
+  ).join('');
+}
+
+function loadTheme() {
+  let id = 'cosmos';
+  try { id = localStorage.getItem(THEME_KEY) || 'cosmos'; } catch(e) {}
+  applyTheme(id);
+}
+
 // ── Init ──────────────────────────────────────────────────────
 (function init() {
   loadCalibratedProfiles();
+  loadTheme();
+  renderThemePicker();
   const restored = loadSavedSession();
   if (restored) {
     sessionActive = true;

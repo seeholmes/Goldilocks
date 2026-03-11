@@ -195,7 +195,11 @@
     <div class="logo">Goldilocks</div>
     <div class="logo-sub">Training Protocol</div>
     <div class="tagline">calibrate your curve · <em>own your data</em></div>
-    <a class="back-link" href="goldilocks-zone.html">← Back to Goldilocks Zone</a>
+    <a class="back-link" href="goldilocks-zone.html">← Back to Goldilocks</a>
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px">
+      <span style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted)">Theme</span>
+      <div id="themePicker" style="display:flex;gap:6px;align-items:center"></div>
+    </div>
   </div>
 
   <!-- ── SETUP PHASE ── -->
@@ -967,8 +971,51 @@ function resetToSetup() {
   if (el) { el.addEventListener('input', updateSetupInfo); el.addEventListener('change', updateSetupInfo); }
 });
 
+// ── Theme system (shared with Goldilocks Zone) ─────────────────
+const THEMES = {
+  cosmos:    { name:'Cosmos',    '--space':'#08090d','--deep':'#0e1018','--surface':'#13151f','--border':'#1e2130','--text':'#e8e0cc','--muted':'#5a5570','--logo-a':'#f5c842','--logo-b':'#e8a020','--logo-c':'#ff8c3a','--accent':'#f5c842','--accent2':'#e8a020' },
+  navy:      { name:'Navy',      '--space':'#0d1117','--deep':'#010409','--surface':'#161b22','--border':'#21262d','--text':'#e6edf3','--muted':'#484f58','--logo-a':'#f5c842','--logo-b':'#e8a020','--logo-c':'#ff8c3a','--accent':'#f5c842','--accent2':'#e8a020' },
+  espresso:  { name:'Espresso',  '--space':'#120e0a','--deep':'#0a0705','--surface':'#1c1510','--border':'#2e2218','--text':'#e8ddd0','--muted':'#6a5040','--logo-a':'#f5c842','--logo-b':'#d4956a','--logo-c':'#c0622a','--accent':'#f5c842','--accent2':'#d4956a' },
+  parchment: { name:'Parchment', '--space':'#f5f0e8','--deep':'#ede8de','--surface':'#ffffff','--border':'#e0d8cc','--text':'#2a2420','--muted':'#a09088','--logo-a':'#c8820a','--logo-b':'#e8a020','--logo-c':'#d4600a','--accent':'#c8820a','--accent2':'#b07010' },
+  honey:     { name:'Honey',     '--space':'#fdf4e3','--deep':'#f8edd8','--surface':'#fff8ec','--border':'#f0dab0','--text':'#3a2808','--muted':'#c09050','--logo-a':'#d4700a','--logo-b':'#f5a820','--logo-c':'#e87010','--accent':'#c07010','--accent2':'#b06010' },
+  slate:     { name:'Slate',     '--space':'#eef2f8','--deep':'#e4eaf4','--surface':'#ffffff','--border':'#d0dcee','--text':'#1a2840','--muted':'#8090b0','--logo-a':'#c8820a','--logo-b':'#e8a020','--logo-c':'#ff8c3a','--accent':'#c8820a','--accent2':'#b07010' },
+};
+const THEME_KEY = 'goldilocks_theme';
+
+function applyTheme(id) {
+  const t = THEMES[id] || THEMES.cosmos;
+  const root = document.documentElement;
+  ['--space','--deep','--surface','--border','--text','--muted','--accent','--accent2'].forEach(v => root.style.setProperty(v, t[v]));
+  const logoGrad = `linear-gradient(135deg,${t['--logo-a']} 0%,${t['--logo-b']} 50%,${t['--logo-c']} 100%)`;
+  document.querySelectorAll('.logo').forEach(el => el.style.backgroundImage = logoGrad);
+  root.style.setProperty('--gold',  t['--accent']);
+  root.style.setProperty('--gold2', t['--accent2']);
+  document.querySelectorAll('.theme-swatch').forEach(sw => {
+    sw.style.outline = sw.dataset.theme === id ? `2px solid ${t['--accent']}` : 'none';
+    sw.style.outlineOffset = '2px';
+  });
+  try { localStorage.setItem(THEME_KEY, id); } catch(e) {}
+}
+
+function renderThemePicker() {
+  const el = document.getElementById('themePicker');
+  if (!el) return;
+  el.innerHTML = Object.entries(THEMES).map(([id, t]) =>
+    `<div class="theme-swatch" data-theme="${id}" onclick="applyTheme('${id}')" title="${t.name}"
+      style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,${t['--logo-a']},${t['--logo-b']});border:2px solid ${t['--border']};cursor:pointer;flex-shrink:0;transition:transform 0.15s" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"></div>`
+  ).join('');
+}
+
+function loadTheme() {
+  let id = 'cosmos';
+  try { id = localStorage.getItem(THEME_KEY) || 'cosmos'; } catch(e) {}
+  applyTheme(id);
+}
+
 // ── Init ──────────────────────────────────────────────────────
 (function init() {
+  loadTheme();
+  renderThemePicker();
   updateSetupInfo();
   const restored = loadSavedTrainingSession();
   if (restored && t0) {
