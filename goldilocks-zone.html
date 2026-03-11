@@ -331,11 +331,17 @@
   <div class="orbit-summary">
     <div class="orbit-svg-wrap">
       <svg viewBox="0 0 200 200" fill="none">
-        <circle cx="100" cy="100" r="90" stroke="#1e2130" stroke-width="1"/>
-        <circle cx="100" cy="100" r="78" stroke="rgba(245,200,66,0.08)" stroke-width="18"/>
-        <circle cx="100" cy="100" r="69" stroke="rgba(245,200,66,0.3)" stroke-width="1" stroke-dasharray="4 3"/>
-        <circle cx="100" cy="100" r="87" stroke="rgba(232,160,32,0.3)" stroke-width="1" stroke-dasharray="4 3"/>
-        <circle id="peakArc" cx="100" cy="100" r="78" stroke="#f5c842" stroke-width="18" stroke-dasharray="0 490" stroke-linecap="round" opacity="0.6" transform="rotate(-90 100 100)"/>
+        <circle cx="100" cy="100" r="90" stroke="var(--border)" stroke-width="1"/>
+        <!-- Track ring (background) -->
+        <circle cx="100" cy="100" r="78" stroke="var(--border)" stroke-width="14" opacity="0.6"/>
+        <!-- Arc 1: Time elapsed — dim, behind -->
+        <circle id="timeArc" cx="100" cy="100" r="78" stroke="var(--gold2)" stroke-width="14" stroke-dasharray="0 490" stroke-linecap="round" opacity="0.25" transform="rotate(-90 100 100)"/>
+        <!-- Arc 2: BAC level — bright, on top -->
+        <circle id="peakArc" cx="100" cy="100" r="78" stroke="#f5c842" stroke-width="7" stroke-dasharray="0 490" stroke-linecap="round" opacity="0.9" transform="rotate(-90 100 100)"/>
+        <!-- Dashed orbit guides -->
+        <circle cx="100" cy="100" r="69" stroke="var(--gold)" stroke-width="0.5" stroke-dasharray="3 4" opacity="0.2"/>
+        <circle cx="100" cy="100" r="87" stroke="var(--gold2)" stroke-width="0.5" stroke-dasharray="3 4" opacity="0.2"/>
+        <!-- Planet -->
         <circle cx="100" cy="100" r="55" fill="url(#sg)" opacity="0.95"/>
         <circle cx="100" cy="100" r="55" fill="none" stroke="rgba(245,200,66,0.5)" stroke-width="1.5"/>
         <circle cx="100" cy="100" r="55" fill="url(#sg-shine)" opacity="0.3"/>
@@ -659,12 +665,33 @@ function renderTimeline() {
   });
 
   const peak  = Math.max(...trace);
-  const arcEl = document.getElementById('peakArc');
-  if (arcEl) {
-    const circ = 2 * Math.PI * 78;
-    const frac = Math.min(1, peak / (bacMax * 1.5));
-    arcEl.setAttribute('stroke-dasharray', `${frac * circ} ${circ}`);
-    arcEl.setAttribute('stroke', peak <= bacMax ? '#f5c842' : peak <= 0.08 ? '#ff8c3a' : '#ff5a5a');
+  const circ  = 2 * Math.PI * 78;
+  const bacArcEl  = document.getElementById('peakArc');
+  const timeArcEl = document.getElementById('timeArc');
+
+  if (bacArcEl) {
+    // BAC arc: peak (planning) or live BAC (session) as % of ceiling
+    const bacVal  = sessionActive ? (() => {
+      const curHour = getCurrentHour();
+      const frac    = getHourFraction();
+      const completed = [];
+      for (let h = 0; h < curHour; h++) completed.push(actualDrinks[h] !== undefined ? actualDrinks[h] : plan[h]);
+      const curActual = actualDrinks[curHour] !== undefined ? actualDrinks[curHour] : 0;
+      return bacOverride && bacOverride.hour === curHour ? bacOverride.val : estimateLiveBac(completed, curActual, frac);
+    })() : peak;
+    const bacFrac = Math.min(1, bacVal / (bacMax * 1.4));
+    bacArcEl.setAttribute('stroke-dasharray', `${bacFrac * circ} ${circ}`);
+    const arcColor = bacVal < bacMin ? '#7eb8ff' : bacVal <= bacMax ? '#f5c842' : bacVal <= bacMax * 1.2 ? '#ff8c3a' : '#ff5a5a';
+    bacArcEl.setAttribute('stroke', arcColor);
+  }
+
+  if (timeArcEl) {
+    // Time arc: full ring in planning (shows full session), live progress in session
+    const timeFrac = sessionActive ? (() => {
+      const elapsed = (Date.now() - sessionStartTs) / 1000;
+      return Math.min(1, elapsed / (hours * 3600));
+    })() : 1;
+    timeArcEl.setAttribute('stroke-dasharray', `${timeFrac * circ} ${circ}`);
   }
 
   const firstIn = trace.findIndex(b => b >= bacMin);
@@ -818,6 +845,22 @@ function updateLiveBac() {
 
   const rf = document.getElementById('timeRingFill');
   if (rf) rf.style.width = (frac * 100) + '%';
+
+  // Update orbit arcs live
+  const circ = 2 * Math.PI * 78;
+  const bacArcEl  = document.getElementById('peakArc');
+  const timeArcEl = document.getElementById('timeArc');
+  if (bacArcEl) {
+    const bacFrac  = Math.min(1, liveBac / (bacMax * 1.4));
+    bacArcEl.setAttribute('stroke-dasharray', `${bacFrac * circ} ${circ}`);
+    const arcColor = liveBac < bacMin ? '#7eb8ff' : liveBac <= bacMax ? '#f5c842' : liveBac <= bacMax * 1.2 ? '#ff8c3a' : '#ff5a5a';
+    bacArcEl.setAttribute('stroke', arcColor);
+  }
+  if (timeArcEl) {
+    const elapsed   = (Date.now() - sessionStartTs) / 1000;
+    const timeFrac  = Math.min(1, elapsed / (hours * 3600));
+    timeArcEl.setAttribute('stroke-dasharray', `${timeFrac * circ} ${circ}`);
+  }
 
   const now = new Date();
   let hh = now.getHours(), mm = now.getMinutes();
