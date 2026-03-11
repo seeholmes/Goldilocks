@@ -673,11 +673,16 @@ function renderTimeline() {
     // BAC arc: peak (planning) or live BAC (session) as % of ceiling
     const bacVal  = sessionActive ? (() => {
       const curHour = getCurrentHour();
-      const frac    = getHourFraction();
+      const frac    = getFracThroughHour();
       const completed = [];
       for (let h = 0; h < curHour; h++) completed.push(actualDrinks[h] !== undefined ? actualDrinks[h] : plan[h]);
       const curActual = actualDrinks[curHour] !== undefined ? actualDrinks[curHour] : 0;
-      return bacOverride && bacOverride.hour === curHour ? bacOverride.val : estimateLiveBac(completed, curActual, frac);
+      if (bacOverride && bacOverride.hour === curHour) {
+        const drinksSince = Math.max(0, curActual - bacOverride.drinksAtOverride);
+        const fracSince   = Math.max(0, frac - bacOverride.fracAtOverride);
+        return Math.max(0, Math.round((bacOverride.val + drinksSince * bpd(ag, profile) - profile.metab * fracSince) * 1000) / 1000);
+      }
+      return estimateLiveBac(completed, curActual, frac);
     })() : peak;
     const bacFrac = Math.min(1, bacVal / (bacMax * 1.4));
     bacArcEl.setAttribute('stroke-dasharray', `${bacFrac * circ} ${circ}`);
@@ -767,7 +772,7 @@ function commitBacOverride() {
   if (Math.abs(val - modelVal) < 0.002) return;
 
   const curHour = getCurrentHour();
-  bacOverride = { val, hour: curHour }; // persist until hour changes or drink logged
+  bacOverride = { val, hour: curHour, drinksAtOverride: actualDrinks[curHour] !== undefined ? actualDrinks[curHour] : 0, fracAtOverride: getFracThroughHour() };
 
   // Replan all remaining hours from the overridden BAC
   const remaining = hours - (curHour + 1);
@@ -804,8 +809,6 @@ function commitBacOverride() {
 function logDrink(hour, upToSlot) {
   const wasPlanned = plan[hour];
   actualDrinks[hour] = upToSlot;
-  // A new drink means the model should take back over — override is stale
-  if (bacOverride !== null && bacOverride.hour === hour) bacOverride = null;
   if (upToSlot > wasPlanned && hour + 1 < hours) replanFromHour(hour + 1);
   saveSession();
   updateLiveBac();
@@ -827,13 +830,20 @@ function updateLiveBac() {
   for (let h = 0; h < curHour; h++) completed.push(actualDrinks[h] !== undefined ? actualDrinks[h] : plan[h]);
   const curActual = actualDrinks[curHour] !== undefined ? actualDrinks[curHour] : 0;
 
-  // If there's an active override for this hour, use it — clear it if hour has changed
+  // If there's an active override for this hour, use it as base + any drinks since override
   let liveBac;
   if (bacOverride !== null) {
     if (bacOverride.hour === curHour) {
-      liveBac = bacOverride.val;
+      const drinksSinceOverride = Math.max(0, curActual - bacOverride.drinksAtOverride);
+      const fracSinceOverride   = Math.max(0, frac - bacOverride.fracAtOverride);
+      liveBac = Math.max(0,
+        bacOverride.val
+        + drinksSinceOverride * bpd(ag, profile)
+        - profile.metab * fracSinceOverride
+      );
+      liveBac = Math.round(liveBac * 1000) / 1000;
     } else {
-      bacOverride = null; // hour turned over, resume model
+      bacOverride = null; // hour turned over, resume pure model
       liveBac = estimateLiveBac(completed, curActual, frac);
     }
   } else {
