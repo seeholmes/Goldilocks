@@ -102,11 +102,7 @@
   /* Live BAC sticky bar */
   .live-bac-bar { display:none; position:sticky; top:0; z-index:100; background:rgba(8,9,13,0.95); border-bottom:1px solid var(--border); padding:12px 20px; backdrop-filter:blur(10px); align-items:center; gap:16px; }
   .live-bac-bar.visible { display:flex; }
-  .live-bac-num { font-family:'Anybody',sans-serif; font-size:32px; font-weight:600; line-height:1; transition:color 0.5s; cursor:pointer; }
-  .live-bac-num:hover { opacity:0.8; }
-  .live-bac-input { font-family:'Anybody',sans-serif; font-size:28px; font-weight:600; line-height:1; width:90px; background:transparent; border:none; border-bottom:2px solid var(--gold2); color:var(--gold); outline:none; -moz-appearance:textfield; padding:0; }
-  .live-bac-input::-webkit-inner-spin-button{-webkit-appearance:none}
-  .live-bac-edit-hint { font-size:8px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold2); opacity:0.6; margin-top:3px; }
+  .live-bac-num { font-family:'Anybody',sans-serif; font-size:32px; font-weight:600; line-height:1; transition:color 0.5s; }
   .live-bac-meta { flex:1; }
   .live-bac-label { font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); }
   .live-bac-status { font-size:11px; margin-top:3px; }
@@ -179,9 +175,8 @@
 
 <div class="live-bac-bar" id="liveBacBar">
   <div>
-    <div class="live-bac-label">Est. BAC <span class="live-bac-edit-hint" id="editHint">tap to override</span></div>
-    <div class="live-bac-num" id="liveBacNum" onclick="startBacEdit()">0.000</div>
-    <input class="live-bac-input" id="liveBacInput" type="number" step="0.001" min="0" max="0.4" style="display:none" onblur="commitBacOverride()" onkeydown="if(event.key==='Enter')this.blur()">
+    <div class="live-bac-label">Est. BAC</div>
+    <div class="live-bac-num" id="liveBacNum">0.000</div>
   </div>
   <div class="live-bac-meta">
     <div class="live-bac-status" id="liveBacStatus">—</div>
@@ -424,7 +419,6 @@ let bacMax         = 0.08;
 let hours          = 4;
 let clockInterval  = null;
 let replanFlags    = [];
-let bacOverride    = null;  // { val, hour } — user-set BAC, cleared on hour change
 
 // ── Profile logic ─────────────────────────────────────────────
 function getActiveProfile() {
@@ -691,11 +685,6 @@ function renderTimeline() {
       const completed = [];
       for (let h = 0; h < curHour; h++) completed.push(actualDrinks[h] !== undefined ? actualDrinks[h] : plan[h]);
       const curActual = actualDrinks[curHour] !== undefined ? actualDrinks[curHour] : 0;
-      if (bacOverride && bacOverride.hour === curHour) {
-        const drinksSince = Math.max(0, curActual - bacOverride.drinksAtOverride);
-        const fracSince   = Math.max(0, frac - bacOverride.fracAtOverride);
-        return Math.max(0, Math.round((bacOverride.val + drinksSince * bpd(ag, profile) - profile.metab * fracSince) * 1000) / 1000);
-      }
       return estimateLiveBac(completed, curActual, frac);
     })() : peak;
     const bacFrac = Math.min(1, bacVal / (bacMax * 1.4));
@@ -758,67 +747,6 @@ function update() {
   renderTimeline();
 }
 
-// ── BAC Override ──────────────────────────────────────────────
-function startBacEdit() {
-  if (!sessionActive) return;
-  const numEl   = document.getElementById('liveBacNum');
-  const inputEl = document.getElementById('liveBacInput');
-  const current = parseFloat(numEl.textContent) || 0;
-  numEl.style.display   = 'none';
-  inputEl.style.display = 'block';
-  inputEl.value         = current.toFixed(3);
-  inputEl.focus();
-  inputEl.select();
-}
-
-function commitBacOverride() {
-  const numEl   = document.getElementById('liveBacNum');
-  const inputEl = document.getElementById('liveBacInput');
-  const val     = parseFloat(inputEl.value);
-
-  inputEl.style.display = 'none';
-  numEl.style.display   = 'block';
-
-  if (isNaN(val) || val < 0) return; // ignore bad input
-
-  // If the entered value is within 0.002 of what the model shows, treat as no-op
-  const modelVal = parseFloat(numEl.textContent) || 0;
-  if (Math.abs(val - modelVal) < 0.002) return;
-
-  const curHour = getCurrentHour();
-  bacOverride = { val, hour: curHour, drinksAtOverride: actualDrinks[curHour] !== undefined ? actualDrinks[curHour] : 0, fracAtOverride: getFracThroughHour() };
-
-  // Replan all remaining hours from the overridden BAC
-  const remaining = hours - (curHour + 1);
-
-  if (remaining > 0) {
-    const newPlan = buildSchedule(ag, profile, bacMin, bacMax, remaining, val, curHour + 1);
-    for (let i = curHour + 1; i < hours; i++) {
-      plan[i] = newPlan[i - (curHour + 1)];
-      replanFlags[i] = true;
-    }
-  }
-
-  // Force live display to show the override value immediately
-  numEl.textContent  = val.toFixed(3);
-  numEl.style.color  = clr(val, bacMin, bacMax);
-  document.getElementById('liveBacStatus').textContent = statusText(val, bacMin, bacMax);
-  document.getElementById('liveBacStatus').style.color = clr(val, bacMin, bacMax);
-  const pct = Math.min(100, (val / (bacMax * 1.4)) * 100);
-  document.getElementById('liveBacFill').style.width      = pct + '%';
-  document.getElementById('liveBacFill').style.background = barBg(val, bacMin, bacMax);
-
-  saveSession();
-  renderTimeline();
-
-  // Flash toast
-  const toast = document.createElement('div');
-  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(126,184,255,0.12);border:1px solid rgba(126,184,255,0.35);color:#7eb8ff;font-family:Space Mono,monospace;font-size:10px;letter-spacing:0.1em;padding:10px 18px;border-radius:8px;z-index:999;text-transform:uppercase;';
-  toast.textContent = `✦ BAC overridden · plan updated`;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 2500);
-}
-
 // ── Log drink ─────────────────────────────────────────────────
 function logDrink(hour, upToSlot) {
   const wasPlanned = plan[hour];
@@ -843,26 +771,7 @@ function updateLiveBac() {
   const completed = [];
   for (let h = 0; h < curHour; h++) completed.push(actualDrinks[h] !== undefined ? actualDrinks[h] : plan[h]);
   const curActual = actualDrinks[curHour] !== undefined ? actualDrinks[curHour] : 0;
-
-  // If there's an active override for this hour, use it as base + any drinks since override
-  let liveBac;
-  if (bacOverride !== null) {
-    if (bacOverride.hour === curHour) {
-      const drinksSinceOverride = Math.max(0, curActual - bacOverride.drinksAtOverride);
-      const fracSinceOverride   = Math.max(0, frac - bacOverride.fracAtOverride);
-      liveBac = Math.max(0,
-        bacOverride.val
-        + drinksSinceOverride * bpd(ag, profile)
-        - profile.metab * fracSinceOverride
-      );
-      liveBac = Math.round(liveBac * 1000) / 1000;
-    } else {
-      bacOverride = null; // hour turned over, resume pure model
-      liveBac = estimateLiveBac(completed, curActual, frac);
-    }
-  } else {
-    liveBac = estimateLiveBac(completed, curActual, frac);
-  }
+  const liveBac   = estimateLiveBac(completed, curActual, frac);
 
   document.getElementById('liveBacNum').textContent   = liveBac.toFixed(3);
   document.getElementById('liveBacNum').style.color   = clr(liveBac, bacMin, bacMax);
@@ -990,7 +899,6 @@ function endSession() {
   sessionActive = false;
   clearInterval(clockInterval);
   clearSavedSession();
-  bacOverride = null;
   CONFIG_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = false; });
   document.getElementById('startBtn').style.display = 'block';
   document.getElementById('endBtn').style.display   = 'none';
