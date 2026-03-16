@@ -163,6 +163,9 @@
   .time-ring { width:100%; height:3px; background:var(--border); border-radius:100px; overflow:hidden; }
   .time-ring-fill { height:100%; background:linear-gradient(90deg,var(--gold2),var(--gold)); border-radius:100px; transition:width 1s linear; }
   .replan-badge { font-size:9px; letter-spacing:0.08em; text-transform:uppercase; color:var(--amber); background:rgba(255,140,58,0.1); border:1px solid rgba(255,140,58,0.25); border-radius:4px; padding:2px 7px; margin-left:4px; }
+  .inzone-badge { font-size:14px; margin-left:6px; animation: zoneGlow 3s ease-in-out infinite; display:inline-block; }
+  .offzone-badge { font-size:12px; margin-left:6px; opacity:0.45; display:inline-block; }
+  @keyframes zoneGlow { 0%,100%{ filter:drop-shadow(0 0 0px rgba(245,200,66,0)); } 50%{ filter:drop-shadow(0 0 6px rgba(245,200,66,0.9)); } }
 
   .window-note { font-size:10px; color:var(--muted); text-align:center; padding:12px 0 2px; border-top:1px solid var(--border); margin-top:10px; line-height:1.6; }
   .window-note em { font-style:normal; color:var(--gold); }
@@ -609,14 +612,25 @@ function renderTimeline() {
     const isCurrent= sessionActive && h === curHour;
     const actual   = actualDrinks[h] !== undefined ? actualDrinks[h] : null;
 
+    // For past hours, check if actual BAC was in zone
+    const actualBac = isPast ? (() => {
+      const comp = [];
+      for (let i = 0; i <= h; i++) comp.push(actualDrinks[i] !== undefined ? actualDrinks[i] : plan[i]);
+      return simulate(comp, ag, profile)[h];
+    })() : null;
+    const wasInZone = isPast && actualBac !== null && actualBac >= bacMin && actualBac <= bacMax;
+
     const block = document.createElement('div');
     block.className = 'hour-block' +
       (isCurrent ? ' current' : '') + (isPast ? ' past' : '') + (inWindow ? ' in-zone' : '');
 
-    const repFlag = replanFlags[h] ? `<span class="replan-badge">replanned</span>` : '';
+    const repFlag    = replanFlags[h] ? `<span class="replan-badge">replanned</span>` : '';
+    const zoneFlag   = wasInZone
+      ? `<span class="inzone-badge" title="In the zone">⭐</span>`
+      : isPast ? `<span class="offzone-badge" title="Outside zone">💧</span>` : '';
     block.innerHTML = `
       <div class="hour-top">
-        <div><div class="hour-label">Hour ${h+1} ${repFlag}</div><div class="hour-time">${fmt(start,h)} – ${fmt(start,h+1)}</div></div>
+        <div><div class="hour-label">Hour ${h+1} ${repFlag}${zoneFlag}</div><div class="hour-time">${fmt(start,h)} – ${fmt(start,h+1)}</div></div>
         <div class="hour-bar-wrap"><div class="hour-bar-fill" style="width:${pct}%;background:${barBg(projBac,bacMin,bacMax)}"></div></div>
         <div class="hour-bac-val" style="color:${clr(projBac,bacMin,bacMax)}">${projBac.toFixed(3)}</div>
       </div>`;
@@ -911,7 +925,7 @@ function loadSavedSession() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
     const s = JSON.parse(raw);
-    if ((Date.now() - s.sessionStartTs) / 3600000 > (s.hours + 2)) { clearSavedSession(); return false; }
+    if ((Date.now() - s.sessionStartTs) / 3600000 > (s.hours + 1)) { clearSavedSession(); return false; }
 
     document.getElementById('drinkOz').value    = s.drinkOz;
     document.getElementById('drinkAbv').value   = s.drinkAbv;
@@ -941,7 +955,9 @@ function loadSavedSession() {
 
 function checkHourTransitions() {
   const curHour = getCurrentHour();
-  for (let h = 0; h < curHour; h++) if (actualDrinks[h] === undefined) actualDrinks[h] = plan[h];
+  for (let h = 0; h < curHour; h++) {
+    if (actualDrinks[h] === undefined) actualDrinks[h] = 0; // no log = no drinks, not plan
+  }
   saveSession();
 }
 
