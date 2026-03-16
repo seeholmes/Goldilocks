@@ -464,10 +464,12 @@ function onUnitsChange() {
 }
 
 function updateWidmarkChip(p, a) {
-  const db = bpd(a, p);
+  // Always display BAC per 1 standard drink for the profile chip — not per configured drink
+  const stdBpd = bpd(STD_DRINK_G, p);
+  const thisBpd = bpd(a, p);
   document.getElementById('wR').textContent     = p.r.toFixed(2);
   document.getElementById('wKg').textContent    = p.weightKg.toFixed(1);
-  document.getElementById('wBpd').textContent   = db.toFixed(4);
+  document.getElementById('wBpd').textContent   = stdBpd.toFixed(4);
   document.getElementById('wMetab').textContent = p.metab.toFixed(3);
 }
 
