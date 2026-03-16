@@ -285,6 +285,7 @@
             <option value="8|10.0">Cocktail — Approx (8oz, 10%)</option>
           </optgroup>
           <option value="custom">Custom →</option>
+          <optgroup label="─── My Drinks ───" id="myDrinksGroup" style="display:none"></optgroup>
         </select>
       </div>
     </div>
@@ -299,6 +300,14 @@
       </div>
     </div>
     <div class="pure-alc-note">Pure alcohol per drink: <span id="pureAlcDisplay">—</span></div>
+    <!-- Save as named drink -->
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+      <div class="input-wrap" style="flex:1">
+        <input type="text" id="saveDrinkName" placeholder="name this drink" maxlength="28"
+          style="background:transparent;border:none;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;padding:9px 12px;width:100%;outline:none;">
+      </div>
+      <button onclick="saveCustomDrink()" style="padding:9px 16px;background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.3);border-radius:7px;color:var(--gold2);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;white-space:nowrap;transition:all 0.2s" onmouseover="this.style.background='rgba(245,200,66,0.16)'" onmouseout="this.style.background='rgba(245,200,66,0.08)'">Save Drink</button>
+    </div>
     <div style="margin-top:12px;display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--deep);border:1px solid var(--border);border-radius:7px;cursor:pointer" onclick="toggleFasted()">
       <div id="fastedBox" style="width:16px;height:16px;border:1px solid var(--muted);border-radius:4px;flex-shrink:0;transition:all 0.2s;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--space)"></div>
       <span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">Drinking on an empty stomach</span>
@@ -971,10 +980,67 @@ function toggleFasted() {
 function applyPreset() {
   const val = document.getElementById('drinkPreset').value;
   if (!val || val === 'custom') return;
+  // custom drinks stored as "custom:name"
+  if (val.startsWith('custom:')) {
+    const name = val.slice(7);
+    let drinks = {};
+    try { drinks = JSON.parse(localStorage.getItem('goldilocks_drinks') || '{}'); } catch(e) {}
+    const d = drinks[name];
+    if (d) {
+      document.getElementById('drinkOz').value  = d.oz;
+      document.getElementById('drinkAbv').value = d.abv;
+      document.getElementById('saveDrinkName').value = name;
+      update();
+    }
+    return;
+  }
   const [oz, abv] = val.split('|');
   document.getElementById('drinkOz').value  = oz;
   document.getElementById('drinkAbv').value = abv;
   update();
+}
+
+const DRINKS_KEY = 'goldilocks_drinks';
+
+function saveCustomDrink() {
+  const name = (document.getElementById('saveDrinkName').value || '').trim();
+  if (!name) { document.getElementById('saveDrinkName').focus(); return; }
+  const oz  = parseFloat(document.getElementById('drinkOz').value);
+  const abv = parseFloat(document.getElementById('drinkAbv').value);
+  if (!oz || !abv) return;
+
+  let drinks = {};
+  try { drinks = JSON.parse(localStorage.getItem(DRINKS_KEY) || '{}'); } catch(e) {}
+  drinks[name] = { oz, abv };
+  try { localStorage.setItem(DRINKS_KEY, JSON.stringify(drinks)); } catch(e) { return; }
+
+  loadCustomDrinks();
+  // Select the newly saved drink in the dropdown
+  document.getElementById('drinkPreset').value = `custom:${name}`;
+
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(245,200,66,0.12);border:1px solid rgba(245,200,66,0.4);color:var(--gold);font-family:Space Mono,monospace;font-size:10px;letter-spacing:0.1em;padding:10px 18px;border-radius:8px;z-index:999;text-transform:uppercase;';
+  toast.textContent = `✦ "${name}" saved`;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
+}
+
+function loadCustomDrinks() {
+  let drinks = {};
+  try { drinks = JSON.parse(localStorage.getItem(DRINKS_KEY) || '{}'); } catch(e) {}
+  const group = document.getElementById('myDrinksGroup');
+  if (!group) return;
+  group.innerHTML = '';
+  const names = Object.keys(drinks);
+  if (names.length === 0) { group.style.display = 'none'; return; }
+  group.style.display = '';
+  names.forEach(name => {
+    const d   = drinks[name];
+    const opt = document.createElement('option');
+    opt.value       = `custom:${name}`;
+    opt.textContent = `${name} (${d.oz}oz, ${d.abv}%)`;
+    group.appendChild(opt);
+  });
 }
 
 // ── Wake recovery ─────────────────────────────────────────────
@@ -1135,6 +1201,7 @@ function loadTheme() {
   loadCalibratedProfiles();
   loadTheme();
   renderThemePicker();
+  loadCustomDrinks();
   const restored = loadSavedSession();
   if (restored) {
     sessionActive = true;
