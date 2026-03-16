@@ -240,6 +240,14 @@
           </div>
         </div>
       </div>
+      <!-- Save as named profile -->
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+        <div class="input-wrap blue-focus" style="flex:1">
+          <input type="text" id="saveProfileName" placeholder="name this profile" maxlength="24"
+            style="background:transparent;border:none;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;padding:9px 12px;width:100%;outline:none;">
+        </div>
+        <button onclick="saveCustomProfile()" style="padding:9px 16px;background:rgba(126,184,255,0.1);border:1px solid rgba(126,184,255,0.3);border-radius:7px;color:var(--blue);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;white-space:nowrap;transition:all 0.2s" onmouseover="this.style.background='rgba(126,184,255,0.18)'" onmouseout="this.style.background='rgba(126,184,255,0.1)'">Save Profile</button>
+      </div>
     </div>
 
     <!-- Widmark chip — always visible -->
@@ -973,6 +981,60 @@ function applyPreset() {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && sessionActive) { checkHourTransitions(); updateLiveBac(); renderTimeline(); }
 });
+
+function saveCustomProfile() {
+  const name = (document.getElementById('saveProfileName').value || '').trim();
+  if (!name) {
+    document.getElementById('saveProfileName').focus();
+    return;
+  }
+
+  const p = getActiveProfile();
+  const newProfile = {
+    name,
+    weightKg:   p.weightKg,
+    r:          p.r,
+    risePerStd: p.risePerStd || (p.weightKg * p.r * 1000 * 0.015 / 100), // Widmark-derived default
+    metab:      p.metab,
+    useWidmark: true,
+    sessions:   0,
+    confidence: 'widmark',
+    calibratedAt: new Date().toISOString().slice(0, 10),
+  };
+
+  let profiles = {};
+  try { profiles = JSON.parse(localStorage.getItem('goldilocks_profiles') || '{}'); } catch(e) {}
+  profiles[name] = newProfile;
+  try { localStorage.setItem('goldilocks_profiles', JSON.stringify(profiles)); } catch(e) {
+    alert('Could not save — localStorage unavailable.'); return;
+  }
+
+  // Add to PROFILES map and dropdown
+  PROFILES[name] = { ...newProfile };
+  const sel = document.getElementById('profileSelect');
+  const existing = sel.querySelector(`option[value="${name}"]`);
+  if (existing) {
+    existing.textContent = name;
+  } else {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    const customOpt = sel.querySelector('option[value="custom"]');
+    sel.insertBefore(opt, customOpt);
+  }
+
+  // Switch to the new profile
+  sel.value = name;
+  applyProfile();
+  document.getElementById('saveProfileName').value = '';
+
+  // Toast
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(126,184,255,0.12);border:1px solid rgba(126,184,255,0.35);color:#7eb8ff;font-family:Space Mono,monospace;font-size:10px;letter-spacing:0.1em;padding:10px 18px;border-radius:8px;z-index:999;text-transform:uppercase;';
+  toast.textContent = `✦ Profile "${name}" saved`;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
+}
 
 // ── Load calibrated profiles from training app ────────────────
 function loadCalibratedProfiles() {
