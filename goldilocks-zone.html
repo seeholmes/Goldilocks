@@ -209,11 +209,14 @@
     <div class="sec blue">Profile</div>
     <div>
       <span class="field-label">Who's drinking</span>
-      <div class="select-wrap blue-focus">
-        <select id="profileSelect" onchange="applyProfile()">
-          <option value="seeholmes">seeholmes</option>
-          <option value="custom">Custom</option>
-        </select>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="select-wrap blue-focus" style="flex:1">
+          <select id="profileSelect" onchange="applyProfile(); updateProfileTrash()">
+            <option value="seeholmes">seeholmes</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <button id="profileTrashBtn" onclick="deleteProfile()" title="Delete profile" style="display:none;padding:9px 12px;background:rgba(255,90,90,0.08);border:1px solid rgba(255,90,90,0.25);border-radius:7px;color:var(--danger);font-size:14px;cursor:pointer;transition:all 0.2s;flex-shrink:0" onmouseover="this.style.background='rgba(255,90,90,0.18)'" onmouseout="this.style.background='rgba(255,90,90,0.08)'">🗑</button>
       </div>
     </div>
 
@@ -264,29 +267,32 @@
     <div class="sec">Your Drink</div>
     <div style="margin-bottom:10px">
       <span class="field-label">Quick Select</span>
-      <div class="select-wrap">
-        <select id="drinkPreset" onchange="applyPreset()">
-          <option value="">— choose a preset —</option>
-          <optgroup label="Beer">
-            <option value="12|4.2">Beer — Can (12oz, 4.2%)</option>
-            <option value="12|5.0">Beer — Can (12oz, 5.0%)</option>
-            <option value="16|5.0">Beer — Pint (16oz, 5.0%)</option>
-            <option value="16|6.5">Beer — Pint IPA (16oz, 6.5%)</option>
-            <option value="20|5.0">Beer — Imperial Pint (20oz, 5.0%)</option>
-          </optgroup>
-          <optgroup label="Wine">
-            <option value="5|12.0">Wine — Standard Pour (5oz, 12%)</option>
-            <option value="6|13.5">Wine — Generous Pour (6oz, 13.5%)</option>
-            <option value="3|18.0">Wine — Fortified / Port (3oz, 18%)</option>
-          </optgroup>
-          <optgroup label="Spirits">
-            <option value="1.5|40.0">Shot (1.5oz, 40%)</option>
-            <option value="2|40.0">Double Shot (2oz, 40%)</option>
-            <option value="8|10.0">Cocktail — Approx (8oz, 10%)</option>
-          </optgroup>
-          <option value="custom">Custom →</option>
-          <optgroup label="─── My Drinks ───" id="myDrinksGroup" style="display:none"></optgroup>
-        </select>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="select-wrap" style="flex:1">
+          <select id="drinkPreset" onchange="applyPreset(); updateDrinkTrash()">
+            <option value="">— choose a preset —</option>
+            <optgroup label="Beer">
+              <option value="12|4.2">Beer — Can (12oz, 4.2%)</option>
+              <option value="12|5.0">Beer — Can (12oz, 5.0%)</option>
+              <option value="16|5.0">Beer — Pint (16oz, 5.0%)</option>
+              <option value="16|6.5">Beer — Pint IPA (16oz, 6.5%)</option>
+              <option value="20|5.0">Beer — Imperial Pint (20oz, 5.0%)</option>
+            </optgroup>
+            <optgroup label="Wine">
+              <option value="5|12.0">Wine — Standard Pour (5oz, 12%)</option>
+              <option value="6|13.5">Wine — Generous Pour (6oz, 13.5%)</option>
+              <option value="3|18.0">Wine — Fortified / Port (3oz, 18%)</option>
+            </optgroup>
+            <optgroup label="Spirits">
+              <option value="1.5|40.0">Shot (1.5oz, 40%)</option>
+              <option value="2|40.0">Double Shot (2oz, 40%)</option>
+              <option value="8|10.0">Cocktail — Approx (8oz, 10%)</option>
+            </optgroup>
+            <option value="custom">Custom →</option>
+            <optgroup label="─── My Drinks ───" id="myDrinksGroup" style="display:none"></optgroup>
+          </select>
+        </div>
+        <button id="drinkTrashBtn" onclick="deleteCustomDrink()" title="Delete drink" style="display:none;padding:9px 12px;background:rgba(255,90,90,0.08);border:1px solid rgba(255,90,90,0.25);border-radius:7px;color:var(--danger);font-size:14px;cursor:pointer;transition:all 0.2s;flex-shrink:0" onmouseover="this.style.background='rgba(255,90,90,0.18)'" onmouseout="this.style.background='rgba(255,90,90,0.08)'">🗑</button>
       </div>
     </div>
     <div class="row2">
@@ -463,8 +469,61 @@ function onUnitsChange() {
   update();
 }
 
+function updateProfileTrash() {
+  const val = document.getElementById('profileSelect').value;
+  const btn = document.getElementById('profileTrashBtn');
+  // Only show trash for user-saved profiles, not built-ins
+  const isBuiltIn = val === 'seeholmes' || val === 'custom';
+  btn.style.display = isBuiltIn ? 'none' : 'block';
+}
+
+function deleteProfile() {
+  const sel  = document.getElementById('profileSelect');
+  const name = sel.value;
+  if (!name || name === 'seeholmes' || name === 'custom') return;
+  if (!confirm(`Delete profile "${name}"?`)) return;
+
+  // Remove from localStorage
+  let profiles = {};
+  try { profiles = JSON.parse(localStorage.getItem('goldilocks_profiles') || '{}'); } catch(e) {}
+  delete profiles[name];
+  try { localStorage.setItem('goldilocks_profiles', JSON.stringify(profiles)); } catch(e) {}
+
+  // Remove from PROFILES map and dropdown
+  delete PROFILES[name];
+  const opt = sel.querySelector(`option[value="${name}"]`);
+  if (opt) opt.remove();
+
+  // Fall back to seeholmes
+  sel.value = 'seeholmes';
+  applyProfile();
+  updateProfileTrash();
+}
+
+function updateDrinkTrash() {
+  const val = document.getElementById('drinkPreset').value;
+  const btn = document.getElementById('drinkTrashBtn');
+  btn.style.display = val.startsWith('custom:') ? 'block' : 'none';
+}
+
+function deleteCustomDrink() {
+  const val  = document.getElementById('drinkPreset').value;
+  if (!val.startsWith('custom:')) return;
+  const name = val.slice(7);
+  if (!confirm(`Delete drink "${name}"?`)) return;
+
+  let drinks = {};
+  try { drinks = JSON.parse(localStorage.getItem(DRINKS_KEY) || '{}'); } catch(e) {}
+  delete drinks[name];
+  try { localStorage.setItem(DRINKS_KEY, JSON.stringify(drinks)); } catch(e) {}
+
+  // Reset dropdown and reload
+  document.getElementById('drinkPreset').value = '';
+  loadCustomDrinks();
+  updateDrinkTrash();
+}
+
 function updateWidmarkChip(p, a) {
-  // Always display BAC per 1 standard drink for the profile chip — not per configured drink
   const stdBpd = bpd(STD_DRINK_G, p);
   const thisBpd = bpd(a, p);
   document.getElementById('wR').textContent     = p.r.toFixed(2);
@@ -1204,6 +1263,8 @@ function loadTheme() {
   loadTheme();
   renderThemePicker();
   loadCustomDrinks();
+  updateProfileTrash();
+  updateDrinkTrash();
   const restored = loadSavedSession();
   if (restored) {
     sessionActive = true;
