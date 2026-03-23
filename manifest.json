@@ -1,0 +1,13 @@
+{
+  "name": "Goldilocks",
+  "short_name": "Goldilocks",
+  "description": "BAC planning — not too much, not too little, just right",
+  "start_url": "/Goldilocks/goldilocks-zone.html",
+  "scope": "/Goldilocks/",
+  "display": "standalone",
+  "background_color": "#08090d",
+  "theme_color": "#08090d",
+  "icons": [
+    { "src": "/Goldilocks/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}

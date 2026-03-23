@@ -1,0 +1,13 @@
+{
+  "name": "Goldilocks Training",
+  "short_name": "GL Training",
+  "description": "Calibrate your BAC curve with the Goldilocks Training Protocol",
+  "start_url": "/Goldilocks/goldilocks-training.html",
+  "scope": "/Goldilocks/",
+  "display": "standalone",
+  "background_color": "#08090d",
+  "theme_color": "#08090d",
+  "icons": [
+    { "src": "/Goldilocks/apple-touch-icon-training.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}
