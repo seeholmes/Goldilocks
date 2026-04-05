@@ -965,7 +965,7 @@ function startSession() {
   profile        = getActiveProfile();
   ag             = getAlcGrams();
   sessionActive  = true;
-  sessionStartTs = Date.now();
+  sessionStartTs = getStart().getTime(); // anchor to configured start time
   actualDrinks   = new Array(hours).fill(undefined);
   replanFlags    = new Array(hours).fill(false);
   activateSessionUI();
