@@ -121,32 +121,30 @@
   .sum-pill.ending { border-color:rgba(126,184,255,0.25); }
   .sum-pill.ending .sum-val { color:var(--blue); }
 
-  /* Timeline */
-  .hour-block { border:1px solid var(--border); border-radius:9px; margin-bottom:6px; overflow:hidden; transition:border-color 0.3s; }
-  .hour-block.current { border-color:var(--blue2); box-shadow:0 0 0 1px rgba(126,184,255,0.15); }
-  .hour-block.past    { opacity:0.65; }
-  .hour-block.has-drinks { border-color:rgba(126,184,255,0.25); }
-  .hour-top { display:grid; grid-template-columns:72px 1fr 56px; gap:8px; align-items:center; padding:9px 12px; background:var(--deep); }
-  .hour-block.current .hour-top { background:rgba(126,184,255,0.04); }
-  .hour-label { font-size:12px; color:var(--text); }
-  .hour-time  { font-size:9px; color:var(--muted); margin-top:2px; }
-  .hour-bac-val { text-align:right; font-size:12px; font-variant-numeric:tabular-nums; }
-  .hour-bar-wrap { height:3px; background:var(--space); overflow:hidden; }
-  .hour-bar-fill { height:100%; transition:width 0.5s ease, background 0.3s; }
-  .drink-slots { display:flex; align-items:center; gap:6px; padding:10px 12px; flex-wrap:wrap; }
-  .slot { width:34px; height:34px; border-radius:7px; border:1px solid var(--border); background:var(--space); display:flex; align-items:center; justify-content:center; font-size:16px; cursor:default; transition:all 0.15s; user-select:none; }
-  .slot.planned { border-color:rgba(126,184,255,0.5); background:rgba(126,184,255,0.06); }
-  .slot.consumed { border-color:var(--blue); background:rgba(126,184,255,0.18); box-shadow:0 0 8px rgba(126,184,255,0.2); }
-  .slot.extra { border-color:var(--amber); background:rgba(255,140,58,0.15); box-shadow:0 0 8px rgba(255,140,58,0.2); }
-  .slot.reserve { border-color:var(--border); background:transparent; opacity:0.4; }
-  .slot.reserve.live { opacity:0.7; cursor:pointer; }
-  .slot.reserve.live:hover { border-color:var(--blue2); background:rgba(126,184,255,0.05); opacity:1; }
-  .slot.planned.live { cursor:pointer; }
-  .slot.planned.live:hover { border-color:var(--blue); box-shadow:0 0 12px rgba(126,184,255,0.3); }
-  .current-indicator { display:none; align-items:center; gap:8px; padding:0 12px 10px; }
-  .hour-block.current .current-indicator { display:flex; }
-  .time-ring { width:100%; height:3px; background:var(--border); border-radius:100px; overflow:hidden; }
-  .time-ring-fill { height:100%; background:linear-gradient(90deg,var(--blue2),var(--blue)); border-radius:100px; transition:width 1s linear; }
+  /* Vertical drink timeline */
+  .drink-timeline { padding: 4px 0 0; }
+  .dte { display:flex; align-items:flex-start; gap:10px; position:relative; }
+  .dte-track { display:flex; flex-direction:column; align-items:center; flex-shrink:0; width:20px; }
+  .dte-dot { width:14px; height:14px; border-radius:50%; border:2px solid var(--muted); background:var(--space); flex-shrink:0; transition:all 0.25s; }
+  .dte.done .dte-dot  { background:var(--blue2); border-color:var(--blue); box-shadow:0 0 6px rgba(126,184,255,0.35); }
+  .dte.next .dte-dot  { border-color:var(--blue); box-shadow:0 0 10px rgba(126,184,255,0.4); animation:dotPulse 1.8s ease-in-out infinite; }
+  .dte.extra .dte-dot { background:var(--amber); border-color:var(--amber); }
+  @keyframes dotPulse { 0%,100%{box-shadow:0 0 6px rgba(126,184,255,0.3)} 50%{box-shadow:0 0 14px rgba(126,184,255,0.7)} }
+  .dte-connector { width:2px; flex:1; min-height:22px; background:var(--border); margin:3px 0; }
+  .dte-time { font-size:11px; color:var(--muted); width:64px; flex-shrink:0; padding-top:1px; font-variant-numeric:tabular-nums; }
+  .dte.done .dte-time { color:var(--blue2); }
+  .dte-body { flex:1; padding-bottom:22px; }
+  .dte-label { font-size:12px; color:var(--text); }
+  .dte.done .dte-label  { color:var(--muted); }
+  .dte.next .dte-label  { color:var(--blue); }
+  .dte.extra .dte-label { color:var(--amber); }
+  .dte-sub { font-size:9px; color:var(--muted); margin-top:3px; letter-spacing:0.05em; }
+  .dte.tappable { cursor:pointer; }
+  .dte.tappable:active .dte-dot { transform:scale(1.3); }
+  /* Now line */
+  .dt-now { display:flex; align-items:center; gap:8px; padding:10px 0 10px 30px; }
+  .dt-now-line { flex:1; height:1px; background:linear-gradient(90deg,var(--blue2),transparent); }
+  .dt-now-label { font-size:9px; letter-spacing:0.15em; text-transform:uppercase; color:var(--blue2); white-space:nowrap; }
 
   /* Schedule note */
   .schedule-note { font-size:10px; color:var(--muted); text-align:center; padding:12px 0 2px; border-top:1px solid var(--border); margin-top:10px; line-height:1.6; }
@@ -287,22 +285,16 @@
   <!-- Cruise settings -->
   <div class="card">
     <div class="sec">Cruise Settings</div>
-    <div class="row2" style="margin-bottom:14px">
-      <div>
-        <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue2);opacity:0.8;margin-bottom:14px">Mission Duration</div>
-        <input type="range" id="duration" min="1" max="8" step="1" value="4">
-        <div class="slider-labels"><span>1h</span><span>4h</span><span>8h</span></div>
-        <div style="font-family:'Anybody',sans-serif;font-size:24px;font-weight:400;color:var(--blue);margin-top:8px" id="durationVal">4 hours</div>
-      </div>
-      <div>
-        <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue2);opacity:0.8;margin-bottom:14px">Launch Time</div>
-        <div class="input-wrap"><input type="time" id="startTime" value="20:00"></div>
-      </div>
+    <div style="margin-bottom:18px">
+      <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue2);opacity:0.8;margin-bottom:14px">Mission Duration</div>
+      <input type="range" id="duration" min="1" max="8" step="1" value="4">
+      <div class="slider-labels"><span>1h</span><span>4h</span><span>8h</span></div>
+      <div style="font-family:'Anybody',sans-serif;font-size:24px;font-weight:400;color:var(--blue);margin-top:8px" id="durationVal">4 hours</div>
     </div>
     <div>
       <span class="field-label">Target Ending BAC</span>
       <div class="input-wrap"><input type="number" id="bacEnd" value="0.04" min="0.00" max="0.20" step="0.01"></div>
-      <div style="font-size:9px;color:var(--muted);margin-top:7px;line-height:1.6">Drinks will be evenly spaced so your BAC arrives at this value by the end of your last hour.</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:7px;line-height:1.6">Drinks are evenly spaced · session starts when you tap Launch.</div>
     </div>
   </div>
 
@@ -353,16 +345,17 @@ const STD_DRINK_G = 0.6 * 29.5735 * 0.789;
 const MAX_SLOTS   = 6;
 const STORAGE_KEY = 'goldilocks_cruise_session';
 
-let sessionActive  = false;
-let sessionStartTs = null;
-let actualDrinks   = [];
-let plan           = [];
-let drinkTimes     = [];   // exact hour offsets for each drink (continuous)
-let ag             = 0;
-let profile        = PROFILES.seeholmes;
-let bacEnd         = 0.04;
-let hours          = 4;
-let clockInterval  = null;
+let sessionActive    = false;
+let sessionStartTs   = null;
+let plan             = [];   // hourly drink counts (for BAC simulation)
+let drinkSchedule    = [];   // per-drink timestamps (planned)
+let actualDrinkTimes = [];   // per-drink timestamps (actual), null if not yet logged
+let drinkTimes       = [];   // kept for save-compat, unused
+let ag               = 0;
+let profile          = PROFILES.seeholmes;
+let bacEnd           = 0.04;
+let hours            = 4;
+let clockInterval    = null;
 
 // ── Profile helpers ───────────────────────────────────────────
 function getActiveProfile() {
@@ -516,17 +509,22 @@ function statusText(liveBac) {
   return 'Slightly below target';
 }
 
-function fmt(base, off) {
-  const d = new Date(base.getTime() + off * 3600000);
+function fmtTs(ts) {
+  const d = new Date(ts);
   let h = d.getHours(), m = d.getMinutes();
   const ap = h >= 12 ? 'pm' : 'am';
   h = h % 12 || 12;
-  return m === 0 ? `${h}${ap}` : `${h}:${m.toString().padStart(2,'0')}${ap}`;
+  return m === 0 ? `${h} ${ap}` : `${h}:${m.toString().padStart(2,'0')} ${ap}`;
+}
+
+function fmtOffset(ms) {
+  const totalMin = Math.round(ms / 60000);
+  const h = Math.floor(totalMin / 60), m = totalMin % 60;
+  return h > 0 ? (m > 0 ? `+${h}h ${m}m` : `+${h}h`) : `+${m}m`;
 }
 
 function getStart() {
-  const [h,m] = document.getElementById('startTime').value.split(':').map(Number);
-  const d = new Date(); d.setHours(h,m,0,0); return d;
+  return sessionStartTs ? new Date(sessionStartTs) : new Date();
 }
 
 function getCurrentHour() {
@@ -540,79 +538,102 @@ function getFracThroughHour() {
   return e - Math.floor(e);
 }
 
+// Build per-drink schedule: n evenly-spaced timestamps starting from startTs
+function initDrinkSchedule(n, startTs, durationMs) {
+  const spacing = n > 1 ? durationMs / n : durationMs;
+  return Array.from({length: n}, (_, i) => startTs + i * spacing);
+}
+
+// Rebuild hourly plan from current drinkSchedule + actualDrinkTimes
+function rebuildPlan() {
+  plan = new Array(hours).fill(0);
+  for (let i = 0; i < drinkSchedule.length; i++) {
+    const ts = actualDrinkTimes[i] !== null ? actualDrinkTimes[i] : drinkSchedule[i];
+    const h  = Math.max(0, Math.min(hours - 1, Math.floor((ts - sessionStartTs) / 3600000)));
+    plan[h]++;
+  }
+}
+
 // ── Render ────────────────────────────────────────────────────
 function renderTimeline() {
-  const start    = getStart();
-  const effectivePlan = plan.map((p, h) => actualDrinks[h] !== undefined ? actualDrinks[h] : p);
-  const trace    = simulate(effectivePlan, ag, profile);
-  const maxBac   = Math.max(...trace, bacEnd * 1.3, 0.05);
-  const curHour  = getCurrentHour();
-  const tlEl     = document.getElementById('timeline');
+  const tlEl = document.getElementById('timeline');
   tlEl.innerHTML = '';
+  if (!drinkSchedule.length) return;
 
-  plan.forEach((planned, h) => {
-    const projBac  = trace[h];
-    const pct      = Math.min(100, (projBac / maxBac) * 100);
-    const isPast   = sessionActive && h < curHour;
-    const isCurrent= sessionActive && h === curHour;
-    const actual   = actualDrinks[h] !== undefined ? actualDrinks[h] : null;
+  const now        = Date.now();
+  const startTs    = sessionActive ? sessionStartTs : now;
+  const endTs      = startTs + hours * 3600000;
+  const nowInserted = !sessionActive; // planning mode: no "now" line needed
 
-    const block = document.createElement('div');
-    block.className = 'hour-block' +
-      (isCurrent  ? ' current'   : '') +
-      (isPast     ? ' past'      : '') +
-      (planned > 0 ? ' has-drinks' : '');
+  // Build BAC trace from effective plan for projected BAC labels
+  const effectivePlan = sessionActive ? (() => {
+    const p = new Array(hours).fill(0);
+    for (let i = 0; i < drinkSchedule.length; i++) {
+      const ts = actualDrinkTimes[i] !== null ? actualDrinkTimes[i] : drinkSchedule[i];
+      const h  = Math.max(0, Math.min(hours - 1, Math.floor((ts - startTs) / 3600000)));
+      p[h]++;
+    }
+    return p;
+  })() : plan;
+  const trace = simulate(effectivePlan, ag, profile);
 
-    block.innerHTML = `
-      <div class="hour-top">
-        <div><div class="hour-label">Hour ${h+1}</div><div class="hour-time">${fmt(start,h)} – ${fmt(start,h+1)}</div></div>
-        <div class="hour-bar-wrap"><div class="hour-bar-fill" style="width:${pct}%;background:${barBg(projBac)}"></div></div>
-        <div class="hour-bac-val" style="color:${clrBac(projBac)}">${projBac.toFixed(3)}</div>
+  let nowLineAdded = nowInserted;
+
+  drinkSchedule.forEach((schTs, i) => {
+    const actualTs  = actualDrinkTimes[i];
+    const isLogged  = actualTs !== null;
+    const displayTs = isLogged ? actualTs : schTs;
+    const isNext    = sessionActive && !isLogged && (i === 0 || actualDrinkTimes[i - 1] !== null);
+    const isExtra   = isLogged && schTs > now + 300000; // logged way early
+
+    // Insert NOW line just before the first unlogged future drink
+    if (!nowLineAdded && sessionActive && !isLogged) {
+      nowLineAdded = true;
+      const nowDiv = document.createElement('div');
+      nowDiv.className = 'dt-now';
+      nowDiv.innerHTML = `<div class="dt-now-label">now</div><div class="dt-now-line"></div>`;
+      tlEl.appendChild(nowDiv);
+    }
+
+    // BAC at this drink's hour
+    const drinkHour = Math.max(0, Math.min(hours - 1, Math.floor((displayTs - startTs) / 3600000)));
+    const projBac   = trace[drinkHour];
+
+    const dte = document.createElement('div');
+    dte.className = 'dte' +
+      (isLogged ? (isExtra ? ' extra' : ' done') : '') +
+      (isNext   ? ' next' : '') +
+      (isNext   ? ' tappable' : (!isLogged && sessionActive ? ' tappable' : ''));
+
+    const timeStr = sessionActive
+      ? fmtTs(displayTs)
+      : fmtOffset(schTs - startTs);
+
+    let sublabel = '';
+    if (isLogged && isExtra)        sublabel = 'logged early';
+    else if (isLogged)              sublabel = 'done';
+    else if (isNext)                sublabel = 'tap to log';
+    else if (!sessionActive && i === drinkSchedule.length - 1)
+                                    sublabel = `ending BAC ${projBac.toFixed(3)}`;
+    else if (!sessionActive)        sublabel = '';
+    else                            sublabel = 'upcoming';
+
+    dte.innerHTML = `
+      <div class="dte-time">${timeStr}</div>
+      <div class="dte-track">
+        <div class="dte-dot"></div>
+        ${i < drinkSchedule.length - 1 ? '<div class="dte-connector"></div>' : ''}
+      </div>
+      <div class="dte-body">
+        <div class="dte-label">Drink ${i + 1}</div>
+        ${sublabel ? `<div class="dte-sub">${sublabel}</div>` : ''}
       </div>`;
 
-    const slotsDiv = document.createElement('div');
-    slotsDiv.className = 'drink-slots';
-
-    for (let s = 0; s < MAX_SLOTS; s++) {
-      const slot = document.createElement('div');
-      const isConsumed = actual !== null && s < actual;
-      const isPlanned  = s < planned;
-      if      (isConsumed && isPlanned)  slot.className = 'slot consumed';
-      else if (isConsumed && !isPlanned) slot.className = 'slot extra';
-      else if (isPlanned && !isConsumed) slot.className = 'slot planned' + (isCurrent ? ' live' : '');
-      else                               slot.className = 'slot reserve' + (isCurrent ? ' live' : '');
-      slot.textContent = (isConsumed || isPlanned || isCurrent) ? '🍺' : '';
-      if (!isConsumed && !isPlanned) slot.textContent = '';
-      if (isCurrent) slot.addEventListener('click', () => logDrink(h, s + 1));
-      slotsDiv.appendChild(slot);
+    if (!isLogged && sessionActive) {
+      dte.addEventListener('click', () => logDrink(i));
     }
 
-    const legend = document.createElement('div');
-    legend.style.cssText = 'font-size:9px;color:var(--muted);margin-left:4px;line-height:1.5;';
-    if (isCurrent) {
-      const c = actual !== null ? actual : 0;
-      legend.innerHTML = `<span style="color:var(--blue)">${c}</span>/${planned} planned`;
-    } else if (isPast) {
-      const c = actual !== null ? actual : 0;
-      legend.innerHTML = `<span style="color:${c > planned ? 'var(--amber)':'var(--blue2)'}">${c} had</span> · ${planned} planned`;
-    } else {
-      legend.innerHTML = `<span style="color:var(--blue2)">${planned}</span> planned`;
-    }
-    slotsDiv.appendChild(legend);
-    block.appendChild(slotsDiv);
-
-    if (isCurrent) {
-      const frac = getFracThroughHour();
-      const prog = document.createElement('div');
-      prog.className = 'current-indicator';
-      prog.innerHTML = `
-        <span style="color:var(--blue2);font-size:9px;white-space:nowrap">Hour in progress</span>
-        <div class="time-ring"><div class="time-ring-fill" id="timeRingFill" style="width:${frac*100}%"></div></div>
-        <span style="color:var(--muted);font-size:9px;white-space:nowrap">${Math.round(frac*60)}m</span>`;
-      block.appendChild(prog);
-    }
-
-    tlEl.appendChild(block);
+    tlEl.appendChild(dte);
   });
 }
 
@@ -625,47 +646,30 @@ function update() {
   updateWidmarkChip(profile, ag);
 
   const result = buildCruisePlan(ag, profile, hours, bacEnd);
+  plan         = result.plan;
 
-  const warnEl     = document.getElementById('warnNote');
-  const schedNote  = document.getElementById('scheduleNote');
-
-  if (!result.achievable) {
-    plan = new Array(hours).fill(0);
-    drinkTimes = [];
-    document.getElementById('summaryTotal').textContent   = '—';
-    document.getElementById('summarySpacing').textContent = '—';
-    document.getElementById('summaryEnding').textContent  = '—';
-    warnEl.style.display = 'block';
-    warnEl.textContent   = '⚠ Not achievable — each drink metabolizes away before session end. Try a stronger drink, larger pour, or shorter duration.';
-    schedNote.innerHTML  = '';
-    if (!sessionActive) {
-      actualDrinks = new Array(hours).fill(undefined);
-    }
-    renderTimeline();
-    return;
-  }
-
-  warnEl.style.display = 'none';
-  plan       = result.plan;
-
-  if (!sessionActive) {
-    actualDrinks = new Array(hours).fill(undefined);
-  }
-
-  const total = result.n;
-  const trace = simulate(plan, ag, profile);
-  const projEnd = trace[hours - 1];
+  const total    = result.n;
+  const trace    = simulate(plan, ag, profile);
+  const projEnd  = trace[hours - 1];
 
   document.getElementById('summaryTotal').textContent   = total > 0 ? total : '0';
   document.getElementById('summarySpacing').textContent = total > 1 ? fmtSpacing(result.spacing) : '—';
   document.getElementById('summaryEnding').textContent  = projEnd.toFixed(3);
+  document.getElementById('warnNote').style.display     = 'none';
 
+  const schedNote = document.getElementById('scheduleNote');
   if (total > 0) {
-    const drinkNumLabel = total === 1 ? '1 drink' : `${total} drinks`;
-    const spacingLabel  = total > 1 ? `, one every ${fmtSpacing(result.spacing)}` : '';
-    schedNote.innerHTML = `<em>${drinkNumLabel}</em>${spacingLabel} · first drink at T+0 · ending BAC <em>${projEnd.toFixed(3)}</em>`;
+    const spacingLabel = total > 1 ? ` · one every ${fmtSpacing(result.spacing)}` : '';
+    schedNote.innerHTML = `<em>${total} drink${total>1?'s':''}</em>${spacingLabel} · ending BAC <em>${projEnd.toFixed(3)}</em>`;
   } else {
-    schedNote.innerHTML = `No drinks needed to reach <em>${bacEnd.toFixed(3)}</em> — target is at or below zero.`;
+    schedNote.innerHTML = `No drinks needed.`;
+  }
+
+  // Build preview schedule using now as tentative start
+  if (!sessionActive) {
+    const previewStart = Date.now();
+    drinkSchedule      = initDrinkSchedule(total, previewStart, hours * 3600000);
+    actualDrinkTimes   = new Array(total).fill(null);
   }
 
   // Disclaimer
@@ -680,8 +684,23 @@ function update() {
 }
 
 // ── Log drink ─────────────────────────────────────────────────
-function logDrink(hour, upToSlot) {
-  actualDrinks[hour] = upToSlot;
+function logDrink(i) {
+  if (!sessionActive || actualDrinkTimes[i] !== null) return;
+  const now      = Date.now();
+  actualDrinkTimes[i] = now;
+
+  // Reschedule remaining drinks evenly from now to session end
+  const sessionEndTs  = sessionStartTs + hours * 3600000;
+  const remaining     = drinkSchedule.length - (i + 1);
+  if (remaining > 0) {
+    const timeLeft = sessionEndTs - now;
+    const spacing  = timeLeft / remaining;
+    for (let j = i + 1; j < drinkSchedule.length; j++) {
+      drinkSchedule[j] = now + (j - i) * spacing;
+    }
+  }
+
+  rebuildPlan();
   saveSession();
   updateLiveBac();
   renderTimeline();
@@ -693,16 +712,17 @@ function updateLiveBac() {
   const curHour = getCurrentHour();
   const frac    = getFracThroughHour();
 
-  if (curHour > 0 && actualDrinks[curHour - 1] === undefined) {
-    actualDrinks[curHour - 1] = plan[curHour - 1];
-    renderTimeline();
+  // Count actual logged drinks per completed hour and current hour
+  const completed = new Array(Math.max(0, curHour)).fill(0);
+  let curActual   = 0;
+  for (let i = 0; i < actualDrinkTimes.length; i++) {
+    const t = actualDrinkTimes[i];
+    if (t === null) continue;
+    const h = Math.max(0, Math.min(hours - 1, Math.floor((t - sessionStartTs) / 3600000)));
+    if (h < curHour)       completed[h]++;
+    else if (h === curHour) curActual++;
   }
-
-  const completed = [];
-  for (let h = 0; h < curHour; h++)
-    completed.push(actualDrinks[h] !== undefined ? actualDrinks[h] : plan[h]);
-  const curActual = actualDrinks[curHour] !== undefined ? actualDrinks[curHour] : 0;
-  const liveBac   = estimateLiveBac(completed, curActual, frac);
+  const liveBac = estimateLiveBac(completed, curActual, frac);
 
   document.getElementById('liveBacNum').textContent    = liveBac.toFixed(3);
   document.getElementById('liveBacNum').style.color    = clrBac(liveBac);
@@ -713,26 +733,23 @@ function updateLiveBac() {
   document.getElementById('liveBacFill').style.width      = pct + '%';
   document.getElementById('liveBacFill').style.background = barBg(liveBac);
 
-  const rf = document.getElementById('timeRingFill');
-  if (rf) rf.style.width = (frac * 100) + '%';
-
   const now = new Date();
   let hh = now.getHours(), mm = now.getMinutes();
   const ap = hh >= 12 ? 'pm' : 'am'; hh = hh % 12 || 12;
   document.getElementById('liveClockEl').textContent  = `${hh}:${mm.toString().padStart(2,'0')} ${ap}`;
-  document.getElementById('liveHourLbl').textContent  = `Hour ${curHour + 1} of ${hours}`;
+  const logged = actualDrinkTimes.filter(t => t !== null).length;
+  document.getElementById('liveHourLbl').textContent  = `${logged} / ${drinkSchedule.length} drinks`;
 }
 
 // ── Persistence ───────────────────────────────────────────────
 function saveSession() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      sessionStartTs, actualDrinks, plan, drinkTimes,
+      sessionStartTs, plan, drinkSchedule, actualDrinkTimes,
       hours, bacEnd, ag,
       profileName: document.getElementById('profileSelect').value,
       drinkOz:   document.getElementById('drinkOz').value,
       drinkAbv:  document.getElementById('drinkAbv').value,
-      startTime: document.getElementById('startTime').value,
       weight:    document.getElementById('weight').value,
       units:     document.getElementById('units').value,
       sex:       document.getElementById('sex').value,
@@ -752,7 +769,6 @@ function loadSavedSession() {
 
     document.getElementById('drinkOz').value   = s.drinkOz;
     document.getElementById('drinkAbv').value  = s.drinkAbv;
-    document.getElementById('startTime').value = s.startTime;
     document.getElementById('duration').value  = s.hours;
     document.getElementById('durationVal').textContent = s.hours == 1 ? '1 hour' : `${s.hours} hours`;
     document.getElementById('bacEnd').value    = s.bacEnd;
@@ -762,28 +778,24 @@ function loadSavedSession() {
     if (s.sex)    document.getElementById('sex').value = s.sex;
     document.getElementById('customProfileFields').style.display = s.profileName === 'custom' ? 'block' : 'none';
 
-    sessionStartTs = s.sessionStartTs;
-    actualDrinks   = s.actualDrinks;
-    plan           = s.plan;
-    drinkTimes     = s.drinkTimes || [];
-    hours          = s.hours;
-    bacEnd         = s.bacEnd;
-    ag             = s.ag;
-    profile        = s.profile;
+    sessionStartTs   = s.sessionStartTs;
+    plan             = s.plan;
+    drinkSchedule    = s.drinkSchedule || [];
+    actualDrinkTimes = s.actualDrinkTimes || new Array((s.drinkSchedule || []).length).fill(null);
+    hours            = s.hours;
+    bacEnd           = s.bacEnd;
+    ag               = s.ag;
+    profile          = s.profile;
     return true;
   } catch(e) { clearSavedSession(); return false; }
 }
 
 function checkHourTransitions() {
-  const curHour = getCurrentHour();
-  for (let h = 0; h < curHour; h++) {
-    if (actualDrinks[h] === undefined) actualDrinks[h] = 0;
-  }
   saveSession();
 }
 
 // ── Session controls ──────────────────────────────────────────
-const CONFIG_IDS = ['drinkOz','drinkAbv','bacEnd','duration','startTime','drinkPreset','profileSelect','weight','units','sex'];
+const CONFIG_IDS = ['drinkOz','drinkAbv','bacEnd','duration','drinkPreset','profileSelect','weight','units','sex'];
 
 function activateSessionUI() {
   CONFIG_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = true; });
@@ -799,13 +811,12 @@ function startSession() {
   bacEnd         = parseFloat(document.getElementById('bacEnd').value) || 0.04;
   hours          = parseInt(document.getElementById('duration').value) || 4;
   sessionActive  = true;
-  sessionStartTs = getStart().getTime();
-  actualDrinks   = new Array(hours).fill(undefined);
+  sessionStartTs = Date.now();
 
-  const result = buildCruisePlan(ag, profile, hours, bacEnd);
-  if (result && result.achievable) {
-    plan = result.plan;
-  }
+  const result   = buildCruisePlan(ag, profile, hours, bacEnd);
+  plan           = result.plan;
+  drinkSchedule  = initDrinkSchedule(result.n, sessionStartTs, hours * 3600000);
+  actualDrinkTimes = new Array(result.n).fill(null);
 
   activateSessionUI();
   saveSession();
@@ -823,7 +834,7 @@ function endSession() {
   document.getElementById('endBtn').style.display   = 'none';
   document.getElementById('liveBacBar').classList.remove('visible');
   document.getElementById('planLabel').textContent  = 'Flight Plan';
-  actualDrinks = new Array(hours).fill(undefined);
+  actualDrinkTimes = new Array(drinkSchedule.length).fill(null);
   update();
 }
 
@@ -832,34 +843,32 @@ document.getElementById('duration').addEventListener('input', function() {
   document.getElementById('durationVal').textContent = this.value == 1 ? '1 hour' : `${this.value} hours`;
   update();
 });
-['weight','sex','drinkOz','drinkAbv','bacEnd','startTime'].forEach(id => {
+['weight','sex','drinkOz','drinkAbv','bacEnd'].forEach(id => {
   const el = document.getElementById(id);
   if (el) { el.addEventListener('input', update); el.addEventListener('change', update); }
 });
 
 // ── Copy ──────────────────────────────────────────────────────
 document.getElementById('copyBtn').addEventListener('click', function() {
-  const start  = getStart();
-  const oz     = parseFloat(document.getElementById('drinkOz').value) || 12;
-  const abv    = parseFloat(document.getElementById('drinkAbv').value) || 5;
-  const trace  = simulate(plan, ag, profile);
-  const total  = plan.reduce((a,b) => a+b, 0);
+  const trace    = simulate(plan, ag, profile);
+  const total    = drinkSchedule.length;
   const totalStd = (total * ag / STD_DRINK_G).toFixed(1);
   const projEnd  = trace[hours - 1].toFixed(3);
-  const timeStr  = document.getElementById('startTime').value;
   const profLine = profile.name === 'seeholmes'
     ? '185 lbs | male | rise 0.02/std | metab 0.015/hr'
     : `${(profile.weightKg / 0.453592).toFixed(0)} lbs | ${document.getElementById('sex')?.value} | Widmark r=${profile.r} | metab ${profile.metab}/hr`;
-  const sep = '- - - - - - - - - - - - - - -';
-  let lines = [`GOLDILOCKS CRUISE — ${profile.name}`, `${timeStr} launch · ${hours}hr · Target ending BAC ${bacEnd.toFixed(2)}`, sep];
-  plan.forEach((drinks, h) => {
-    const bac  = trace[h];
-    const beer = drinks > 0 ? '🍺'.repeat(drinks) : '—';
-    const dLbl = drinks === 0 ? 'none' : `${drinks} drink${drinks>1?'s':''}`;
-    lines.push(`Hr ${h+1}  ${fmt(start,h)}-${fmt(start,h+1)}  ${dLbl}  BAC ${bac.toFixed(3)}  ${beer}`);
+  const sep   = '- - - - - - - - - - - - - - -';
+  const start = sessionActive ? fmtTs(sessionStartTs) : 'T+0';
+  let lines   = [`GOLDILOCKS CRUISE — ${profile.name}`, `Launch ${start} · ${hours}hr · Target ending BAC ${bacEnd.toFixed(2)}`, sep];
+  drinkSchedule.forEach((ts, i) => {
+    const actual  = actualDrinkTimes[i];
+    const dispTs  = actual || ts;
+    const timeStr = sessionActive ? fmtTs(dispTs) : fmtOffset(dispTs - sessionStartTs);
+    const status  = actual ? ' ✓' : '';
+    lines.push(`Drink ${i+1}  ${timeStr}${status}`);
   });
   lines.push(sep);
-  lines.push(`Total: ${total} drinks | ${totalStd} std | Projected ending: ${projEnd}`);
+  lines.push(`Total: ${total} drinks | ${totalStd} std | Projected ending BAC: ${projEnd}`);
   lines.push(profLine);
   const text = lines.join('\n');
   const btn  = document.getElementById('copyBtn');
