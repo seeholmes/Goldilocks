@@ -1,0 +1,8 @@
+{
+  "name": "goldilocks-bac-planner",
+  "version": "1.0.2",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/goldilocks-core.test.js tests/goldilocks-presets.test.js tests/static-structure.test.js"
+  }
+}

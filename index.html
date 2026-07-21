@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Choose a Goldilocks BAC planning, tracking, or calibration mode.">
+<meta name="theme-color" content="#08090d">
 <title>Goldilocks — Mission Control</title>
 <link rel="icon" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -15,7 +17,7 @@
     --surface: #13151f;
     --border:  #1e2130;
     --text:    #e8e0cc;
-    --muted:   #5a5570;
+    --muted:   #aaa3bb;
     --gold:    #f5c842;
     --gold2:   #e8a020;
     --blue:    #7eb8ff;
@@ -59,7 +61,7 @@
   @keyframes pulse { 0%,100%{filter:drop-shadow(0 0 14px rgba(245,200,66,0.8))} 50%{filter:drop-shadow(0 0 26px rgba(245,200,66,1))} }
   .logo { font-family:'Anybody',sans-serif; font-size:44px; font-weight:800; letter-spacing:-1px; background:linear-gradient(135deg,#f5c842 0%,#e8a020 50%,#ff8c3a 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
   .tagline { color:var(--muted); margin-top:8px; font-size:10px; letter-spacing:0.2em; text-transform:uppercase; }
-  .version { font-size:8px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); opacity:0.45; margin-top:6px; }
+  .version { font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin-top:6px; }
 
   /* Mission select label */
   .mission-label { font-size:9px; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); text-align:center; margin-bottom:18px; }
@@ -69,6 +71,7 @@
   .mode-card { display:block; text-decoration:none; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:22px 24px; position:relative; overflow:hidden; transition:all 0.2s; cursor:pointer; }
   .mode-card::before { content:''; position:absolute; inset:0; border-radius:var(--radius); background:linear-gradient(135deg,var(--card-glow) 0%,transparent 60%); pointer-events:none; }
   .mode-card:hover { transform:translateY(-2px); box-shadow:0 8px 32px var(--card-shadow); border-color:var(--card-accent); }
+  .mode-card:focus-visible { outline:3px solid var(--card-accent); outline-offset:3px; }
   .mode-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
   .mode-icon { font-size:24px; line-height:1; filter:drop-shadow(0 0 10px var(--card-accent)); flex-shrink:0; }
   .mode-arrow { font-size:18px; color:var(--card-accent); opacity:0.5; transition:all 0.2s; margin-top:2px; flex-shrink:0; }
@@ -78,7 +81,7 @@
   .mode-desc { font-size:11px; color:var(--muted); line-height:1.7; }
   .mode-chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:14px; }
   .chip { font-size:8px; letter-spacing:0.1em; text-transform:uppercase; background:var(--deep); border:1px solid var(--border); border-radius:100px; padding:3px 10px; color:var(--muted); }
-  .chip.lit { border-color:var(--card-accent); color:var(--card-accent); opacity:0.7; }
+  .chip.lit { border-color:var(--card-accent); color:var(--card-accent); }
 
   /* Zone card */
   .mode-card.zone { --card-accent:#f5c842; --card-glow:rgba(245,200,66,0.04); --card-shadow:rgba(245,200,66,0.12); }
@@ -87,29 +90,33 @@
   /* Training card */
   .mode-card.training { --card-accent:#52e09c; --card-glow:rgba(82,224,156,0.04); --card-shadow:rgba(82,224,156,0.12); }
 
-  .disclaimer { color:var(--muted); font-size:9px; line-height:1.8; text-align:center; margin-top:32px; opacity:0.6; }
+  .disclaimer { color:var(--muted); font-size:10px; line-height:1.8; text-align:center; margin-top:32px; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration:0.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; transition-duration:0.01ms !important; }
+  }
 </style>
 </head>
 <body>
 <div class="container">
 
-  <div class="hero">
-    <span class="star-icon">✦</span>
-    <div class="logo">Goldilocks</div>
-    <div class="tagline">mission control</div>
-    <div class="version">v1.01</div>
-  </div>
+  <header class="hero">
+    <span class="star-icon" aria-hidden="true">✦</span>
+    <h1 class="logo">Goldilocks</h1>
+    <p class="tagline">mission control</p>
+    <p class="version">v1.02</p>
+  </header>
 
-  <div class="mission-label">Choose your mission</div>
+  <main>
+  <h2 class="mission-label" id="mission-heading">Choose your mission</h2>
 
-  <div class="mode-grid">
+  <nav class="mode-grid" aria-labelledby="mission-heading">
 
     <a class="mode-card zone" href="goldilocks-zone.html">
       <div class="mode-card-top">
-        <span class="mode-icon">✦</span>
-        <span class="mode-arrow">→</span>
+        <span class="mode-icon" aria-hidden="true">✦</span>
+        <span class="mode-arrow" aria-hidden="true">→</span>
       </div>
-      <div class="mode-name">Zone Mode</div>
+      <h3 class="mode-name">Zone Mode</h3>
       <div class="mode-sub">Stay in the Goldilocks Zone</div>
       <div class="mode-desc">Set a floor and ceiling BAC. The planner builds an hour-by-hour schedule to keep you in range throughout your session.</div>
       <div class="mode-chips">
@@ -122,10 +129,10 @@
 
     <a class="mode-card cruise" href="goldilocks-cruise.html">
       <div class="mode-card-top">
-        <span class="mode-icon">⊹</span>
-        <span class="mode-arrow">→</span>
+        <span class="mode-icon" aria-hidden="true">⊹</span>
+        <span class="mode-arrow" aria-hidden="true">→</span>
       </div>
-      <div class="mode-name">Cruise Mode</div>
+      <h3 class="mode-name">Cruise Mode</h3>
       <div class="mode-sub">Set your speed · hit your mark</div>
       <div class="mode-desc">Pick a drink, set a duration and a target ending BAC. Drinks are evenly spaced so you coast smoothly to your destination.</div>
       <div class="mode-chips">
@@ -137,10 +144,10 @@
 
     <a class="mode-card training" href="goldilocks-training.html">
       <div class="mode-card-top">
-        <span class="mode-icon">⚗️</span>
-        <span class="mode-arrow">→</span>
+        <span class="mode-icon" aria-hidden="true">⚗️</span>
+        <span class="mode-arrow" aria-hidden="true">→</span>
       </div>
-      <div class="mode-name">Training Protocol</div>
+      <h3 class="mode-name">Training Protocol</h3>
       <div class="mode-sub">Calibrate your constants</div>
       <div class="mode-desc">Three breathalyzer readings over 85 minutes. Linear regression derives your personal elimination rate and BAC rise per drink.</div>
       <div class="mode-chips">
@@ -150,9 +157,10 @@
       </div>
     </a>
 
-  </div>
+  </nav>
 
   <p class="disclaimer">⚠ For harm reduction only · Estimates vary — food, hydration, meds and tolerance all affect real BAC · Never drive</p>
+  </main>
 </div>
 </body>
 </html>
