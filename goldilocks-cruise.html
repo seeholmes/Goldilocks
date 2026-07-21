@@ -451,7 +451,9 @@ function buildCruisePlan(ag, p, T, B_end) {
   if (B_end <= 0) return { n: 0, plan: new Array(T).fill(0), spacing: 0, achievable: true };
 
   const nRaw = (B_end + T * β) / δ;
-  const n    = Math.min(24, Math.max(1, Math.round(nRaw)));
+  let n      = Math.min(24, Math.max(1, Math.round(nRaw)));
+  // Round can give one drink too many — trim if ending BAC would overshoot.
+  if (n * δ - T * β > B_end + 0.002) n = Math.max(1, n - 1);
 
   // Distribute n drinks evenly; extras go in earlier hours
   const base  = Math.floor(n / T);
@@ -699,23 +701,10 @@ function recalcFromNow() {
   const δ = bpd(ag, profile);
   const β = profile.metab;
 
-  // Start with formula estimate, then verify with simulation.
-  // Trim one drink at a time until the projected ending BAC doesn't overshoot.
-  let n_rem = Math.max(0, Math.round((bacEnd + hours * β) / δ) - n_logged);
-
-  while (n_rem >= 0) {
-    const spacing_t  = n_rem > 0 ? T_rem / n_rem : 0;
-    const futureTs_t = Array.from({length: n_rem}, (_, j) => now + (j + 1) * spacing_t * 3600000);
-    const testPlan   = new Array(hours).fill(0);
-    [...doneTimes, ...futureTs_t].forEach(ts => {
-      const h = Math.max(0, Math.min(hours - 1, Math.floor((ts - sessionStartTs) / 3600000)));
-      testPlan[h]++;
-    });
-    const projEnd = simulate(testPlan, ag, profile)[hours - 1];
-    if (projEnd <= bacEnd + 0.002 || n_rem === 0) break;
-    n_rem--;
-  }
-  n_rem = Math.max(0, n_rem);
+  // Compute n_total the same way buildCruisePlan does: round, then trim if overshoot.
+  let n_total = Math.max(0, Math.round((bacEnd + hours * β) / δ));
+  if (n_total * δ - hours * β > bacEnd + 0.002) n_total = Math.max(0, n_total - 1);
+  let n_rem = Math.max(0, n_total - n_logged);
 
   // Space n_rem drinks evenly starting from now
   const spacing  = n_rem > 0 ? T_rem / n_rem : 0;
