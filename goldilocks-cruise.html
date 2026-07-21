@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="goldilocks-icons.css">
+<link rel="stylesheet" href="goldilocks-session-flow.css">
 <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@200;400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="goldilocks-theme.js"></script>
 <script>GoldilocksTheme.bootstrap('pace');</script>
@@ -225,6 +226,7 @@
     </div>
   </header>
 
+  <div id="setupFlow" class="setup-flow">
   <!-- Profile -->
   <section class="card profile-card" aria-labelledby="profileHeading">
     <h2 class="sec" id="profileHeading">Profile</h2>
@@ -324,13 +326,13 @@
       <span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">Drinking on an empty stomach</span>
     </button>
     <div id="fastedWarning" style="display:none;margin-top:8px;padding:10px 12px;background:rgba(255,140,58,0.08);border:1px solid rgba(255,140,58,0.25);border-radius:7px;font-size:10px;line-height:1.7;color:var(--amber)">
-      &#9888; Fasted: BAC will rise faster and peak higher — consider reducing your BAC goal at the end.
+      &#9888; Advisory only: fasting can change alcohol absorption. This toggle does not alter the estimate or plan.
     </div>
   </section>
 
   <!-- Pace settings -->
   <section class="card" aria-labelledby="settingsHeading">
-    <h2 class="sec" id="settingsHeading">Session Goal</h2>
+    <h2 class="sec" id="settingsHeading">Pace Settings</h2>
     <div style="margin-bottom:18px">
       <label for="duration" style="display:block;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue2);opacity:0.8;margin-bottom:14px">Session Length</label>
       <input type="range" id="duration" min="60" max="480" step="15" value="240" aria-describedby="durationVal durationResolution">
@@ -339,31 +341,80 @@
       <div id="durationResolution" style="font-size:9px;color:var(--muted);margin-top:5px">15-minute increments</div>
     </div>
     <div>
-      <label class="field-label" for="bacEnd">Goal BAC at End</label>
+      <label class="field-label" for="bacEnd">Planning Reference at End</label>
       <div class="input-wrap"><input type="number" id="bacEnd" value="0.04" min="0.00" max="0.20" step="0.01"></div>
-      <div style="font-size:9px;color:var(--muted);margin-top:7px;line-height:1.6">Pace spaces drinks across the session · timing begins when you tap Start.</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:7px;line-height:1.6">Pace spaces planned check-ins across the session · timing begins when you tap Start.</div>
     </div>
     <div class="form-error" id="configError" role="alert" aria-live="assertive"></div>
   </section>
-
-  <!-- Summary -->
-  <div class="summary-row" aria-live="polite">
-    <div class="sum-pill">
-      <div class="sum-val" id="summaryTotal">—</div>
-      <div class="sum-lbl">Drinks</div>
-    </div>
-    <div class="sum-pill">
-      <div class="sum-val" id="summarySpacing" style="font-size:20px">—</div>
-      <div class="sum-lbl">Spacing</div>
-    </div>
-    <div class="sum-pill ending">
-      <div class="sum-val" id="summaryEnding">—</div>
-      <div class="sum-lbl">Projected BAC at End</div>
-    </div>
   </div>
 
+  <section id="preStartReview" class="preflight-review" aria-labelledby="preStartReviewHeading">
+    <div class="session-kicker">Before you start</div>
+    <h2 class="session-heading" id="preStartReviewHeading" tabindex="-1">Review the Pace session</h2>
+    <p class="session-detail">Timing starts immediately when you tap Start. Times below are a live preview.</p>
+    <div class="review-grid">
+      <div class="review-item"><div class="review-value" id="reviewStart">—</div><div class="review-label">Start</div></div>
+      <div class="review-item"><div class="review-value" id="reviewEnd">—</div><div class="review-label">End</div></div>
+      <div class="review-item"><div class="review-value" id="reviewDuration">—</div><div class="review-label">Duration</div></div>
+      <div class="review-item"><div class="review-value" id="summaryTotal">—</div><div class="review-label">Planned drinks</div></div>
+      <div class="review-item"><div class="review-value" id="summarySpacing">—</div><div class="review-label">Spacing</div></div>
+      <div class="review-item"><div class="review-value" id="summaryEnding">—</div><div class="review-label">Estimated BAC at end</div></div>
+      <div class="review-item"><div class="review-value" id="summaryPeak">—</div><div class="review-label">Estimated peak BAC</div></div>
+    </div>
+    <p class="session-caution">Planning reference only — not a safety threshold. Estimates vary, and no BAC level guarantees safety.</p>
+  </section>
+
   <button class="start-btn" id="startBtn" onclick="startSession()">Start Pace Session</button>
-  <button class="end-btn"   id="endBtn"   onclick="endSession()">✕ End Session</button>
+
+  <section id="activeSessionPanel" class="active-session-panel" aria-labelledby="activeSessionHeading" hidden>
+    <div class="session-kicker">Session in progress</div>
+    <h2 class="session-heading" id="activeSessionHeading">Your next Pace check-in</h2>
+    <div id="nextAction" class="next-action">
+      <span id="nextActionText" class="session-detail" role="status" aria-live="polite">Reviewing the current schedule…</span>
+      <time id="nextActionTime" class="next-action-time">—</time>
+      <span id="nextActionTimer" class="session-detail" role="timer" aria-live="off">—</span>
+    </div>
+    <div class="session-stats">
+      <div class="session-stat"><div class="session-stat-value" id="activeCurrentBac">0.000</div><div class="session-stat-label">Current BAC estimate</div></div>
+      <div class="session-stat"><div class="session-stat-value" id="activeProjectedBac">0.000</div><div class="session-stat-label">Projected BAC at end</div></div>
+      <div class="session-stat"><div class="session-stat-value" id="activeLoggedCount">0</div><div class="session-stat-label">Drinks logged</div></div>
+    </div>
+    <p class="session-caution">Estimates use only the drinks you log. The planning reference is not a safety threshold.</p>
+    <div class="session-actions">
+      <button type="button" class="session-action-btn primary" id="logNowBtn" onclick="logNextDrinkNow()">Log drink now</button>
+      <button type="button" class="session-action-btn" id="undoLatestBtn" onclick="undoLatestDrink()">Undo latest</button>
+      <button type="button" class="session-action-btn" id="recalculateNowBtn" onclick="recalculateScheduleFromNow()">Recalculate from now</button>
+      <button type="button" class="session-action-btn finish" id="finishSessionBtn" onclick="requestSessionAction('finish')">Finish session</button>
+      <button type="button" class="session-action-btn danger" id="discardSessionBtn" onclick="requestSessionAction('discard')">Discard session</button>
+    </div>
+    <div class="log-editor" aria-labelledby="logEditorHeading">
+      <h3 class="log-editor-title" id="logEditorHeading">Logged drinks</h3>
+      <div id="logEditor"></div>
+      <div id="logEditorError" class="form-error" role="alert" aria-live="assertive"></div>
+    </div>
+  </section>
+
+  <section id="sessionSummary" class="completion-summary" aria-labelledby="sessionSummaryHeading" hidden>
+    <div class="session-kicker">Session complete</div>
+    <h2 class="session-heading" id="sessionSummaryHeading" tabindex="-1">Pace session summary</h2>
+    <p class="session-detail" id="sessionSummaryDetail">Reviewing your logged session.</p>
+    <div class="completion-grid">
+      <div class="completion-item"><div class="completion-value" id="completeStarted">—</div><div class="completion-label">Started</div></div>
+      <div class="completion-item"><div class="completion-value" id="completeFinished">—</div><div class="completion-label">Finished</div></div>
+      <div class="completion-item"><div class="completion-value" id="completeElapsed">—</div><div class="completion-label">Elapsed</div></div>
+      <div class="completion-item"><div class="completion-value" id="completePlanned">—</div><div class="completion-label">Initially planned</div></div>
+      <div class="completion-item"><div class="completion-value" id="completeLogged">—</div><div class="completion-label">Logged</div></div>
+      <div class="completion-item"><div class="completion-value" id="completeBac">—</div><div class="completion-label">BAC estimate at finish</div></div>
+      <div class="completion-item"><div class="completion-value" id="completeReference">—</div><div class="completion-label">Planning reference</div></div>
+      <div class="completion-item"><div class="completion-value" id="completeInitialEnd">—</div><div class="completion-label">Initial end projection</div></div>
+      <div class="completion-item"><div class="completion-value" id="completeInitialPeak">—</div><div class="completion-label">Initial estimated peak</div></div>
+    </div>
+    <p class="session-caution">These estimates are not measurements and do not establish sobriety or fitness to drive.</p>
+    <div class="session-actions">
+      <button type="button" class="session-action-btn primary" id="startAnotherBtn" onclick="startAnotherSession()">Start another session</button>
+    </div>
+  </section>
 
   <section class="card" aria-labelledby="planLabel">
     <h2 class="sec" id="planLabel">Pace Plan</h2>
@@ -375,8 +426,20 @@
   <p class="disclaimer" id="disclaimerEl">⚠ For harm reduction only · Widmark estimates vary — food, hydration, meds and tolerance all affect real BAC · Never drive</p>
 </main>
 
+<dialog id="sessionDialog" class="session-dialog" aria-labelledby="sessionDialogTitle" aria-describedby="sessionDialogCopy">
+  <div class="session-dialog-body">
+    <h2 class="session-dialog-title" id="sessionDialogTitle">Confirm session action</h2>
+    <p class="session-dialog-copy" id="sessionDialogCopy"></p>
+    <div class="session-actions">
+      <button type="button" class="session-action-btn" id="sessionDialogCancel">Cancel</button>
+      <button type="button" class="session-action-btn" id="sessionDialogConfirm">Confirm</button>
+    </div>
+  </div>
+</dialog>
+
 <script src="goldilocks-presets.js"></script>
 <script src="goldilocks-core.js"></script>
+<script src="goldilocks-session-flow.js"></script>
 <script>
 // ── Profiles ──────────────────────────────────────────────────
 const PROFILES = {
@@ -414,6 +477,14 @@ let planSpacing      = 0;
 let planOffsetHours  = 0;
 let plannedEndpoint  = 0;
 let planAchievable   = true;
+let completedAt      = null;
+let completionReason = null;
+let completionBac    = null;
+let initialPlannedDrinks = 0;
+let initialProjectedEnd  = 0;
+let initialPeakBac       = 0;
+let previewInterval      = null;
+let renderedLogSignature = null;
 
 // ── Profile helpers ───────────────────────────────────────────
 function getActiveProfile() {
@@ -611,57 +682,24 @@ function validateConfig(focusInvalid = false) {
   let problem = null;
   if (!Number.isFinite(oz) || oz < 1 || oz > 64) problem = ['Drink size must be between 1 and 64 oz.', 'drinkOz'];
   else if (!Number.isFinite(abv) || abv < 0.5 || abv > 100) problem = ['ABV must be between 0.5% and 100%.', 'drinkAbv'];
-  else if (!Number.isFinite(target) || target < 0 || target > 0.2) problem = ['Goal BAC at end must be between 0.00 and 0.20.', 'bacEnd'];
+  else if (!Number.isFinite(target) || target < 0 || target > 0.2) problem = ['Planning reference at end must be between 0.00 and 0.20.', 'bacEnd'];
   else if (!isValidDurationMinutes(requestedDurationMinutes)) problem = ['Session length must be between 1h and 8h in 15-minute increments.', 'duration'];
   else if (!isValidProfile(getActiveProfile())) problem = ['Enter a valid body weight and profile.', document.getElementById('profileSelect').value === 'custom' ? 'weight' : null];
-  else {
-    const alcoholGrams = oz * (abv / 100) * 29.5735 * 0.789;
-    const activeProfile = getActiveProfile();
-    const durationHours = getDurationHours(requestedDurationMinutes);
-    const capacityPlan = GoldilocksCore.buildCruiseCapacityPlan(durationHours, MAX_SLOTS);
-    const maximumTrace = GoldilocksCore.simulateDuration(
-      capacityPlan,
-      alcoholGrams,
-      activeProfile,
-      durationHours
-    );
-    const maximumEndpoint = maximumTrace.at(-1) ?? 0;
-    if (maximumEndpoint + 0.002 < target) {
-      problem = ['This goal cannot be reached within the pacing limit. Lower the goal or extend the session.', 'bacEnd'];
-    } else {
-      const candidate = buildCruisePlan(alcoholGrams, activeProfile, durationHours, target);
-      if (candidate.plan.some((drinks, bucket) => drinks > capacityPlan[bucket])) {
-        problem = ['This goal cannot be reached within the pacing limit. Lower the goal or extend the session.', 'bacEnd'];
-      }
-    }
-  }
   setConfigError(problem?.[0] || '', problem?.[1] || null, focusInvalid);
   return !problem;
 }
 
 // ── Colors ────────────────────────────────────────────────────
 function clrBac(bac) {
-  if (bac <= 0)         return 'var(--muted)';
-  if (bac <= bacEnd)    return 'var(--blue)';
-  if (bac <= bacEnd * 1.25) return 'var(--amber)';
-  return 'var(--danger)';
+  return bac <= 0 ? 'var(--muted)' : 'var(--blue)';
 }
 
 function barBg(bac) {
-  if (bac <= 0)         return 'var(--border)';
-  if (bac <= bacEnd)    return 'linear-gradient(90deg,#5a9aee,#7eb8ff)';
-  if (bac <= bacEnd * 1.25) return 'var(--amber)';
-  return 'var(--danger)';
+  return bac <= 0 ? 'var(--border)' : 'linear-gradient(90deg,#5a9aee,#7eb8ff)';
 }
 
 function statusText(liveBac) {
-  if (liveBac <= 0)            return 'Sober';
-  const diff = liveBac - bacEnd;
-  if (Math.abs(diff) < 0.005) return '⊹ On target';
-  if (diff > 0.02)             return '⚠ Above target — slow down';
-  if (diff > 0)                return 'Slightly above target';
-  if (diff < -0.02)            return 'Below target — reassess your pace';
-  return 'Slightly below target';
+  return liveBac <= 0 ? 'No BAC estimated from logged drinks' : 'Estimate based on logged drinks';
 }
 
 function fmtTs(ts) {
@@ -714,6 +752,212 @@ function initDrinkSchedule(result, startTs) {
 }
 
 // ── Render ────────────────────────────────────────────────────
+function getSessionEndTs() {
+  return Number.isFinite(sessionStartTs) ? sessionStartTs + durationMinutes * 60000 : null;
+}
+
+function getLoggedTimes() {
+  return actualDrinkTimes.filter(timestamp => Number.isFinite(timestamp));
+}
+
+function getProjectedEndBac() {
+  if (!plan.length || !ag || !profile) return 0;
+  return simulateCruise(plan, ag, profile).at(-1) ?? 0;
+}
+
+function getEstimatedBacAt(timestamp = Date.now()) {
+  if (!Number.isFinite(sessionStartTs) || !Number.isFinite(timestamp) || timestamp < sessionStartTs) return 0;
+  const durationHours = getDurationHours();
+  const elapsedHours = Math.max(0, Math.min(durationHours, (timestamp - sessionStartTs) / 3600000));
+  const bucketCount = getDurationBucketCount();
+  const currentBucket = Math.max(0, Math.min(bucketCount - 1, Math.floor(elapsedHours)));
+  const completed = new Array(currentBucket).fill(0);
+  let currentDrinks = 0;
+  getLoggedTimes().forEach(actualTs => {
+    if (actualTs > timestamp) return;
+    const bucket = Math.max(0, Math.min(bucketCount - 1, Math.floor((actualTs - sessionStartTs) / 3600000)));
+    if (bucket < currentBucket) completed[bucket] += 1;
+    else if (bucket === currentBucket) currentDrinks += 1;
+  });
+  const fraction = Math.max(0, Math.min(1, elapsedHours - currentBucket));
+  return estimateLiveBac(completed, currentDrinks, fraction);
+}
+
+function toDateTimeLocal(timestamp) {
+  const date = new Date(timestamp);
+  const localTimestamp = new Date(timestamp - date.getTimezoneOffset() * 60000);
+  return localTimestamp.toISOString().slice(0, 19);
+}
+
+function updateReviewTimes(previewStart = Date.now()) {
+  if (sessionActive) return;
+  document.getElementById('reviewStart').textContent = fmtTs(previewStart);
+  document.getElementById('reviewEnd').textContent = fmtTs(previewStart + durationMinutes * 60000);
+  document.getElementById('reviewDuration').textContent = formatDuration(durationMinutes);
+}
+
+function renderPreStartReview(result, previewStart, trace) {
+  updateReviewTimes(previewStart);
+  const peak = Math.max(0, ...trace);
+  const peakElement = document.getElementById('summaryPeak');
+  peakElement.textContent = peak.toFixed(3);
+  peakElement.style.color = clrBac(peak);
+  document.getElementById('summaryTotal').textContent = result.n > 0 ? String(result.n) : '0';
+  document.getElementById('summarySpacing').textContent = result.n > 1 ? fmtSpacing(result.spacing) : '—';
+  document.getElementById('summaryEnding').textContent = result.endpoint.toFixed(3);
+}
+
+function setSessionFlowState(state) {
+  const planning = state === 'planning';
+  const active = state === 'active';
+  const complete = state === 'complete';
+  document.body.dataset.sessionState = state;
+  document.getElementById('setupFlow').hidden = !planning;
+  document.getElementById('preStartReview').hidden = !planning;
+  document.getElementById('startBtn').style.display = planning ? 'block' : 'none';
+  document.getElementById('activeSessionPanel').hidden = !active;
+  document.getElementById('sessionSummary').hidden = !complete;
+  document.getElementById('liveBacBar').classList.toggle('visible', active);
+  document.getElementById('planLabel').textContent = complete
+    ? 'Completed Pace Log'
+    : active ? 'Session in Progress' : 'Pace Plan';
+}
+
+function setLogEditorError(message = '') {
+  const error = document.getElementById('logEditorError');
+  error.textContent = message;
+  error.classList.toggle('visible', !!message);
+}
+
+function editLoggedDrink(index, input) {
+  const candidate = new Date(input.value).getTime();
+  const validation = GoldilocksSessionFlow.validatePaceTimestamp(actualDrinkTimes, index, candidate, {
+    startAt: sessionStartTs,
+    endAt: getSessionEndTs(),
+    now: Date.now(),
+  });
+  input.setCustomValidity(validation.reason);
+  if (!validation.valid) {
+    setLogEditorError(validation.reason);
+    input.reportValidity();
+    return;
+  }
+  input.setCustomValidity('');
+  setLogEditorError('');
+  actualDrinkTimes[index] = candidate;
+  recalcFromNow();
+  showWarn(`Drink ${index + 1} time updated — remaining schedule recalculated`);
+}
+
+function renderLogEditor() {
+  const editor = document.getElementById('logEditor');
+  editor.replaceChildren();
+  const loggedCount = getLoggedTimes().length;
+  renderedLogSignature = getLoggedTimes().join('|');
+  if (!loggedCount) {
+    const empty = document.createElement('p');
+    empty.className = 'session-detail';
+    empty.textContent = 'No drinks logged yet.';
+    editor.appendChild(empty);
+    return;
+  }
+  const maximum = Math.min(Date.now(), getSessionEndTs());
+  for (let index = 0; index < loggedCount; index += 1) {
+    const row = document.createElement('div');
+    row.className = 'log-row';
+    const label = document.createElement('label');
+    label.className = 'log-row-label';
+    label.htmlFor = `loggedDrinkTime${index}`;
+    label.textContent = `Drink ${index + 1}`;
+    const input = document.createElement('input');
+    input.type = 'datetime-local';
+    input.step = '1';
+    input.className = 'log-time-input';
+    input.id = `loggedDrinkTime${index}`;
+    input.value = toDateTimeLocal(actualDrinkTimes[index]);
+    input.min = toDateTimeLocal(sessionStartTs);
+    input.max = toDateTimeLocal(maximum);
+    input.setAttribute('aria-label', `Logged time for drink ${index + 1}`);
+    input.addEventListener('change', () => editLoggedDrink(index, input));
+    row.append(label, input);
+    editor.appendChild(row);
+  }
+}
+
+function refreshLogEditor() {
+  const signature = getLoggedTimes().join('|');
+  if (signature !== renderedLogSignature) {
+    renderLogEditor();
+    return;
+  }
+  const maximum = toDateTimeLocal(Math.min(Date.now(), getSessionEndTs()));
+  document.querySelectorAll('#logEditor .log-time-input').forEach(input => { input.max = maximum; });
+}
+
+function renderActiveSession() {
+  if (!sessionActive || sessionComplete) return;
+  const now = Date.now();
+  const nextIndex = GoldilocksSessionFlow.paceNextIndex(actualDrinkTimes);
+  const nextAt = nextIndex >= 0 ? drinkSchedule[nextIndex] : getSessionEndTs();
+  const deadline = GoldilocksSessionFlow.describeDeadline(nextAt, now);
+  const nextActionText = document.getElementById('nextActionText');
+  const nextActionTime = document.getElementById('nextActionTime');
+  const nextActionTimer = document.getElementById('nextActionTimer');
+  let actionMessage;
+  if (nextIndex >= 0) {
+    actionMessage = deadline.state === 'overdue'
+      ? `Planned check-in ${nextIndex + 1} is overdue. Log the actual time or recalculate the remaining schedule.`
+      : `Planned check-in ${nextIndex + 1}`;
+    nextActionTime.textContent = fmtTs(nextAt);
+  } else {
+    actionMessage = 'No planned drinks remain. The session continues until its scheduled end.';
+    nextActionTime.textContent = `Ends ${fmtTs(getSessionEndTs())}`;
+  }
+  if (nextActionText.textContent !== actionMessage) nextActionText.textContent = actionMessage;
+  nextActionTime.dateTime = new Date(nextAt).toISOString();
+  nextActionTimer.textContent = deadline.label;
+  const currentBac = getEstimatedBacAt(now);
+  const projectedBac = getProjectedEndBac();
+  const loggedCount = getLoggedTimes().length;
+  document.getElementById('activeCurrentBac').textContent = currentBac.toFixed(3);
+  document.getElementById('activeProjectedBac').textContent = projectedBac.toFixed(3);
+  document.getElementById('activeLoggedCount').textContent = String(loggedCount);
+  document.getElementById('logNowBtn').disabled = nextIndex < 0;
+  document.getElementById('undoLatestBtn').disabled = loggedCount === 0;
+  document.getElementById('recalculateNowBtn').disabled = nextIndex < 0 || deadline.state !== 'overdue';
+  refreshLogEditor();
+}
+
+function renderCompletionSummary() {
+  if (!sessionComplete || !Number.isFinite(completedAt)) return;
+  const loggedCount = getLoggedTimes().length;
+  document.getElementById('completeStarted').textContent = fmtTs(sessionStartTs);
+  document.getElementById('completeFinished').textContent = fmtTs(completedAt);
+  document.getElementById('completeElapsed').textContent = GoldilocksSessionFlow.formatMinutes(
+    GoldilocksSessionFlow.elapsedMinutes(sessionStartTs, completedAt)
+  );
+  document.getElementById('completePlanned').textContent = String(initialPlannedDrinks);
+  document.getElementById('completeLogged').textContent = String(loggedCount);
+  document.getElementById('completeBac').textContent = Number(completionBac || 0).toFixed(3);
+  document.getElementById('completeReference').textContent = bacEnd.toFixed(3);
+  document.getElementById('completeInitialEnd').textContent = Number(initialProjectedEnd || 0).toFixed(3);
+  document.getElementById('completeInitialPeak').textContent = Number(initialPeakBac || 0).toFixed(3);
+  document.getElementById('sessionSummaryDetail').textContent = completionReason === 'elapsed'
+    ? 'The planned duration elapsed. This summary uses only the drinks you logged.'
+    : 'You finished this session early. This summary uses only the drinks you logged.';
+}
+
+function startSessionClock() {
+  clearInterval(clockInterval);
+  let timelineTicks = 0;
+  clockInterval = setInterval(() => {
+    updateLiveBac();
+    renderActiveSession();
+    timelineTicks += 1;
+    if (timelineTicks % 10 === 0) renderTimeline();
+  }, 1000);
+}
+
 function renderTimeline() {
   const tlEl = document.getElementById('timeline');
   tlEl.innerHTML = '';
@@ -793,6 +1037,7 @@ function update() {
       document.getElementById('summaryTotal').textContent = '—';
       document.getElementById('summarySpacing').textContent = '—';
       document.getElementById('summaryEnding').textContent = '—';
+      document.getElementById('summaryPeak').textContent = '—';
       document.getElementById('scheduleNote').textContent = 'Fix the settings above to create a Pace plan.';
       document.getElementById('timeline').replaceChildren();
     }
@@ -835,17 +1080,20 @@ function update() {
   document.getElementById('summaryTotal').textContent   = sessionComplete ? loggedTotal : (total > 0 ? total : '0');
   document.getElementById('summarySpacing').textContent = !sessionComplete && total > 1 ? fmtSpacing(result.spacing) : '—';
   document.getElementById('summaryEnding').textContent  = projEnd.toFixed(3);
+  document.getElementById('summaryPeak').textContent = Math.max(0, ...trace).toFixed(3);
+  if (!sessionActive) renderPreStartReview(result, Date.now(), trace);
   if (!sessionActive) {
     const warning = document.getElementById('warnNote');
     warning.textContent = result.achievable
       ? ''
-      : `Closest non-overshooting plan ends at BAC ${result.endpoint.toFixed(3)}.`;
+      : `Closest non-overshooting model ends at estimated BAC ${result.endpoint.toFixed(3)}.`;
     warning.style.display = result.achievable ? 'none' : 'block';
   }
 
   const schedNote = document.getElementById('scheduleNote');
   if (sessionComplete) {
-    schedNote.textContent = `Session complete · ${loggedTotal} of ${total} planned drinks logged · final BAC ${projEnd.toFixed(3)}`;
+    const finishEstimate = Number.isFinite(completionBac) ? completionBac : projEnd;
+    schedNote.textContent = `Session complete · ${loggedTotal} drink${loggedTotal === 1 ? '' : 's'} logged · estimated BAC at finish ${finishEstimate.toFixed(3)}`;
   } else if (sessionActive) {
     const remaining = actualDrinkTimes.filter(t => t === null).length;
     schedNote.textContent = `${remaining} drink${remaining === 1 ? '' : 's'} remaining · projected BAC at end ${projEnd.toFixed(3)}`;
@@ -911,6 +1159,7 @@ function recalcFromNow() {
   saveSession();
   updateLiveBac();
   renderTimeline();
+  renderActiveSession();
 }
 
 // ── Log drink ─────────────────────────────────────────────────
@@ -934,6 +1183,28 @@ function logDrink(i) {
   recalcFromNow();
 }
 
+function logNextDrinkNow() {
+  const nextIndex = GoldilocksSessionFlow.paceNextIndex(actualDrinkTimes);
+  if (nextIndex >= 0) logDrink(nextIndex);
+}
+
+function undoLatestDrink() {
+  if (!sessionActive || sessionComplete) return;
+  const latestIndex = GoldilocksSessionFlow.paceLastLoggedIndex(actualDrinkTimes);
+  if (latestIndex < 0) return;
+  actualDrinkTimes[latestIndex] = null;
+  recalcFromNow();
+  showWarn(`Drink ${latestIndex + 1} removed — remaining schedule recalculated`);
+}
+
+function recalculateScheduleFromNow() {
+  if (!sessionActive || sessionComplete) return;
+  const nextIndex = GoldilocksSessionFlow.paceNextIndex(actualDrinkTimes);
+  if (nextIndex < 0 || drinkSchedule[nextIndex] >= Date.now()) return;
+  recalcFromNow();
+  showWarn('Overdue check-in cleared — remaining schedule recalculated from now');
+}
+
 function showWarn(msg) {
   const el = document.getElementById('warnNote');
   el.textContent = msg;
@@ -945,21 +1216,20 @@ function showWarn(msg) {
 // ── Live BAC ──────────────────────────────────────────────────
 function finalizeIfDurationElapsed() {
   if (!sessionActive || sessionComplete || !sessionStartTs) return sessionComplete;
-  const sessionEndTs = sessionStartTs + durationMinutes * 60000;
+  const sessionEndTs = getSessionEndTs();
   if (Date.now() < sessionEndTs) return false;
+  completeSession('elapsed', sessionEndTs);
+  return true;
+}
+
+function completeSession(reason, finishTimestamp) {
+  if (!sessionActive || sessionComplete) return;
+  const sessionEndTs = getSessionEndTs();
+  completedAt = Math.max(sessionStartTs, Math.min(finishTimestamp, sessionEndTs));
+  completionReason = reason === 'elapsed' ? 'elapsed' : 'manual';
+  completionBac = getEstimatedBacAt(completedAt);
   sessionComplete = true;
   clearInterval(clockInterval);
-  const boundedSchedule = [];
-  const boundedActuals = [];
-  for (let index = 0; index < drinkSchedule.length; index += 1) {
-    const scheduled = drinkSchedule[index];
-    const actual = actualDrinkTimes[index];
-    if (actual === null && scheduled > sessionEndTs) continue;
-    boundedSchedule.push(scheduled > sessionEndTs && actual !== null ? actual : scheduled);
-    boundedActuals.push(actual);
-  }
-  drinkSchedule = boundedSchedule;
-  actualDrinkTimes = boundedActuals;
   const bucketCount = getDurationBucketCount();
   plan = new Array(bucketCount).fill(0);
   actualDrinkTimes.forEach(timestamp => {
@@ -967,49 +1237,33 @@ function finalizeIfDurationElapsed() {
     const bucket = Math.max(0, Math.min(bucketCount - 1, Math.floor((timestamp - sessionStartTs) / 3600000)));
     plan[bucket]++;
   });
-  const logged = actualDrinkTimes.filter(timestamp => timestamp !== null).length;
-  const finalTrace = simulateCruise(plan, ag, profile);
-  const finalBac = finalTrace.at(-1) ?? 0;
-  planSpacing = 0;
-  planOffsetHours = 0;
-  plannedEndpoint = finalBac;
-  planAchievable = Math.abs(finalBac - bacEnd) <= 0.002;
+  const logged = getLoggedTimes().length;
   document.getElementById('summaryTotal').textContent = String(logged);
   document.getElementById('summarySpacing').textContent = '—';
-  document.getElementById('summaryEnding').textContent = finalBac.toFixed(3);
+  document.getElementById('summaryEnding').textContent = completionBac.toFixed(3);
   document.getElementById('scheduleNote').textContent =
-    `Session complete · ${logged} of ${drinkSchedule.length} planned drinks logged · final BAC ${finalBac.toFixed(3)}`;
-  document.getElementById('planLabel').textContent = 'Session Complete';
+    `Session complete · ${logged} drink${logged === 1 ? '' : 's'} logged · estimated BAC at finish ${completionBac.toFixed(3)}`;
   document.getElementById('duration').disabled = true;
+  setSessionFlowState('complete');
+  renderCompletionSummary();
+  renderTimeline();
   saveSession();
-  return true;
+  setTimeout(() => document.getElementById('sessionSummaryHeading').focus(), 0);
 }
 
 function updateLiveBac() {
   if (!sessionActive) return;
-  finalizeIfDurationElapsed();
-  const curHour = getCurrentHour();
-  const frac    = getFracThroughHour();
-
-  // Count actual logged drinks per completed hour and current hour
-  const completed = new Array(Math.max(0, curHour)).fill(0);
-  let curActual   = 0;
-  const bucketCount = getDurationBucketCount();
-  for (let i = 0; i < actualDrinkTimes.length; i++) {
-    const t = actualDrinkTimes[i];
-    if (t === null) continue;
-    const h = Math.max(0, Math.min(bucketCount - 1, Math.floor((t - sessionStartTs) / 3600000)));
-    if (h < curHour)       completed[h]++;
-    else if (h === curHour) curActual++;
-  }
-  const liveBac = estimateLiveBac(completed, curActual, frac);
+  if (finalizeIfDurationElapsed()) return;
+  const liveBac = getEstimatedBacAt(Date.now());
 
   document.getElementById('liveBacNum').textContent    = liveBac.toFixed(3);
   document.getElementById('liveBacNum').style.color    = clrBac(liveBac);
-  document.getElementById('liveBacStatus').textContent = sessionComplete ? 'Session complete · final estimate' : statusText(liveBac);
-  document.getElementById('liveBacStatus').style.color = clrBac(liveBac);
+  const liveStatus = statusText(liveBac);
+  const liveStatusElement = document.getElementById('liveBacStatus');
+  if (liveStatusElement.textContent !== liveStatus) liveStatusElement.textContent = liveStatus;
+  liveStatusElement.style.color = clrBac(liveBac);
 
-  const bacScale = bacEnd > 0 ? bacEnd * 1.4 : 0.08;
+  const bacScale = 0.2;
   const pct = Math.min(100, (liveBac / bacScale) * 100);
   document.getElementById('liveBacFill').style.width      = pct + '%';
   document.getElementById('liveBacFill').style.background = barBg(liveBac);
@@ -1018,10 +1272,8 @@ function updateLiveBac() {
   let hh = now.getHours(), mm = now.getMinutes();
   const ap = hh >= 12 ? 'pm' : 'am'; hh = hh % 12 || 12;
   document.getElementById('liveClockEl').textContent  = `${hh}:${mm.toString().padStart(2,'0')} ${ap}`;
-  const logged = actualDrinkTimes.filter(t => t !== null).length;
-  document.getElementById('liveHourLbl').textContent  = sessionComplete
-    ? `${logged} drinks logged · complete`
-    : `${logged} / ${drinkSchedule.length} drinks`;
+  const logged = getLoggedTimes().length;
+  document.getElementById('liveHourLbl').textContent = `${logged} drink${logged === 1 ? '' : 's'} logged`;
 }
 
 // ── Persistence ───────────────────────────────────────────────
@@ -1031,6 +1283,8 @@ function saveSession() {
       sessionStartTs, plan, drinkSchedule, actualDrinkTimes,
       durationMinutes, bacEnd, ag, sessionComplete,
       planSpacing, planOffsetHours, plannedEndpoint, planAchievable,
+      completedAt, completionReason, completionBac,
+      initialPlannedDrinks, initialProjectedEnd, initialPeakBac,
       profileName: document.getElementById('profileSelect').value,
       drinkOz:   document.getElementById('drinkOz').value,
       drinkAbv:  document.getElementById('drinkAbv').value,
@@ -1046,9 +1300,17 @@ function clearSavedSession() { try { localStorage.removeItem(STORAGE_KEY); } cat
 
 function normalizeRestoredSession(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return s;
-  if (s.durationMinutes !== undefined) return s;
-  if (Number.isInteger(s.hours)) return { ...s, durationMinutes: s.hours * 60 };
-  return s;
+  const normalized = s.durationMinutes !== undefined
+    ? { ...s }
+    : Number.isInteger(s.hours) ? { ...s, durationMinutes: s.hours * 60 } : { ...s };
+  if (normalized.sessionComplete === true
+      && normalized.completedAt === undefined
+      && Number.isFinite(normalized.sessionStartTs)
+      && Number.isInteger(normalized.durationMinutes)) {
+    normalized.completedAt = normalized.sessionStartTs + normalized.durationMinutes * 60000;
+    normalized.completionReason = 'elapsed';
+  }
+  return normalized;
 }
 
 function isValidRestoredSession(s) {
@@ -1056,22 +1318,36 @@ function isValidRestoredSession(s) {
   if (!isValidDurationMinutes(s.durationMinutes)) return false;
   const durationHours = getDurationHours(s.durationMinutes);
   const bucketCount = getDurationBucketCount(s.durationMinutes);
+  const sessionEndTs = s.sessionStartTs + s.durationMinutes * 60000;
   if (s.sessionComplete !== undefined && typeof s.sessionComplete !== 'boolean') return false;
   if (!Number.isFinite(s.sessionStartTs) || s.sessionStartTs > Date.now() + 5 * 60000) return false;
-  if (Date.now() > s.sessionStartTs + (s.durationMinutes + 60) * 60000) return false;
+  if (s.sessionComplete === true) {
+    if (!Number.isFinite(s.completedAt)
+        || s.completedAt < s.sessionStartTs
+        || s.completedAt > sessionEndTs
+        || s.completedAt > Date.now() + 60000
+        || !['manual','elapsed'].includes(s.completionReason)) return false;
+    if (Date.now() > s.completedAt + 24 * 3600000) return false;
+  } else if (Date.now() > sessionEndTs + 60 * 60000) return false;
   if (!Number.isFinite(s.bacEnd) || s.bacEnd < 0 || s.bacEnd > 0.2) return false;
   if (s.planSpacing !== undefined && (!Number.isFinite(s.planSpacing) || s.planSpacing < 0 || s.planSpacing > durationHours + 1e-6)) return false;
   if (s.planOffsetHours !== undefined && (!Number.isFinite(s.planOffsetHours) || s.planOffsetHours < 0 || s.planOffsetHours > durationHours + 1e-6)) return false;
   if (s.plannedEndpoint !== undefined && (!Number.isFinite(s.plannedEndpoint) || s.plannedEndpoint < 0)) return false;
   if (s.planAchievable !== undefined && typeof s.planAchievable !== 'boolean') return false;
+  if (s.completionBac !== undefined && s.completionBac !== null
+      && (!Number.isFinite(s.completionBac) || s.completionBac < 0)) return false;
+  if (s.initialPlannedDrinks !== undefined
+      && (!Number.isInteger(s.initialPlannedDrinks) || s.initialPlannedDrinks < 0 || s.initialPlannedDrinks > MAX_SESSION_DRINKS)) return false;
+  if (s.initialProjectedEnd !== undefined
+      && (!Number.isFinite(s.initialProjectedEnd) || s.initialProjectedEnd < 0)) return false;
+  if (s.initialPeakBac !== undefined
+      && (!Number.isFinite(s.initialPeakBac) || s.initialPeakBac < 0)) return false;
   if (!Number.isFinite(s.ag) || s.ag <= 0 || s.ag > 1600 || !isValidProfile(s.profile)) return false;
   if (typeof s.profileName !== 'string' || s.profileName !== s.profile.name) return false;
   if (s.profileName.toLowerCase() === 'custom' && s.profileName !== 'custom') return false;
   if (!Array.isArray(s.plan) || s.plan.length !== bucketCount || s.plan.some(v => !Number.isInteger(v) || v < 0 || v > MAX_SESSION_DRINKS)) return false;
   if (!Array.isArray(s.drinkSchedule) || s.drinkSchedule.length > MAX_SESSION_DRINKS || s.drinkSchedule.some(v => !Number.isFinite(v))) return false;
   if (!Array.isArray(s.actualDrinkTimes) || s.actualDrinkTimes.length !== s.drinkSchedule.length || s.actualDrinkTimes.some(v => v !== null && !Number.isFinite(v))) return false;
-  const sessionEndTs = s.sessionStartTs + s.durationMinutes * 60000;
-  if (s.sessionComplete === true && Date.now() < sessionEndTs) return false;
   let previousScheduled = -Infinity;
   let previousActual = -Infinity;
   let reachedUnloggedDrink = false;
@@ -1087,7 +1363,7 @@ function isValidRestoredSession(s) {
     if (reachedUnloggedDrink
         || actual < s.sessionStartTs
         || actual > sessionEndTs
-        || actual > Date.now() + 60000
+        || actual > (s.sessionComplete === true ? s.completedAt : Date.now()) + 60000
         || actual < previousActual) return false;
     previousActual = actual;
   }
@@ -1166,6 +1442,20 @@ function loadSavedSession() {
     planAchievable   = typeof s.planAchievable === 'boolean'
       ? s.planAchievable
       : Math.abs(plannedEndpoint - bacEnd) <= 0.002;
+    completedAt      = Number.isFinite(s.completedAt) ? s.completedAt : null;
+    completionReason = typeof s.completionReason === 'string' ? s.completionReason : null;
+    initialPlannedDrinks = Number.isInteger(s.initialPlannedDrinks)
+      ? s.initialPlannedDrinks
+      : drinkSchedule.length;
+    initialProjectedEnd = Number.isFinite(s.initialProjectedEnd)
+      ? s.initialProjectedEnd
+      : plannedEndpoint;
+    initialPeakBac = Number.isFinite(s.initialPeakBac)
+      ? s.initialPeakBac
+      : Math.max(0, ...simulateCruise(plan, ag, profile));
+    completionBac = Number.isFinite(s.completionBac)
+      ? s.completionBac
+      : (sessionComplete && Number.isFinite(completedAt) ? getEstimatedBacAt(completedAt) : null);
     return true;
   } catch(e) { clearSavedSession(); return false; }
 }
@@ -1179,11 +1469,10 @@ const CONFIG_IDS = ['drinkOz','drinkAbv','bacEnd','drinkPreset','profileSelect',
 
 function activateSessionUI() {
   CONFIG_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = true; });
-  document.getElementById('startBtn').style.display = 'none';
-  document.getElementById('endBtn').style.display   = 'block';
-  document.getElementById('liveBacBar').classList.add('visible');
-  document.getElementById('planLabel').textContent  = 'Session in Progress';
+  setSessionFlowState(sessionComplete ? 'complete' : 'active');
   updateDrinkTrash();
+  if (sessionComplete) renderCompletionSummary();
+  else renderActiveSession();
 }
 
 function startSession() {
@@ -1195,6 +1484,9 @@ function startSession() {
   sessionActive  = true;
   sessionComplete = false;
   sessionStartTs = Date.now();
+  completedAt = null;
+  completionReason = null;
+  completionBac = null;
 
   const result   = buildCruisePlan(ag, profile, getDurationHours(), bacEnd);
   plan           = result.plan;
@@ -1204,30 +1496,94 @@ function startSession() {
   planAchievable = result.achievable;
   drinkSchedule  = initDrinkSchedule(result, sessionStartTs);
   actualDrinkTimes = new Array(result.n).fill(null);
+  initialPlannedDrinks = result.n;
+  initialProjectedEnd = result.endpoint;
+  initialPeakBac = Math.max(0, ...simulateCruise(plan, ag, profile));
 
   activateSessionUI();
   saveSession();
   updateLiveBac();
   renderTimeline();
-  clockInterval = setInterval(() => { updateLiveBac(); renderTimeline(); }, 10000);
+  renderActiveSession();
+  startSessionClock();
 }
 
-function endSession() {
+function resetSessionToPlanning() {
   sessionActive = false;
   sessionComplete = false;
   clearInterval(clockInterval);
   clearSavedSession();
+  sessionStartTs = null;
+  completedAt = null;
+  completionReason = null;
+  completionBac = null;
+  initialPlannedDrinks = 0;
+  initialProjectedEnd = 0;
+  initialPeakBac = 0;
   CONFIG_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = false; });
-  document.getElementById('startBtn').style.display = 'block';
-  document.getElementById('endBtn').style.display   = 'none';
-  document.getElementById('liveBacBar').classList.remove('visible');
-  document.getElementById('planLabel').textContent  = 'Pace Plan';
   document.getElementById('duration').disabled = false;
   actualDrinkTimes = new Array(drinkSchedule.length).fill(null);
   loadCustomDrinks();
   updateDrinkTrash();
+  setSessionFlowState('planning');
   update();
 }
+
+function finishSession() {
+  const now = Date.now();
+  completeSession(now >= getSessionEndTs() ? 'elapsed' : 'manual', Math.min(now, getSessionEndTs()));
+}
+
+function discardSession() {
+  resetSessionToPlanning();
+}
+
+function startAnotherSession() {
+  resetSessionToPlanning();
+  document.getElementById('preStartReviewHeading').focus?.();
+}
+
+let pendingSessionAction = null;
+
+function runPendingSessionAction() {
+  const action = pendingSessionAction;
+  pendingSessionAction = null;
+  if (action === 'finish') finishSession();
+  if (action === 'discard') discardSession();
+}
+
+function requestSessionAction(action) {
+  if (!sessionActive || sessionComplete || !['finish','discard'].includes(action)) return;
+  pendingSessionAction = action;
+  const dialog = document.getElementById('sessionDialog');
+  const confirmButton = document.getElementById('sessionDialogConfirm');
+  const finishing = action === 'finish';
+  document.getElementById('sessionDialogTitle').textContent = finishing ? 'Finish this Pace session?' : 'Discard this Pace session?';
+  document.getElementById('sessionDialogCopy').textContent = finishing
+    ? 'Finishing keeps your logged drinks and shows a completion summary. Unlogged future check-ins remain marked as not logged.'
+    : 'Discarding permanently removes this active session and its logged drinks from this browser.';
+  confirmButton.textContent = finishing ? 'Finish session' : 'Discard session';
+  confirmButton.className = `session-action-btn ${finishing ? 'finish' : 'danger'}`;
+  if (typeof dialog.showModal === 'function') {
+    dialog.showModal();
+  } else if (window.confirm(document.getElementById('sessionDialogCopy').textContent)) {
+    runPendingSessionAction();
+  } else {
+    pendingSessionAction = null;
+  }
+}
+
+document.getElementById('sessionDialogCancel').addEventListener('click', () => {
+  pendingSessionAction = null;
+  document.getElementById('sessionDialog').close();
+});
+document.getElementById('sessionDialogConfirm').addEventListener('click', () => {
+  document.getElementById('sessionDialog').close();
+  runPendingSessionAction();
+});
+document.getElementById('sessionDialog').addEventListener('cancel', () => {
+  pendingSessionAction = null;
+});
 
 // ── Events ────────────────────────────────────────────────────
 document.getElementById('duration').addEventListener('input', function() {
@@ -1373,7 +1729,21 @@ window.addEventListener('storage', event => {
 
 // ── Wake recovery ─────────────────────────────────────────────
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && sessionActive) { checkHourTransitions(); updateLiveBac(); renderTimeline(); }
+  if (!document.hidden && sessionActive) {
+    checkHourTransitions();
+    updateLiveBac();
+    renderTimeline();
+    renderActiveSession();
+  }
+});
+window.addEventListener('pageshow', () => {
+  if (sessionActive) {
+    updateLiveBac();
+    renderTimeline();
+    renderActiveSession();
+  } else {
+    updateReviewTimes(Date.now());
+  }
 });
 
 // ── Theme system (shared with zone.html) ──────────────────────
@@ -1392,13 +1762,15 @@ function initTheme() {
     activateSessionUI();
     checkHourTransitions();
     update();
-    updateLiveBac();
     renderTimeline();
     if (!sessionComplete) {
-      clockInterval = setInterval(() => { updateLiveBac(); renderTimeline(); }, 10000);
+      updateLiveBac();
+      renderActiveSession();
+      if (!sessionComplete) startSessionClock();
     } else {
-      document.getElementById('planLabel').textContent = 'Session Complete';
       document.getElementById('duration').disabled = true;
+      setSessionFlowState('complete');
+      renderCompletionSummary();
     }
     const toast = document.createElement('div');
     toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(126,184,255,0.12);border:1px solid rgba(126,184,255,0.4);color:var(--blue);font-family:Space Mono,monospace;font-size:10px;letter-spacing:0.1em;padding:10px 18px;border-radius:8px;z-index:999;text-transform:uppercase;';
@@ -1407,8 +1779,10 @@ function initTheme() {
     setTimeout(() => toast.remove(), 3000);
   } else {
     updateDrinkTrash();
+    setSessionFlowState('planning');
     update();
   }
+  previewInterval = setInterval(() => updateReviewTimes(Date.now()), 30000);
 })();
 </script>
 </body>

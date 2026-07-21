@@ -18,6 +18,24 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
 }
 
+function openingTagWithId(html, id) {
+  const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return html.match(new RegExp(`<[^>]+\\bid="${escaped}"[^>]*>`, 'i'))?.[0] || '';
+}
+
+function functionSource(html, name) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(`function\\s+${escaped}\\s*\\([^)]*\\)\\s*\\{`).exec(html);
+  if (!match) return '';
+  let depth = 1;
+  for (let index = match.index + match[0].length; index < html.length; index += 1) {
+    if (html[index] === '{') depth += 1;
+    if (html[index] === '}') depth -= 1;
+    if (depth === 0) return html.slice(match.index, index + 1);
+  }
+  return '';
+}
+
 function pngDimensions(relativePath) {
   const bytes = fs.readFileSync(path.join(root, relativePath));
   assert.equal(bytes.toString('ascii', 1, 4), 'PNG', `${relativePath} must be a PNG`);
@@ -66,7 +84,7 @@ test('mode pages load the tested calculation core', () => {
     ],
     'goldilocks-cruise.html': [
       'bacPerDrink', 'simulateDuration', 'estimateLiveBac',
-      'buildCruiseCapacityPlan', 'buildCruiseReplan',
+      'buildCruiseReplan',
     ],
     'goldilocks-training.html': [
       'calculateCalibration', 'fitLine', 'widmarkRisePerStd',
@@ -115,6 +133,152 @@ test('Pace exposes 15-minute session-length planning', () => {
   assert.match(html, /normalizeRestoredSession\s*\(/);
   assert.match(html, /s\.hours\s*\*\s*60/);
   assert.match(html, /s\.plan\.length\s*!==\s*bucketCount/);
+});
+
+test('Zone and Pace load the shared Phase 2 session-flow assets', () => {
+  for (const page of ['goldilocks-zone.html', 'goldilocks-cruise.html']) {
+    const html = read(page);
+    assert.match(
+      html,
+      /<link\b[^>]*\bhref="goldilocks-session-flow\.css"[^>]*>/i,
+      `${page} must load goldilocks-session-flow.css`
+    );
+    assert.match(
+      html,
+      /<script\b[^>]*\bsrc="goldilocks-session-flow\.js"[^>]*><\/script>/i,
+      `${page} must load goldilocks-session-flow.js`
+    );
+  }
+  assert.match(
+    read('goldilocks-session-flow.css'),
+    /\[hidden\]\s*\{[^}]*display:\s*none\s*!important/i,
+    'shared flow styles must keep completed/planning regions semantically hidden'
+  );
+});
+
+test('Zone and Pace expose an accessible planning, active, and completion flow', () => {
+  const requiredIds = [
+    'setupFlow',
+    'preStartReview',
+    'activeSessionPanel',
+    'nextAction',
+    'nextActionTimer',
+    'finishSessionBtn',
+    'discardSessionBtn',
+    'sessionSummary',
+    'sessionSummaryHeading',
+  ];
+
+  for (const page of ['goldilocks-zone.html', 'goldilocks-cruise.html']) {
+    const html = read(page);
+    for (const id of requiredIds) {
+      assert.ok(openingTagWithId(html, id), `${page} must expose #${id}`);
+    }
+
+    assert.match(openingTagWithId(html, 'preStartReview'), /\baria-labelledby="[^"]+"/i);
+    assert.match(openingTagWithId(html, 'activeSessionPanel'), /\baria-labelledby="[^"]+"/i);
+    assert.match(openingTagWithId(html, 'sessionSummary'), /\baria-labelledby="sessionSummaryHeading"/i);
+
+    const nextAction = openingTagWithId(html, 'nextAction');
+    const nextActionText = openingTagWithId(html, 'nextActionText') || openingTagWithId(html, 'nextActionTitle');
+    const liveStatus = /\brole="status"/i.test(nextAction) ? nextAction : nextActionText;
+    assert.match(liveStatus, /\brole="status"/i, `${page} next action must expose a status`);
+    assert.match(liveStatus, /\baria-live="polite"/i, `${page} next action must announce meaningful changes politely`);
+
+    const timer = openingTagWithId(html, 'nextActionTimer');
+    assert.match(timer, /\brole="timer"/i, `${page} countdown must expose timer semantics`);
+    const timerLiveSetting = timer.match(/\baria-live="([^"]+)"/i)?.[1]?.toLowerCase();
+    assert.equal(timerLiveSetting, 'off', `${page} countdown must not announce every timer update`);
+
+    for (const id of ['finishSessionBtn', 'discardSessionBtn']) {
+      assert.match(openingTagWithId(html, id), /\btype="button"/i, `${page}#${id} must be an explicit button`);
+    }
+    assert.match(openingTagWithId(html, 'sessionSummaryHeading'), /\btabindex="-1"/i);
+    assert.match(
+      html,
+      /getElementById\(['"]sessionSummaryHeading['"]\)\.focus(?:\?\.)?\s*\(/,
+      `${page} must move focus to its completion summary`
+    );
+  }
+});
+
+test('Zone and Pace provide distinct finish, discard, undo, edit, and reconciliation paths', () => {
+  const planners = {
+    'goldilocks-zone.html': {
+      functions: ['finishSession', 'discardSession', 'undoLastLog', 'setHourLog', 'renderReconcileEditor'],
+      sharedCalls: ['zoneUnresolvedHours', 'elapsedMinutes'],
+      confirmation: 'openSessionDialog',
+      reset: 'resetToPlanning',
+    },
+    'goldilocks-cruise.html': {
+      functions: ['finishSession', 'discardSession', 'undoLatestDrink', 'editLoggedDrink', 'recalcFromNow'],
+      sharedCalls: ['paceLastLoggedIndex', 'validatePaceTimestamp', 'describeDeadline'],
+      confirmation: 'requestSessionAction',
+      reset: 'resetSessionToPlanning',
+    },
+  };
+
+  for (const [page, contract] of Object.entries(planners)) {
+    const html = read(page);
+    for (const name of contract.functions) {
+      assert.ok(functionSource(html, name), `${page} must define ${name}()`);
+    }
+    for (const name of contract.sharedCalls) {
+      assert.match(html, new RegExp(`GoldilocksSessionFlow\\.${name}\\s*\\(`), `${page} must use ${name}()`);
+    }
+
+    const finish = functionSource(html, 'finishSession');
+    const discard = functionSource(html, 'discardSession');
+    const destructiveReset = functionSource(html, contract.reset);
+    const confirmation = functionSource(html, contract.confirmation);
+    assert.doesNotMatch(finish, /clearSavedSession\s*\(/, `${page} finish must preserve its saved summary`);
+    assert.match(
+      `${discard}\n${destructiveReset}`,
+      /clearSavedSession\s*\(/,
+      `${page} discard must clear the saved session`
+    );
+    assert.match(confirmation, /(?:showModal|confirm)\s*\(/, `${page} destructive actions must request confirmation`);
+  }
+
+  const zoneUndo = functionSource(read('goldilocks-zone.html'), 'undoLastLog');
+  assert.match(zoneUndo, /change\.previousPlan/, 'Zone undo must restore the exact prior plan');
+  assert.match(zoneUndo, /change\.previousReplanFlags/, 'Zone undo must restore prior replan markers');
+});
+
+test('planner BAC copy does not present a selected target as safe or nudge consumption', () => {
+  for (const page of ['goldilocks-zone.html', 'goldilocks-cruise.html']) {
+    const html = read(page);
+    assert.doesNotMatch(html, /In the Goldilocks Zone/i, `${page} must not label a selected range as safe`);
+    assert.doesNotMatch(html, /\bOn target\b/i, `${page} must not present a BAC goal as a success state`);
+    assert.doesNotMatch(
+      html,
+      /Below (?:selected )?(?:range|goal|target|zone)[^'"\n<]*(?:reassess|speed up|drink)/i,
+      `${page} must not nudge drinking when below a selected target`
+    );
+    assert.match(html, /not a safety threshold/i, `${page} must distinguish planning targets from safety`);
+  }
+
+  const zone = read('goldilocks-zone.html');
+  assert.doesNotMatch(zone, /\bSober\b|\.in-zone|bacMax\s*\*\s*1\./i, 'Zone visuals must not turn a preference into a safety scale');
+  assert.match(zone, /BAC_DISPLAY_SCALE/, 'Zone must use a fixed estimate display scale');
+
+  const pace = read('goldilocks-cruise.html');
+  assert.doesNotMatch(pace, /Session Goal|Choose different session settings/i, 'Pace must not frame its reference as a goal to reach');
+});
+
+test('planner fasted controls disclose that they are advisory only', () => {
+  for (const page of ['goldilocks-zone.html', 'goldilocks-cruise.html']) {
+    const html = read(page);
+    const toggle = openingTagWithId(html, 'fastedToggle');
+    assert.match(toggle, /\baria-pressed="false"/i, `${page} fasted control must expose toggle state`);
+    const warningStart = html.indexOf('id="fastedWarning"');
+    assert.ok(warningStart >= 0, `${page} must expose #fastedWarning`);
+    const warning = html.slice(warningStart, warningStart + 700);
+    assert.match(warning, /Advisory only/i, `${page} must call the fasted setting advisory`);
+    assert.match(warning, /does not (?:change|alter)/i, `${page} must disclose that the model is unchanged`);
+    assert.match(warning, /\b(?:BAC )?estimate\b/i, `${page} must mention the estimate is unchanged`);
+    assert.match(warning, /\bplan\b/i, `${page} must mention the plan is unchanged`);
+  }
 });
 
 test('all pages use the shared theme catalog and animated icon system', () => {
@@ -185,6 +349,36 @@ test('Training saves profiles for and hands off to both planners', () => {
   assert.match(html, /Plan in Zone/);
   assert.match(html, /Plan in Pace/);
   assert.match(html, /id="profileHandoff"/);
+});
+
+test('Training explains fasted calibration behavior without implying a safer metabolism', () => {
+  const html = read('goldilocks-training.html');
+  const fastedInput = openingTagWithId(html, 'fastedInput');
+  assert.match(fastedInput, /\baria-describedby="fastedTrainingHelp"/i);
+
+  const helpStart = html.indexOf('id="fastedTrainingHelp"');
+  assert.ok(helpStart >= 0, 'Training must expose #fastedTrainingHelp');
+  const help = html.slice(helpStart, helpStart + 650);
+  assert.match(help, /elimination rate is kept/i);
+  assert.match(help, /rise rate is excluded from the profile average/i);
+  assert.match(help, /protocol timing is unchanged/i);
+
+  const metabolismResult = openingTagWithId(html, 'resMetab');
+  assert.doesNotMatch(metabolismResult, /\bgreen\b/i, 'metabolism must not have a success color');
+  assert.doesNotMatch(html, /\bmetabColor\b/, 'metabolism color must not classify a rate as good or safe');
+});
+
+test('Training confirms destructive protocol resets', () => {
+  const html = read('goldilocks-training.html');
+  const cancel = functionSource(html, 'cancelProtocol');
+  const reset = functionSource(html, 'resetToSetup');
+  assert.ok(cancel, 'Training must define cancelProtocol()');
+  assert.match(cancel, /\bprotocolActive\b/);
+  assert.match(cancel, /\bconfirm\s*\(/, 'canceling an active protocol must require confirmation');
+  assert.ok(reset, 'Training must define resetToSetup()');
+  assert.match(reset, /completedProtocolId/);
+  assert.match(reset, /savedProtocolId/);
+  assert.match(reset, /\bconfirm\s*\(/, 'discarding unsaved completed results must require confirmation');
 });
 
 test('pages expose a semantic top-level structure and reduced-motion fallback', () => {

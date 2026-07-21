@@ -302,10 +302,13 @@
       </div>
 
       <label class="toggle-row" for="fastedInput" style="margin-top:12px">
-        <input class="fasted-input" type="checkbox" id="fastedInput" onchange="setFasted(this.checked)">
+        <input class="fasted-input" type="checkbox" id="fastedInput" aria-describedby="fastedTrainingHelp" onchange="setFasted(this.checked)">
         <span class="toggle-label">Fasted (empty stomach)</span>
         <span style="font-size:9px;color:var(--amber);margin-left:auto" id="fastedNote"></span>
       </label>
+      <p id="fastedTrainingHelp" style="margin-top:8px;font-size:9px;color:var(--muted);line-height:1.7">
+        Calibration effect: elimination rate is kept, rise rate is excluded from the profile average, and protocol timing is unchanged.
+      </p>
     </div>
 
     <!-- Protocol overview -->
@@ -419,7 +422,7 @@
     <!-- Key results -->
     <div class="result-grid">
       <div class="result-cell">
-        <div class="result-val green" id="resMetab">—</div>
+        <div class="result-val" id="resMetab">—</div>
         <div class="result-lbl">Metab rate / hr</div>
         <div class="result-sub" id="resMetabComp">Widmark ref: 0.015</div>
       </div>
@@ -959,9 +962,8 @@ function finishProtocol() {
   document.getElementById('resultsHeading').focus();
 
   // Fill results
-  const metabColor = results.metabPerHr > 0.018 ? 'var(--amber)' : results.metabPerHr < 0.012 ? 'var(--blue)' : 'var(--green)';
   document.getElementById('resMetab').textContent    = results.metabPerHr.toFixed(4);
-  document.getElementById('resMetab').style.color    = metabColor;
+  document.getElementById('resMetab').style.color    = 'var(--text)';
   document.getElementById('resMetabComp').textContent= `vs Widmark ref 0.0150`;
 
   if (!fasted) {
@@ -1039,6 +1041,10 @@ function finishProtocol() {
 }
 
 function cancelProtocol() {
+  const readingDetail = readings.length
+    ? ` and ${readings.length} logged reading${readings.length === 1 ? '' : 's'}`
+    : '';
+  if (protocolActive && !confirm(`Discard this active protocol${readingDetail}? This cannot be undone.`)) return;
   clearInterval(timerInterval);
   protocolActive = false;
   readings = [];
@@ -1386,6 +1392,8 @@ function isValidSavedSession(s) {
 }
 
 function resetToSetup() {
+  const hasUnsavedCalibration = completedProtocolId && savedProtocolId !== completedProtocolId;
+  if (hasUnsavedCalibration && !confirm('Start another session without saving this completed calibration? These results will be discarded.')) return;
   document.getElementById('phaseResults').classList.add('hidden');
   document.getElementById('phaseSetup').classList.remove('hidden');
   readings = []; currentStep = 0; t0 = null;

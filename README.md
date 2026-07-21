@@ -14,7 +14,7 @@ Open the hosted app at [seeholmes.github.io/Goldilocks](https://seeholmes.github
 
 ## Architecture
 
-The production app has no framework, bundler, backend, analytics, or device integration. Each mode is a standalone HTML page with inline presentation and controller code. Shared, testable BAC and calibration calculations live in `goldilocks-core.js`; shared custom-drink validation and storage live in `goldilocks-presets.js`; shared theme behavior lives in `goldilocks-theme.js`; and Mission Control reads resumable state through the non-mutating `goldilocks-session-state.js` inspector.
+The production app has no framework, bundler, backend, analytics, or device integration. Each mode is a standalone HTML page with inline presentation and controller code. Shared, testable BAC and calibration calculations live in `goldilocks-core.js`; shared custom-drink validation and storage live in `goldilocks-presets.js`; shared theme behavior lives in `goldilocks-theme.js`; shared session-flow helpers and presentation live in `goldilocks-session-flow.js` and `goldilocks-session-flow.css`; and Mission Control reads resumable state through the non-mutating `goldilocks-session-state.js` inspector.
 
 The only external runtime dependency is Google Fonts. User data stays in same-origin browser storage:
 
@@ -28,7 +28,7 @@ The only external runtime dependency is Google Fonts. User data stays in same-or
 | `goldilocks_training_session` | Active Training protocol |
 | `goldilocks_training_history` | Last 20 completed training sessions |
 
-Session records are validated and expire after their mode-specific recovery window.
+Session records are validated and expire after their mode-specific recovery window. Zone keeps unresolved hourly logs distinct from an explicit zero, and both planners retain a finished-session summary before the record expires.
 
 ## Local development
 
@@ -52,4 +52,4 @@ Changes to BAC math, schedule construction, calibration, profile shape, themes, 
 
 ## Safety
 
-BAC values are estimates, not measurements. Food, hydration, medication, timing, physiology, and other factors can materially affect actual BAC. Use a breathalyzer where appropriate, never use this app to decide whether it is safe to drive, and never drive after drinking.
+BAC values are estimates, not measurements. A selected Zone range or Pace ending value is a planning preference, not a safety threshold. Food, hydration, medication, timing, physiology, and other factors can materially affect actual BAC. Use a breathalyzer where appropriate, never use this app to decide whether it is safe to drive, and never drive after drinking.

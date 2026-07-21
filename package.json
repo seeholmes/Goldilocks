@@ -3,6 +3,6 @@
   "version": "1.0.2",
   "private": true,
   "scripts": {
-    "test": "node --test tests/goldilocks-core.test.js tests/goldilocks-presets.test.js tests/goldilocks-theme.test.js tests/goldilocks-session-state.test.js tests/static-structure.test.js"
+    "test": "node --test tests/goldilocks-core.test.js tests/goldilocks-presets.test.js tests/goldilocks-theme.test.js tests/goldilocks-session-flow.test.js tests/goldilocks-session-state.test.js tests/static-structure.test.js"
   }
 }

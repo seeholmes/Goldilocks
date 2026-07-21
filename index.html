@@ -215,10 +215,10 @@
           </span>
         </div>
         <h3 class="mode-name">Zone</h3>
-        <div class="mode-sub">Stay between two limits</div>
-        <div class="mode-desc">Choose a BAC floor and ceiling. Zone builds an hour-by-hour plan and adjusts it as you log drinks.</div>
+        <div class="mode-sub">Plan around a selected range</div>
+        <div class="mode-desc">Choose a BAC planning range. Zone builds an hour-by-hour model and adjusts it as you log drinks.</div>
         <div class="mode-chips">
-          <span class="chip lit">Target range</span>
+          <span class="chip lit">Planning range</span>
           <span class="chip lit">Adaptive hourly plan</span>
           <span class="chip">Live estimate</span>
         </div>
@@ -242,7 +242,7 @@
         </div>
         <h3 class="mode-name">Pace</h3>
         <div class="mode-sub">Space drinks across your session</div>
-        <div class="mode-desc">Choose a drink, session length, and BAC goal at the end. Pace spaces drinks and adjusts the remaining schedule as you log them.</div>
+        <div class="mode-desc">Choose a drink, session length, and BAC planning reference at the end. Pace spaces drinks and adjusts the remaining schedule as you log them.</div>
         <div class="mode-chips">
           <span class="chip lit">15-minute duration</span>
           <span class="chip lit">Adaptive spacing</span>
@@ -307,15 +307,25 @@ function formatRemaining(milliseconds) {
 function describeResume(entry, now) {
   if (entry.mode === 'zone') {
     if (entry.state === 'scheduled') return `Starts ${formatClock(entry.startAt)} · ${entry.totalSteps}h · ${entry.plannedDrinks} planned`;
-    if (entry.state === 'needs-finalize') return 'Ended recently · open to finalize the session';
-    if (entry.state === 'complete') return `Complete · ${entry.loggedDrinks} logged · review the session`;
+    if (entry.state === 'needs-finalize') {
+      const review = entry.unresolvedPeriods ? ` · ${entry.unresolvedPeriods} ${entry.unresolvedPeriods === 1 ? 'hour needs' : 'hours need'} review` : '';
+      return `Session time elapsed${review}`;
+    }
+    if (entry.state === 'complete') return `Finished · ${entry.loggedDrinks} logged · review the summary`;
+    if (entry.needsReconciliation) {
+      return `${entry.unresolvedPeriods} prior ${entry.unresolvedPeriods === 1 ? 'hour needs' : 'hours need'} review · Hour ${entry.currentStep} of ${entry.totalSteps}`;
+    }
     return `Hour ${entry.currentStep} of ${entry.totalSteps} · ${entry.loggedDrinks} logged · ends ${formatClock(entry.endAt)}`;
   }
   if (entry.mode === 'pace') {
     if (entry.state === 'scheduled') return `Starts ${formatClock(entry.startAt)} · ${entry.plannedDrinks} planned`;
     if (entry.state === 'needs-finalize') return 'Ended recently · open to finalize the session';
-    if (entry.state === 'complete') return `Complete · ${entry.loggedDrinks} of ${entry.plannedDrinks} logged · review`;
-    const next = entry.nextAt && entry.nextAt > now ? ` · next ${formatClock(entry.nextAt)}` : '';
+    if (entry.state === 'complete') return `Finished · ${entry.loggedDrinks} of ${entry.plannedDrinks} logged · review the summary`;
+    const next = entry.nextAt
+      ? entry.nextAt > now
+        ? ` · next ${formatClock(entry.nextAt)}`
+        : ` · next check-in overdue by ${formatRemaining(now - entry.nextAt)}`
+      : '';
     return `${entry.loggedDrinks} of ${entry.plannedDrinks} logged · ${formatRemaining(entry.endAt - now)} left${next}`;
   }
   if (entry.state === 'results-saved') return 'Results saved · review your calibrated profile';
@@ -353,7 +363,7 @@ function createResumeLink(entry, now) {
 
   const action = document.createElement('span');
   action.className = 'resume-action';
-  action.textContent = 'Resume →';
+  action.textContent = entry.state === 'complete' ? 'Review summary →' : 'Resume →';
   link.append(copy, action);
   return link;
 }
@@ -388,12 +398,23 @@ function updateMissionControl() {
     const status = document.querySelector(`[data-mode-status="${entry.mode}"]`);
     if (card) card.classList.add('is-active');
     if (status) {
-      status.textContent = entry.mode === 'training' ? 'Protocol active' : 'Session active';
+      status.textContent = entry.mode === 'training'
+        ? 'Protocol active'
+        : entry.state === 'complete'
+          ? 'Summary ready'
+          : entry.state === 'needs-finalize' || entry.needsReconciliation
+            ? 'Needs review'
+            : 'Session active';
       status.hidden = false;
     }
   });
 
-  heading.textContent = sessions.length === 1 ? 'Resume your session' : 'Resume your sessions';
+  const completedCount = sessions.filter(entry => entry.state === 'complete').length;
+  heading.textContent = completedCount === sessions.length
+    ? (sessions.length === 1 ? 'Review your recent summary' : 'Review your recent summaries')
+    : completedCount > 0
+      ? 'Continue or review'
+      : (sessions.length === 1 ? 'Resume your session' : 'Resume your sessions');
   section.hidden = sessions.length === 0;
   updateCalibrationStatus();
 }

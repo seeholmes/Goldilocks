@@ -130,6 +130,7 @@ test('inspects scheduled, active, completed, and expired Zone sessions', () => {
   assert.equal(active.state, 'active');
   assert.equal(active.currentStep, 2);
   assert.equal(active.loggedDrinks, 2);
+  assert.equal(active.needsReconciliation, false);
 
   const completeStart = NOW - 4 * HOUR;
   const complete = sessions.inspectZone(zoneFixture({
@@ -144,10 +145,50 @@ test('inspects scheduled, active, completed, and expired Zone sessions', () => {
   assert.equal(expired.health, 'expired');
 });
 
+test('reports unresolved Zone periods without confusing an explicit zero', () => {
+  const unresolved = sessions.inspectZone(zoneFixture({
+    sessionStartTs: NOW - 2 * HOUR,
+    actualDrinks: [2, null, null, null],
+    startTime: '18:00',
+  }), NOW);
+  assert.equal(unresolved.health, 'valid');
+  assert.equal(unresolved.unresolvedPeriods, 1);
+  assert.equal(unresolved.needsReconciliation, true);
+
+  const resolved = sessions.inspectZone(zoneFixture({
+    sessionStartTs: NOW - 2 * HOUR,
+    actualDrinks: [2, 0, null, null],
+    startTime: '18:00',
+  }), NOW);
+  assert.equal(resolved.unresolvedPeriods, 0);
+  assert.equal(resolved.needsReconciliation, false);
+});
+
+test('accepts an early completed Zone session only when elapsed hours are reconciled', () => {
+  const complete = sessions.inspectZone(zoneFixture({
+    completedAt: NOW,
+    actualDrinks: [2, null, null, null],
+    sessionComplete: true,
+  }), NOW);
+  assert.equal(complete.health, 'valid');
+  assert.equal(complete.state, 'complete');
+  assert.equal(complete.completedAt, NOW);
+
+  const invalid = sessions.inspectZone(zoneFixture({
+    completedAt: NOW,
+    actualDrinks: [null, null, null, null],
+    sessionComplete: true,
+  }), NOW);
+  assert.equal(invalid.health, 'corrupt');
+  assert.equal(invalid.reason, 'invalid-completion-progress');
+});
+
 test('inspects Pace progress and normalizes legacy whole-hour duration in memory', () => {
-  const current = sessions.inspectPace(paceFixture(), NOW);
+  const current = sessions.inspectPace(paceFixture({ initialPlannedDrinks: 10, initialPeakBac: 0.06 }), NOW);
   assert.equal(current.health, 'valid');
   assert.equal(current.state, 'active');
+  assert.equal(current.plannedDrinks, 3);
+  assert.equal(current.initialPlannedDrinks, 10);
   assert.equal(current.loggedDrinks, 1);
   assert.equal(current.remainingDrinks, 2);
 
@@ -160,10 +201,43 @@ test('inspects Pace progress and normalizes legacy whole-hour duration in memory
   assert.equal(legacy.durationMinutes, undefined);
 });
 
+test('rejects invalid persisted Pace preview estimates', () => {
+  const result = sessions.inspectPace(paceFixture({ initialPeakBac: Number.NaN }), NOW);
+  assert.equal(result.health, 'corrupt');
+  assert.equal(result.reason, 'invalid-session');
+});
+
 test('rejects a Pace schedule whose persisted hourly plan does not match', () => {
   const result = sessions.inspectPace(paceFixture({ plan: [1, 2] }), NOW);
   assert.equal(result.health, 'corrupt');
   assert.equal(result.reason, 'plan-mismatch');
+});
+
+test('accepts early Pace completion and preserves the original planned count', () => {
+  const start = NOW - 30 * MINUTE;
+  const complete = sessions.inspectPace(paceFixture({
+    completedAt: NOW,
+    sessionComplete: true,
+    initialPlannedDrinks: 3,
+    plan: [1, 0],
+    drinkSchedule: [start + 10 * MINUTE, start + 50 * MINUTE, start + 90 * MINUTE],
+    actualDrinkTimes: [start + 10 * MINUTE, null, null],
+  }), NOW);
+  assert.equal(complete.health, 'valid');
+  assert.equal(complete.state, 'complete');
+  assert.equal(complete.plannedDrinks, 3);
+  assert.equal(complete.loggedDrinks, 1);
+  assert.equal(complete.remainingDrinks, 0);
+  assert.equal(complete.nextAt, null);
+});
+
+test('a Pace undo remains valid and decrements logged progress', () => {
+  const undone = sessions.inspectPace(paceFixture({
+    actualDrinkTimes: [null, null, null],
+  }), NOW);
+  assert.equal(undone.health, 'valid');
+  assert.equal(undone.loggedDrinks, 0);
+  assert.equal(undone.remainingDrinks, 3);
 });
 
 test('distinguishes an active Training protocol from a valid ready-to-finish curve', () => {

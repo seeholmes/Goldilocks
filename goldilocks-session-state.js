@@ -93,9 +93,11 @@
     if (parsed.result) return parsed.result;
     const session = parsed.value;
     const complete = session.sessionComplete === true;
+    const completedAt = session.completedAt ?? null;
 
     if (!Number.isInteger(session.hours) || session.hours < 1 || session.hours > 8
         || (session.sessionComplete !== undefined && typeof session.sessionComplete !== 'boolean')
+        || (completedAt !== null && (!Number.isFinite(completedAt) || !complete))
         || !Number.isFinite(session.sessionStartTs)
         || session.sessionStartTs > now + 24 * HOUR_MS
         || !isFiniteInRange(session.bacMin, 0.01, 0.15)
@@ -117,38 +119,82 @@
         || !Array.isArray(session.replanFlags)
         || session.replanFlags.length !== session.hours
         || session.replanFlags.some((flag) => typeof flag !== 'boolean')
+        || (session.initialPlan !== undefined && (
+          !Array.isArray(session.initialPlan)
+          || session.initialPlan.length !== session.hours
+          || session.initialPlan.some((count) => !Number.isInteger(count) || count < 0 || count > 6)
+        ))
         || !validSharedConfiguration(session)
         || !/^([01]\d|2[0-3]):[0-5]\d$/.test(session.startTime || '')) {
       return modeResult('zone', 'corrupt', 'invalid-session');
     }
 
-    const endAt = session.sessionStartTs + session.hours * HOUR_MS;
-    if (now > endAt + HOUR_MS) return modeResult('zone', 'expired');
+    const scheduledEndAt = session.sessionStartTs + session.hours * HOUR_MS;
+    if (completedAt !== null && (
+      completedAt < session.sessionStartTs
+      || completedAt > now + 5000
+      || completedAt > scheduledEndAt + HOUR_MS
+    )) {
+      return modeResult('zone', 'corrupt', 'invalid-completion-time');
+    }
+    const retentionEndAt = complete
+      ? (completedAt ?? scheduledEndAt) + 24 * HOUR_MS
+      : scheduledEndAt + HOUR_MS;
+    if (now > retentionEndAt) return modeResult('zone', 'expired');
     const elapsedHours = (now - session.sessionStartTs) / HOUR_MS;
     const currentHour = elapsedHours < 0 ? -1 : Math.min(session.hours - 1, Math.floor(elapsedHours));
-    if ((complete && elapsedHours < session.hours)
-        || session.actualDrinks.some((count, hour) => count !== null && hour > currentHour)
-        || (complete && session.actualDrinks.some((count) => count === null))) {
+    if (session.actualDrinks.some((count, hour) => count !== null && hour > currentHour)) {
       return modeResult('zone', 'corrupt', 'invalid-progress');
+    }
+    if (complete) {
+      if (completedAt === null) {
+        if (elapsedHours < session.hours || session.actualDrinks.some((count) => count === null)) {
+          return modeResult('zone', 'corrupt', 'invalid-progress');
+        }
+      } else {
+        const completionElapsed = (completedAt - session.sessionStartTs) / HOUR_MS;
+        const lastRequiredHour = Math.min(
+          session.hours - 1,
+          Math.max(0, Math.floor(Math.max(0, completionElapsed - 1e-9)))
+        );
+        if (session.actualDrinks.some((count, hour) => (
+          hour <= lastRequiredHour ? count === null : count !== null
+        ))) {
+          return modeResult('zone', 'corrupt', 'invalid-completion-progress');
+        }
+      }
     }
 
     const state = now < session.sessionStartTs
       ? 'scheduled'
       : complete
         ? 'complete'
-        : now >= endAt
+        : now >= scheduledEndAt
           ? 'needs-finalize'
           : 'active';
+    const reconciliationThrough = state === 'scheduled' || state === 'complete'
+      ? -1
+      : state === 'needs-finalize'
+        ? session.hours - 1
+        : Math.max(-1, currentHour - 1);
+    const unresolvedPeriods = session.actualDrinks.reduce((count, value, hour) => (
+      hour <= reconciliationThrough && value === null ? count + 1 : count
+    ), 0);
+    const plannedSource = Array.isArray(session.initialPlan) ? session.initialPlan : session.plan;
     return {
       ...modeResult('zone', 'valid'),
       state,
       startAt: session.sessionStartTs,
-      endAt,
+      endAt: completedAt ?? scheduledEndAt,
+      scheduledEndAt,
+      completedAt,
       durationMinutes: session.hours * 60,
       currentStep: state === 'active' ? currentHour + 1 : null,
       totalSteps: session.hours,
-      plannedDrinks: session.plan.reduce((sum, count) => sum + count, 0),
+      plannedDrinks: plannedSource.reduce((sum, count) => sum + count, 0),
       loggedDrinks: session.actualDrinks.reduce((sum, count) => sum + (count || 0), 0),
+      unresolvedPeriods,
+      needsReconciliation: unresolvedPeriods > 0,
       bacMin: session.bacMin,
       bacMax: session.bacMax,
     };
@@ -162,6 +208,7 @@
       ? session.hours * 60
       : session.durationMinutes;
     const complete = session.sessionComplete === true;
+    const completedAt = session.completedAt ?? null;
     const bucketCount = Math.ceil(durationMinutes / 60);
 
     if (!Number.isInteger(durationMinutes)
@@ -169,6 +216,7 @@
         || durationMinutes > 480
         || durationMinutes % 15 !== 0
         || (session.sessionComplete !== undefined && typeof session.sessionComplete !== 'boolean')
+        || (completedAt !== null && (!Number.isFinite(completedAt) || !complete))
         || !Number.isFinite(session.sessionStartTs)
         || session.sessionStartTs > now + 5 * MINUTE_MS
         || !isFiniteInRange(session.bacEnd, 0, 0.2)
@@ -188,13 +236,32 @@
         || !Array.isArray(session.actualDrinkTimes)
         || session.actualDrinkTimes.length !== session.drinkSchedule.length
         || session.actualDrinkTimes.some((timestamp) => timestamp !== null && !Number.isFinite(timestamp))
+        || (session.initialPlannedDrinks !== undefined && (
+          !Number.isInteger(session.initialPlannedDrinks)
+          || session.initialPlannedDrinks < 0
+          || session.initialPlannedDrinks > 48
+        ))
+        || (session.initialProjectedEnd !== undefined && !isFiniteInRange(session.initialProjectedEnd, 0, 0.5))
+        || (session.initialPeakBac !== undefined && !isFiniteInRange(session.initialPeakBac, 0, 0.5))
         || !validSharedConfiguration(session)) {
       return modeResult('pace', 'corrupt', 'invalid-session');
     }
 
-    const endAt = session.sessionStartTs + durationMinutes * MINUTE_MS;
-    if (now > endAt + HOUR_MS) return modeResult('pace', 'expired');
-    if (complete && now < endAt) return modeResult('pace', 'corrupt', 'invalid-completion');
+    const scheduledEndAt = session.sessionStartTs + durationMinutes * MINUTE_MS;
+    if (completedAt !== null && (
+      completedAt < session.sessionStartTs
+      || completedAt > now + 5000
+      || completedAt > scheduledEndAt + HOUR_MS
+    )) {
+      return modeResult('pace', 'corrupt', 'invalid-completion-time');
+    }
+    const retentionEndAt = complete
+      ? (completedAt ?? scheduledEndAt) + 24 * HOUR_MS
+      : scheduledEndAt + HOUR_MS;
+    if (now > retentionEndAt) return modeResult('pace', 'expired');
+    if (complete && completedAt === null && now < scheduledEndAt) {
+      return modeResult('pace', 'corrupt', 'invalid-completion');
+    }
     if (session.planSpacing !== undefined
         && (!Number.isFinite(session.planSpacing) || session.planSpacing < 0 || session.planSpacing > durationMinutes / 60 + 1e-6)) {
       return modeResult('pace', 'corrupt', 'invalid-spacing');
@@ -217,7 +284,7 @@
     for (let index = 0; index < session.drinkSchedule.length; index += 1) {
       const scheduled = session.drinkSchedule[index];
       const actual = session.actualDrinkTimes[index];
-      if (scheduled < session.sessionStartTs || scheduled > endAt || scheduled < previousScheduled) {
+      if (scheduled < session.sessionStartTs || scheduled > scheduledEndAt || scheduled < previousScheduled) {
         return modeResult('pace', 'corrupt', 'invalid-schedule');
       }
       previousScheduled = scheduled;
@@ -227,7 +294,7 @@
       }
       if (reachedUnlogged
           || actual < session.sessionStartTs
-          || actual > endAt
+          || actual > (completedAt ?? scheduledEndAt)
           || actual > now + MINUTE_MS
           || actual < previousActual) {
         return modeResult('pace', 'corrupt', 'invalid-log');
@@ -252,19 +319,27 @@
       ? 'scheduled'
       : complete
         ? 'complete'
-        : now >= endAt
+        : now >= scheduledEndAt
           ? 'needs-finalize'
           : 'active';
+    const initialPlannedDrinks = Number.isInteger(session.initialPlannedDrinks)
+      && session.initialPlannedDrinks >= 0
+      && session.initialPlannedDrinks <= 48
+      ? session.initialPlannedDrinks
+      : session.drinkSchedule.length;
     return {
       ...modeResult('pace', 'valid'),
       state,
       startAt: session.sessionStartTs,
-      endAt,
+      endAt: completedAt ?? scheduledEndAt,
+      scheduledEndAt,
+      completedAt,
       durationMinutes,
-      plannedDrinks: session.drinkSchedule.length,
+      plannedDrinks: complete ? initialPlannedDrinks : session.drinkSchedule.length,
+      initialPlannedDrinks,
       loggedDrinks,
-      remainingDrinks: session.drinkSchedule.length - loggedDrinks,
-      nextAt: session.drinkSchedule[loggedDrinks] ?? null,
+      remainingDrinks: complete ? 0 : session.drinkSchedule.length - loggedDrinks,
+      nextAt: complete ? null : session.drinkSchedule[loggedDrinks] ?? null,
       bacEnd: session.bacEnd,
     };
   }
