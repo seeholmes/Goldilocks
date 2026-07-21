@@ -683,27 +683,55 @@ function update() {
   renderTimeline();
 }
 
-// ── Log drink ─────────────────────────────────────────────────
-function logDrink(i) {
-  if (!sessionActive || actualDrinkTimes[i] !== null) return;
-  const now      = Date.now();
-  actualDrinkTimes[i] = now;
+// ── Recalc from current state ─────────────────────────────────
+// Called after logging a drink OR changing duration mid-session.
+// Re-derives how many drinks are still needed and rebuilds the schedule.
+function recalcFromNow() {
+  if (!sessionActive) return;
+  const now          = Date.now();
+  const sessionEndTs = sessionStartTs + hours * 3600000;
+  const T_rem        = Math.max(0, (sessionEndTs - now) / 3600000);
 
-  // Reschedule remaining drinks evenly from now to session end
-  const sessionEndTs  = sessionStartTs + hours * 3600000;
-  const remaining     = drinkSchedule.length - (i + 1);
-  if (remaining > 0) {
-    const timeLeft = sessionEndTs - now;
-    const spacing  = timeLeft / remaining;
-    for (let j = i + 1; j < drinkSchedule.length; j++) {
-      drinkSchedule[j] = now + (j - i) * spacing;
-    }
-  }
+  // Collect actual logged times
+  const doneTimes = actualDrinkTimes.filter(t => t !== null);
+
+  // n_total uses the full session T — the formula n*δ − T*β = bacEnd is for
+  // the complete session regardless of when each drink falls.
+  const δ        = bpd(ag, profile);
+  const β        = profile.metab;
+  const n_total  = Math.max(0, Math.round((bacEnd + hours * β) / δ));
+  const n_rem    = Math.max(0, n_total - doneTimes.length);
+
+  // Space n_rem drinks evenly starting from now
+  const spacing  = n_rem > 0 ? T_rem / n_rem : 0;
+  const futureTs = Array.from({length: n_rem}, (_, j) => now + j * spacing * 3600000);
+
+  drinkSchedule    = [...doneTimes, ...futureTs];
+  actualDrinkTimes = [...doneTimes, ...new Array(n_rem).fill(null)];
 
   rebuildPlan();
+
+  // Refresh summary pills
+  const trace   = simulate(plan, ag, profile);
+  const projEnd = trace[Math.min(hours, trace.length) - 1];
+  document.getElementById('summaryTotal').textContent   = drinkSchedule.length;
+  document.getElementById('summarySpacing').textContent = spacing > 0 ? fmtSpacing(spacing) : '—';
+  document.getElementById('summaryEnding').textContent  = projEnd.toFixed(3);
+
+  const schedNote = document.getElementById('scheduleNote');
+  const remLabel  = n_rem > 0 ? `<em>${n_rem}</em> drink${n_rem>1?'s':''} remaining` : 'No more drinks needed';
+  schedNote.innerHTML = `${remLabel} · ending BAC <em>${projEnd.toFixed(3)}</em>`;
+
   saveSession();
   updateLiveBac();
   renderTimeline();
+}
+
+// ── Log drink ─────────────────────────────────────────────────
+function logDrink(i) {
+  if (!sessionActive || actualDrinkTimes[i] !== null) return;
+  actualDrinkTimes[i] = Date.now();
+  recalcFromNow();
 }
 
 // ── Live BAC ──────────────────────────────────────────────────
@@ -795,7 +823,7 @@ function checkHourTransitions() {
 }
 
 // ── Session controls ──────────────────────────────────────────
-const CONFIG_IDS = ['drinkOz','drinkAbv','bacEnd','duration','drinkPreset','profileSelect','weight','units','sex'];
+const CONFIG_IDS = ['drinkOz','drinkAbv','bacEnd','drinkPreset','profileSelect','weight','units','sex'];
 
 function activateSessionUI() {
   CONFIG_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = true; });
@@ -840,8 +868,13 @@ function endSession() {
 
 // ── Events ────────────────────────────────────────────────────
 document.getElementById('duration').addEventListener('input', function() {
-  document.getElementById('durationVal').textContent = this.value == 1 ? '1 hour' : `${this.value} hours`;
-  update();
+  hours = parseInt(this.value) || 4;
+  document.getElementById('durationVal').textContent = hours == 1 ? '1 hour' : `${hours} hours`;
+  if (sessionActive) {
+    recalcFromNow();
+  } else {
+    update();
+  }
 });
 ['weight','sex','drinkOz','drinkAbv','bacEnd'].forEach(id => {
   const el = document.getElementById(id);
