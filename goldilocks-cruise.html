@@ -1126,6 +1126,14 @@ function recalcFromNow() {
   // Collect actual logged times
   const doneTimes = actualDrinkTimes.filter(t => t !== null).sort((a, b) => a - b);
   const actualOffsets = doneTimes.map(timestamp => (timestamp - sessionStartTs) / 3600000);
+  const lastActualOffset = actualOffsets.at(-1);
+  const pacedNextOffset = Number.isFinite(lastActualOffset) && planSpacing > 0
+    ? lastActualOffset + planSpacing
+    : elapsedHours;
+  const nextDrinkNotBeforeHours = Math.min(
+    durationHours,
+    Math.max(elapsedHours, pacedNextOffset)
+  );
   const result = GoldilocksCore.buildCruiseReplan(
     ag,
     profile,
@@ -1133,7 +1141,9 @@ function recalcFromNow() {
     bacEnd,
     elapsedHours,
     actualOffsets,
-    MAX_SLOTS
+    MAX_SLOTS,
+    nextDrinkNotBeforeHours,
+    planSpacing
   );
   const n_rem = result.n;
   const futureTs = result.futureOffsets.map(offset => sessionStartTs + offset * 3600000);

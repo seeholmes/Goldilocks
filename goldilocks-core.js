@@ -398,7 +398,9 @@
     targetBac,
     elapsedHours,
     actualDrinkOffsets,
-    maximumDrinksPerHour = 6
+    maximumDrinksPerHour = 6,
+    nextDrinkNotBeforeHours = elapsedHours,
+    minimumFutureSpacingHours = 0
   ) {
     requireDurationHours(durationHours);
     requireNonNegative(targetBac, 'targetBac');
@@ -408,10 +410,22 @@
     }
     requireSchedule(actualDrinkOffsets, 'actualDrinkOffsets');
     requirePositiveInteger(maximumDrinksPerHour, 'maximumDrinksPerHour');
+    requireNonNegative(nextDrinkNotBeforeHours, 'nextDrinkNotBeforeHours');
+    requireNonNegative(minimumFutureSpacingHours, 'minimumFutureSpacingHours');
 
     const rise = bacPerDrink(alcoholGrams, profile);
     const metabolism = requireMetabolism(profile);
     const timingEpsilon = 1e-9;
+    if (nextDrinkNotBeforeHours < elapsedHours - timingEpsilon) {
+      throw new RangeError('nextDrinkNotBeforeHours must not precede elapsedHours');
+    }
+    if (nextDrinkNotBeforeHours > durationHours + timingEpsilon) {
+      throw new RangeError('nextDrinkNotBeforeHours must not exceed durationHours');
+    }
+    const futureStartHours = Math.max(
+      elapsedHours,
+      Math.min(durationHours, nextDrinkNotBeforeHours)
+    );
     const bucketCount = durationBucketCount(durationHours);
     const capacityPlan = buildCruiseCapacityPlan(durationHours, maximumDrinksPerHour);
     const basePlan = new Array(bucketCount).fill(0);
@@ -436,7 +450,7 @@
       futureOffsets: [],
     };
 
-    const remainingHours = durationHours - elapsedHours;
+    const remainingHours = durationHours - futureStartHours;
     if (remainingHours <= timingEpsilon) {
       return {
         n: 0,
@@ -449,7 +463,7 @@
       };
     }
 
-    const currentBucket = Math.min(bucketCount - 1, Math.floor(elapsedHours));
+    const currentBucket = Math.min(bucketCount - 1, Math.floor(futureStartHours));
     let maximumFutureCount = 0;
     for (let bucket = currentBucket; bucket < bucketCount; bucket += 1) {
       maximumFutureCount += Math.max(0, capacityPlan[bucket] - basePlan[bucket]);
@@ -467,10 +481,16 @@
     const comparisonEpsilon = BAC_COMPARISON_EPSILON;
 
     for (let drinkCount = 1; drinkCount <= maximumFutureCount; drinkCount += 1) {
-      const timingSpacing = remainingHours / drinkCount;
+      const naturalSpacing = remainingHours / drinkCount;
+      const timingSpacing = drinkCount > 1
+        ? Math.max(naturalSpacing, minimumFutureSpacingHours)
+        : naturalSpacing;
+      if ((drinkCount - 1) * timingSpacing > remainingHours + timingEpsilon) {
+        continue;
+      }
       const phases = phaseCandidates(
         drinkCount,
-        elapsedHours,
+        futureStartHours,
         durationHours,
         timingSpacing
       );
@@ -479,8 +499,9 @@
         const nudge = timingNudge(durationHours, phase, timingSpacing);
         const futureOffsets = Array.from(
           { length: drinkCount },
-          (_, index) => elapsedHours + (phase + index) * timingSpacing + nudge
+          (_, index) => futureStartHours + (phase + index) * timingSpacing + nudge
         );
+        if (futureOffsets.some(offset => offset > durationHours + timingEpsilon)) continue;
         const candidatePlan = basePlan.slice();
         let respectsHourlyLimit = true;
         for (const offset of futureOffsets) {

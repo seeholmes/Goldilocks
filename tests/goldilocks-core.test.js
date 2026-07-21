@@ -382,6 +382,62 @@ test('replans Cruise from actual logged drinks instead of the original count', (
   );
 });
 
+test('Cruise replan preserves a full cadence after a just-logged drink', () => {
+  const durationHours = 4.5;
+  const targetBac = 0.06;
+  const initial = core.buildCruisePlan(
+    core.STD_DRINK_G,
+    calibratedProfile,
+    durationHours,
+    targetBac
+  );
+  assert.equal(initial.n, 6);
+  closeTo(initial.spacing, 0.75);
+
+  const loggedAt = 2 / 3600;
+  const nextDrinkNotBefore = loggedAt + initial.spacing;
+  const replanned = core.buildCruiseReplan(
+    core.STD_DRINK_G,
+    calibratedProfile,
+    durationHours,
+    targetBac,
+    loggedAt,
+    [loggedAt],
+    6,
+    nextDrinkNotBefore,
+    initial.spacing
+  );
+
+  assert.equal(replanned.n, 5);
+  closeTo(replanned.futureOffsets[0], nextDrinkNotBefore, 1e-9);
+  for (let index = 1; index < replanned.futureOffsets.length; index += 1) {
+    assert.ok(replanned.futureOffsets[index] > replanned.futureOffsets[index - 1]);
+    closeTo(
+      replanned.futureOffsets[index] - replanned.futureOffsets[index - 1],
+      initial.spacing,
+      1e-9
+    );
+  }
+});
+
+test('Cruise replan drops drinks instead of compressing the established cadence', () => {
+  const cadenceHours = 0.75;
+  const replanned = core.buildCruiseReplan(
+    core.STD_DRINK_G,
+    calibratedProfile,
+    1,
+    0.06,
+    0,
+    [0],
+    6,
+    cadenceHours,
+    cadenceHours
+  );
+
+  assert.equal(replanned.n, 1);
+  closeTo(replanned.futureOffsets[0], cadenceHours, 1e-9);
+});
+
 test('Cruise replan recommends no future drinks after actuals overshoot', () => {
   const result = core.buildCruiseReplan(
     core.STD_DRINK_G,

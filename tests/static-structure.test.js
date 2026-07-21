@@ -243,6 +243,18 @@ test('Zone and Pace provide distinct finish, discard, undo, edit, and reconcilia
   const zoneUndo = functionSource(read('goldilocks-zone.html'), 'undoLastLog');
   assert.match(zoneUndo, /change\.previousPlan/, 'Zone undo must restore the exact prior plan');
   assert.match(zoneUndo, /change\.previousReplanFlags/, 'Zone undo must restore prior replan markers');
+
+  const paceRecalc = functionSource(read('goldilocks-cruise.html'), 'recalcFromNow');
+  assert.match(
+    paceRecalc,
+    /lastActualOffset\s*\+\s*planSpacing/,
+    'Pace replanning must preserve a full interval after the latest logged drink'
+  );
+  assert.match(
+    paceRecalc,
+    /buildCruiseReplan\([\s\S]*nextDrinkNotBeforeHours\s*,\s*planSpacing\s*\)/,
+    'Pace must pass its next allowed drink time and cadence into the shared replanner'
+  );
 });
 
 test('planner BAC copy does not present a selected target as safe or nudge consumption', () => {
