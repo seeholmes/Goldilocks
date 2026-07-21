@@ -598,24 +598,24 @@ function estimateLiveBac(completedSched, curDrinks, frac) {
 
 // ── Colors ────────────────────────────────────────────────────
 function clr(bac, lo, hi) {
-  if (bac <= 0)    return 'var(--muted)';
-  if (bac < lo)    return '#6a7a50';
-  if (bac <= hi)   return 'var(--gold)';
-  if (bac <= 0.08) return 'var(--amber)';
+  if (bac <= 0)         return 'var(--muted)';
+  if (bac < lo)         return '#6a7a50';
+  if (bac <= hi)        return 'var(--gold)';
+  if (bac <= hi * 1.25) return 'var(--amber)';
   return 'var(--danger)';
 }
 function barBg(bac, lo, hi) {
-  if (bac <= 0)    return 'var(--border)';
-  if (bac < lo)    return '#2a2a18';
-  if (bac <= hi)   return 'linear-gradient(90deg,#e8a020,#f5c842)';
-  if (bac <= 0.08) return 'var(--amber)';
+  if (bac <= 0)         return 'var(--border)';
+  if (bac < lo)         return '#2a2a18';
+  if (bac <= hi)        return 'linear-gradient(90deg,#e8a020,#f5c842)';
+  if (bac <= hi * 1.25) return 'var(--amber)';
   return 'var(--danger)';
 }
 function statusText(bac, lo, hi) {
-  if (bac <= 0)    return 'Sober';
-  if (bac < lo)    return 'Below zone — drink up';
-  if (bac <= hi)   return '✦ In the Goldilocks Zone';
-  if (bac <= 0.08) return '⚠ Above zone — slow down';
+  if (bac <= 0)         return 'Sober';
+  if (bac < lo)         return 'Below zone — drink up';
+  if (bac <= hi)        return '✦ In the Goldilocks Zone';
+  if (bac <= hi * 1.25) return '⚠ Above zone — slow down';
   return '⚠ Too high — stop drinking';
 }
 
@@ -646,16 +646,6 @@ function getFracThroughHour() {
 function simulateActual(upToHour) {
   let bac = 0;
   for (let h = 0; h < upToHour; h++) {
-    const d = actualDrinks[h] !== undefined ? actualDrinks[h] : plan[h];
-    bac += d * bpd(ag, profile);
-    bac = Math.max(0, bac - profile.metab);
-  }
-  return Math.round(bac * 1000) / 1000;
-}
-
-function simulateActualAt(upTo) {
-  let bac = 0;
-  for (let h = 0; h <= upTo; h++) {
     const d = actualDrinks[h] !== undefined ? actualDrinks[h] : plan[h];
     bac += d * bpd(ag, profile);
     bac = Math.max(0, bac - profile.metab);
