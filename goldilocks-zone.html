@@ -9,7 +9,10 @@
 <link rel="icon" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="goldilocks-icons.css">
 <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@200;400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="goldilocks-theme.js"></script>
+<script>GoldilocksTheme.bootstrap('zone');</script>
 <style>
   :root {
     --space:   #08090d;
@@ -61,7 +64,8 @@
   .orbit-ring { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-52%); width: 320px; height: 120px; opacity: 0.18; pointer-events: none; }
   .star-icon { font-size: 26px; display: block; margin-bottom: 8px; filter: drop-shadow(0 0 12px rgba(245,200,66,0.8)); animation: pulse 4s ease-in-out infinite; }
   @keyframes pulse { 0%,100%{filter:drop-shadow(0 0 12px rgba(245,200,66,0.8))} 50%{filter:drop-shadow(0 0 22px rgba(245,200,66,1))} }
-  .logo { font-family:'Anybody',sans-serif; font-size:36px; font-weight:600; letter-spacing:-0.5px; background:linear-gradient(135deg,#f5c842 0%,#e8a020 50%,#ff8c3a 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .logo { font-family:'Anybody',sans-serif; font-size:36px; font-weight:600; letter-spacing:-0.5px; background:linear-gradient(135deg,var(--logo-a,#f5c842) 0%,var(--logo-b,#e8a020) 50%,var(--logo-c,#ff8c3a) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .logo-sub { font-family:'Anybody',sans-serif; font-size:13px; font-weight:200; color:var(--muted); letter-spacing:0.28em; text-transform:uppercase; margin-top:2px; }
   .tagline { color:var(--muted); margin-top:6px; font-size:10px; letter-spacing:0.18em; text-transform:uppercase; }
   .tagline em { font-style:normal; color:var(--gold); opacity:0.7; }
 
@@ -178,7 +182,7 @@
   .form-error.visible { display:block; }
   [aria-invalid="true"] { outline:2px solid rgba(255,90,90,0.55); outline-offset:-2px; }
   .start-btn:disabled { cursor:not-allowed; opacity:0.45; box-shadow:none; }
-  .theme-swatch { width:22px; height:22px; border-radius:50%; cursor:pointer; flex-shrink:0; transition:transform 0.15s; }
+  .theme-swatch { width:28px; height:28px; border-radius:50%; cursor:pointer; flex-shrink:0; transition:transform 0.15s; padding:0; }
   .theme-swatch:hover { transform:scale(1.2); }
   .theme-swatch:focus-visible, .slot:focus-visible, .clear-hour-btn:focus-visible { outline:2px solid var(--gold); outline-offset:2px; }
   .fasted-toggle { width:100%; font:inherit; color:inherit; text-align:left; }
@@ -224,8 +228,17 @@
       <ellipse cx="160" cy="60" rx="155" ry="52" stroke="url(#og)" stroke-width="1.5" stroke-dasharray="6 4"/>
       <defs><linearGradient id="og" x1="0" y1="0" x2="320" y2="0"><stop offset="0%" stop-color="#f5c842"/><stop offset="50%" stop-color="#e8a020"/><stop offset="100%" stop-color="#ff8c3a"/></linearGradient></defs>
     </svg>
-    <span class="star-icon">✦</span>
+    <span class="mode-glyph mode-glyph--zone" aria-hidden="true">
+      <svg class="mode-glyph__svg" viewBox="0 0 44 44" focusable="false">
+        <circle class="glyph-line glyph-bound" cx="22" cy="22" r="15"/>
+        <circle class="glyph-line glyph-bound" cx="22" cy="22" r="10.5"/>
+        <path class="glyph-line glyph-safe" d="M13 13A12.73 12.73 0 0 1 31 13"/>
+        <circle class="glyph-core" cx="22" cy="22" r="2.1"/>
+        <g class="glyph-zone-orbiter"><circle class="glyph-fill" cx="22" cy="8.5" r="2.2"/></g>
+      </svg>
+    </span>
     <h1 class="logo">Goldilocks</h1>
+    <div class="logo-sub">Zone</div>
     <div class="tagline">not too much · not too little · <em>just right</em></div>
     <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-top:4px">v1.02</div>
     <a href="index.html" style="display:inline-block;margin-top:10px;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:4px 14px;transition:all 0.2s" onmouseover="this.style.color='var(--gold)';this.style.borderColor='rgba(245,200,66,0.4)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">← Mission Control</a>
@@ -1407,86 +1420,14 @@ function loadCalibratedProfiles() {
 }
 
 // ── Theme system ──────────────────────────────────────────────
-const THEMES = {
-  cosmos:    { name:'Cosmos',    dark:true,  '--space':'#08090d','--deep':'#0e1018','--surface':'#13151f','--border':'#1e2130','--text':'#e8e0cc','--muted':'#aaa3bb','--logo-a':'#f5c842','--logo-b':'#e8a020','--logo-c':'#ff8c3a','--accent':'#f5c842','--accent2':'#e8a020', stars:'rgba(245,200,66,0.3)' },
-  navy:      { name:'Navy',      dark:true,  '--space':'#0d1117','--deep':'#010409','--surface':'#161b22','--border':'#21262d','--text':'#e6edf3','--muted':'#aab3bd','--logo-a':'#f5c842','--logo-b':'#e8a020','--logo-c':'#ff8c3a','--accent':'#f5c842','--accent2':'#e8a020', stars:'rgba(245,200,66,0.25)' },
-  espresso:  { name:'Espresso',  dark:true,  '--space':'#120e0a','--deep':'#0a0705','--surface':'#1c1510','--border':'#2e2218','--text':'#e8ddd0','--muted':'#b29a88','--logo-a':'#f5c842','--logo-b':'#d4956a','--logo-c':'#c0622a','--accent':'#f5c842','--accent2':'#d4956a', stars:'rgba(212,149,106,0.3)' },
-  parchment: { name:'Parchment', dark:false, '--space':'#f5f0e8','--deep':'#ede8de','--surface':'#ffffff','--border':'#e0d8cc','--text':'#2a2420','--muted':'#6f625b','--logo-a':'#c8820a','--logo-b':'#e8a020','--logo-c':'#d4600a','--accent':'#c8820a','--accent2':'#b07010', stars:'rgba(200,130,10,0.2)' },
-  honey:     { name:'Honey',     dark:false, '--space':'#fdf4e3','--deep':'#f8edd8','--surface':'#fff8ec','--border':'#f0dab0','--text':'#3a2808','--muted':'#735421','--logo-a':'#d4700a','--logo-b':'#f5a820','--logo-c':'#e87010','--accent':'#c07010','--accent2':'#b06010', stars:'rgba(192,112,16,0.2)' },
-  slate:     { name:'Slate',     dark:false, '--space':'#eef2f8','--deep':'#e4eaf4','--surface':'#ffffff','--border':'#d0dcee','--text':'#1a2840','--muted':'#5d6c88','--logo-a':'#c8820a','--logo-b':'#e8a020','--logo-c':'#ff8c3a','--accent':'#c8820a','--accent2':'#b07010', stars:'rgba(200,130,10,0.15)' },
-};
-const THEME_KEY = 'goldilocks_theme';
-
-function applyTheme(id) {
-  const t = THEMES[id] || THEMES.cosmos;
-  const root = document.documentElement;
-  ['--space','--deep','--surface','--border','--text','--muted'].forEach(v => {
-    root.style.setProperty(v, t[v]);
-  });
-  const primaryAccent = t.dark ? t['--accent'] : '#765000';
-  const secondaryAccent = t.dark ? t['--accent2'] : '#654300';
-  root.style.setProperty('--accent', primaryAccent);
-  root.style.setProperty('--accent2', secondaryAccent);
-  root.style.setProperty('--blue', t.dark ? '#7eb8ff' : '#245f9e');
-  root.style.setProperty('--amber', t.dark ? '#ff8c3a' : '#8a3f00');
-  root.style.setProperty('--danger', t.dark ? '#ff5a5a' : '#a12626');
-  root.style.setProperty('--below', t.dark ? '#9aac77' : '#3f5f2b');
-  // Logo gradient
-  const logoGrad = `linear-gradient(135deg,${t['--logo-a']} 0%,${t['--logo-b']} 50%,${t['--logo-c']} 100%)`;
-  document.querySelectorAll('.logo').forEach(el => el.style.backgroundImage = logoGrad);
-  // Adjust star colors in pseudo via a data attr + inline style trick
-  document.body.setAttribute('data-theme', id);
-  // Live BAC bar background — match space color
-  const bar = document.getElementById('liveBacBar');
-  if (bar) bar.style.background = t['--space'] + 'f2';
-  // Update gold vars to use accent
-  root.style.setProperty('--gold',  primaryAccent);
-  root.style.setProperty('--gold2', secondaryAccent);
-  // Slider thumb
-  const style = document.getElementById('themeSliderStyle') || (() => {
-    const s = document.createElement('style'); s.id = 'themeSliderStyle'; document.head.appendChild(s); return s;
-  })();
-  style.textContent = `input[type="range"]::-webkit-slider-thumb { background: ${primaryAccent} !important; box-shadow: 0 0 10px ${primaryAccent}80 !important; }`;
-  // Mark active swatch
-  document.querySelectorAll('.theme-swatch').forEach(sw => {
-    const selected = sw.dataset.theme === id;
-    sw.style.outline = '';
-    sw.style.boxShadow = selected ? `0 0 0 2px ${t['--space']}, 0 0 0 4px ${primaryAccent}` : 'none';
-    sw.setAttribute('aria-pressed', String(selected));
-  });
-  try { localStorage.setItem(THEME_KEY, id); } catch(e) {}
-}
-
-function renderThemePicker() {
-  const el = document.getElementById('themePicker');
-  if (!el) return;
-  el.replaceChildren();
-  Object.entries(THEMES).forEach(([id, t]) => {
-    const swatch = document.createElement('button');
-    swatch.type = 'button';
-    swatch.className = 'theme-swatch';
-    swatch.dataset.theme = id;
-    swatch.title = t.name;
-    swatch.setAttribute('aria-label', `Use ${t.name} theme`);
-    swatch.setAttribute('aria-pressed', 'false');
-    swatch.style.background = `linear-gradient(135deg,${t['--logo-a']},${t['--logo-b']})`;
-    swatch.style.border = `2px solid ${t['--border']}`;
-    swatch.addEventListener('click', () => applyTheme(id));
-    el.appendChild(swatch);
-  });
-}
-
-function loadTheme() {
-  let id = 'cosmos';
-  try { id = localStorage.getItem(THEME_KEY) || 'cosmos'; } catch(e) {}
-  applyTheme(id);
+function initTheme() {
+  GoldilocksTheme.init({ mode:'zone', pickerId:'themePicker' });
 }
 
 // ── Init ──────────────────────────────────────────────────────
 (function init() {
   loadCalibratedProfiles();
-  renderThemePicker();
-  loadTheme();
+  initTheme();
   loadCustomDrinks();
   updateProfileTrash();
   updateDrinkTrash();

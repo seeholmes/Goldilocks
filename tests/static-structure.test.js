@@ -89,7 +89,7 @@ test('mode pages load the tested calculation core', () => {
   }
 });
 
-test('Zone and Cruise use the shared custom-drink store', () => {
+test('Zone and Pace use the shared custom-drink store', () => {
   for (const page of ['goldilocks-zone.html', 'goldilocks-cruise.html']) {
     const html = read(page);
     assert.match(
@@ -104,7 +104,7 @@ test('Zone and Cruise use the shared custom-drink store', () => {
   }
 });
 
-test('Cruise exposes 15-minute mission-duration planning', () => {
+test('Pace exposes 15-minute session-length planning', () => {
   const html = read('goldilocks-cruise.html');
   const durationInput = html.match(/<input\b[^>]*\bid="duration"[^>]*>/i)?.[0] || '';
   assert.match(durationInput, /\bmin="60"/i);
@@ -115,6 +115,76 @@ test('Cruise exposes 15-minute mission-duration planning', () => {
   assert.match(html, /normalizeRestoredSession\s*\(/);
   assert.match(html, /s\.hours\s*\*\s*60/);
   assert.match(html, /s\.plan\.length\s*!==\s*bucketCount/);
+});
+
+test('all pages use the shared theme catalog and animated icon system', () => {
+  for (const page of pages) {
+    const html = read(page);
+    assert.match(
+      html,
+      /<script\s+src="goldilocks-theme\.js"\s*><\/script>/i,
+      `${page} must load goldilocks-theme.js`
+    );
+    assert.match(
+      html,
+      /<link\s+rel="stylesheet"\s+href="goldilocks-icons\.css">/i,
+      `${page} must load goldilocks-icons.css`
+    );
+    assert.match(html, /id="themePicker"/i, `${page} must expose the shared theme picker`);
+    assert.doesNotMatch(html, /\bconst\s+THEMES\s*=/, `${page} must not duplicate the theme catalog`);
+  }
+
+  const iconCss = read('goldilocks-icons.css');
+  assert.match(iconCss, /glyph-orbit/);
+  assert.match(iconCss, /glyph-step/);
+  assert.match(iconCss, /glyph-rise/);
+  assert.match(iconCss, /prefers-reduced-motion\s*:\s*reduce/i);
+
+  const expectedIcons = {
+    'goldilocks-zone.html': 'mode-glyph--zone',
+    'goldilocks-cruise.html': 'mode-glyph--pace',
+    'goldilocks-training.html': 'mode-glyph--training',
+  };
+  for (const [page, className] of Object.entries(expectedIcons)) {
+    assert.match(read(page), new RegExp(className));
+  }
+});
+
+test('Pace branding is consistent while legacy compatibility remains', () => {
+  const html = read('goldilocks-cruise.html');
+  assert.match(html, /<title>Goldilocks — Pace<\/title>/);
+  assert.match(html, /<div class="logo-sub">Pace<\/div>/);
+  assert.match(html, />Start Pace Session<\/button>/);
+  assert.match(html, />Pace Plan<\/h2>/);
+  assert.doesNotMatch(html, />Cruise(?: Mode| Settings)?</);
+  assert.doesNotMatch(html, /Launch Cruise/);
+  assert.match(html, /goldilocks_cruise_session/);
+
+  const landing = read('index.html');
+  assert.match(landing, /<h3 class="mode-name">Pace<\/h3>/);
+  assert.match(landing, /href="goldilocks-cruise\.html"/);
+  assert.doesNotMatch(landing, /Cruise Mode|coast smoothly/);
+});
+
+test('Mission Control inspects resumable sessions without mutating them', () => {
+  const html = read('index.html');
+  const coreIndex = html.indexOf('<script src="goldilocks-core.js"></script>');
+  const stateIndex = html.indexOf('<script src="goldilocks-session-state.js"></script>');
+  assert.ok(coreIndex >= 0 && stateIndex > coreIndex, 'calculation core must load before session inspection');
+  assert.match(html, /id="resumeSection"/);
+  assert.match(html, /GoldilocksSessionState\.inspectStorage\s*\(/);
+  assert.match(html, /addEventListener\('pageshow'/);
+  assert.doesNotMatch(html, /localStorage\.(?:removeItem|clear)\s*\(/);
+});
+
+test('Training saves profiles for and hands off to both planners', () => {
+  const html = read('goldilocks-training.html');
+  assert.doesNotMatch(html, /Save Profile to Goldilocks Zone|Goldilocks Zone dropdown|open Goldilocks Zone/);
+  assert.match(html, /Save Profile to Goldilocks/);
+  assert.match(html, /available in both Zone and Pace/i);
+  assert.match(html, /Plan in Zone/);
+  assert.match(html, /Plan in Pace/);
+  assert.match(html, /id="profileHandoff"/);
 });
 
 test('pages expose a semantic top-level structure and reduced-motion fallback', () => {

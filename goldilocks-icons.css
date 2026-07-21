@@ -1,0 +1,136 @@
+:root {
+  --zone-rgb: 245, 200, 66;
+  --pace-rgb: 126, 184, 255;
+  --training-rgb: 82, 224, 156;
+}
+
+:root:is([data-theme="parchment"], [data-theme="honey"], [data-theme="slate"]) {
+  --zone-rgb: 118, 80, 0;
+  --pace-rgb: 36, 95, 158;
+  --training-rgb: 31, 107, 79;
+}
+
+.mode-glyph {
+  width: 44px;
+  height: 44px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 44px;
+  border-radius: 12px;
+  color: rgb(var(--glyph-rgb));
+  background: rgba(var(--glyph-rgb), 0.09);
+  border: 1px solid rgba(var(--glyph-rgb), 0.34);
+  box-shadow: 0 0 18px rgba(var(--glyph-rgb), 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.mode-glyph--zone { --glyph-rgb: var(--zone-rgb); }
+.mode-glyph--pace { --glyph-rgb: var(--pace-rgb); }
+.mode-glyph--training { --glyph-rgb: var(--training-rgb); }
+.hero > .mode-glyph { margin: 0 auto 8px; }
+
+.mode-glyph__svg {
+  width: 36px;
+  height: 36px;
+  overflow: visible;
+}
+
+.glyph-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.glyph-fill,
+.glyph-core,
+.glyph-pace-node,
+.glyph-bubble { fill: currentColor; }
+.glyph-bound,
+.glyph-track { opacity: 0.42; }
+.glyph-safe { stroke-width: 3.4; opacity: 0.76; }
+.glyph-core { opacity: 0.34; }
+.glyph-ticks { opacity: 0.62; }
+.glyph-pace-node,
+.glyph-bubble {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.glyph-pace-node { opacity: 0.68; }
+.glyph-bubble { opacity: 0.55; }
+
+.mode-card:is(:hover, :focus-visible) .mode-glyph,
+.hero:hover .mode-glyph,
+.hero:focus-within .mode-glyph {
+  transform: translateY(-2px);
+  border-color: rgba(var(--glyph-rgb), 0.62);
+  box-shadow: 0 0 26px rgba(var(--glyph-rgb), 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.mode-card:is(:hover, :focus-visible) .glyph-zone-orbiter,
+.hero:is(:hover, :focus-within) .glyph-zone-orbiter,
+.mode-glyph.is-animated .glyph-zone-orbiter {
+  animation: glyph-orbit 4s linear infinite;
+  transform-origin: 22px 22px;
+}
+
+.mode-card:is(:hover, :focus-visible) .glyph-safe,
+.hero:is(:hover, :focus-within) .glyph-safe,
+.mode-glyph.is-animated .glyph-safe { animation: glyph-breathe 2s ease-in-out infinite; }
+
+.mode-card:is(:hover, :focus-visible) .glyph-pace-node,
+.hero:is(:hover, :focus-within) .glyph-pace-node,
+.mode-glyph.is-animated .glyph-pace-node {
+  animation: glyph-step 1.8s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.18s);
+}
+
+.mode-card:is(:hover, :focus-visible) .glyph-liquid,
+.hero:is(:hover, :focus-within) .glyph-liquid,
+.mode-glyph.is-animated .glyph-liquid { animation: glyph-wave 2.4s ease-in-out infinite; }
+
+.mode-card:is(:hover, :focus-visible) .glyph-bubble,
+.hero:is(:hover, :focus-within) .glyph-bubble,
+.mode-glyph.is-animated .glyph-bubble {
+  animation: glyph-rise 2.4s ease-in infinite;
+  animation-delay: calc(var(--i) * 0.28s);
+}
+
+@keyframes glyph-orbit { to { transform: rotate(1turn); } }
+@keyframes glyph-breathe { 50% { opacity: 1; } }
+@keyframes glyph-step {
+  0%, 55%, 100% { opacity: 0.45; transform: scale(0.9); }
+  18% { opacity: 1; transform: scale(1.3); }
+}
+@keyframes glyph-wave { 50% { transform: translateX(1px); } }
+@keyframes glyph-rise {
+  0% { opacity: 0; transform: translateY(2px); }
+  25% { opacity: 0.8; }
+  100% { opacity: 0; transform: translateY(-7px); }
+}
+
+:root:is([data-theme="parchment"], [data-theme="honey"], [data-theme="slate"]) .mode-glyph {
+  background: rgba(var(--glyph-rgb), 0.06);
+  border-color: rgba(var(--glyph-rgb), 0.42);
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mode-glyph,
+  .mode-glyph * {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .mode-glyph {
+    color: CanvasText;
+    background: Canvas;
+    border-color: CanvasText;
+    box-shadow: none;
+  }
+}

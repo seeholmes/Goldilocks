@@ -9,7 +9,10 @@
 <link rel="icon" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon-training.png">
 <link rel="manifest" href="manifest-training.json">
+<link rel="stylesheet" href="goldilocks-icons.css">
 <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@200;400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="goldilocks-theme.js"></script>
+<script>GoldilocksTheme.bootstrap('training');</script>
 <style>
   :root {
     --space:   #08090d;
@@ -60,7 +63,7 @@
   .hero { text-align: center; padding: 48px 0 32px; position: relative; }
   .beaker-icon { font-size: 28px; display: block; margin-bottom: 8px; filter: drop-shadow(0 0 14px rgba(82,224,156,0.7)); animation: pulse 4s ease-in-out infinite; }
   @keyframes pulse { 0%,100%{filter:drop-shadow(0 0 14px rgba(82,224,156,0.7))} 50%{filter:drop-shadow(0 0 24px rgba(82,224,156,1))} }
-  .logo { font-family:'Anybody',sans-serif; font-size:32px; font-weight:800; letter-spacing:-1px; background:linear-gradient(135deg,#52e09c 0%,#7eb8ff 60%,#52e09c 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .logo { font-family:'Anybody',sans-serif; font-size:32px; font-weight:800; letter-spacing:-1px; background:linear-gradient(135deg,var(--logo-a,#52e09c) 0%,var(--logo-b,#7eb8ff) 60%,var(--logo-c,#52e09c) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
   .logo-sub { font-family:'Anybody',sans-serif; font-size:14px; font-weight:200; color:var(--muted); letter-spacing:0.3em; text-transform:uppercase; margin-top:2px; }
   .tagline { color:var(--muted); margin-top:8px; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; }
   .tagline em { font-style:normal; color:var(--green); opacity:0.8; }
@@ -188,10 +191,20 @@
   .profile-name-input { background:var(--deep); border:1px solid var(--border); border-radius:7px; color:var(--text); font-family:'Space Mono',monospace; font-size:15px; padding:10px 14px; flex:1; outline:none; transition:border-color 0.2s; }
   .profile-name-input:focus { border-color:var(--gold2); }
 
-  .theme-swatch { width:22px; height:22px; border-radius:50%; cursor:pointer; flex-shrink:0; transition:transform 0.15s; padding:0; }
+  .theme-swatch { width:28px; height:28px; border-radius:50%; cursor:pointer; flex-shrink:0; transition:transform 0.15s; padding:0; }
   .theme-swatch:hover { transform:scale(1.2); }
   :where(a, button, input, select):focus-visible { outline:2px solid var(--green); outline-offset:3px; }
   .sr-only { position:absolute !important; width:1px !important; height:1px !important; padding:0 !important; margin:-1px !important; overflow:hidden !important; clip:rect(0,0,0,0) !important; white-space:nowrap !important; border:0 !important; }
+
+  .profile-handoff { margin-top:12px; padding:12px; background:var(--deep); border:1px solid var(--border); border-radius:8px; }
+  .profile-handoff[hidden] { display:none; }
+  .profile-handoff-title { color:var(--green); font-size:9px; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:9px; }
+  .profile-handoff-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .profile-handoff-link { display:block; border:1px solid var(--border); border-radius:7px; padding:10px 12px; text-align:center; text-decoration:none; font-size:9px; letter-spacing:0.08em; text-transform:uppercase; transition:all 0.2s; }
+  .profile-handoff-link.zone { color:var(--gold); }
+  .profile-handoff-link.pace { color:var(--blue); }
+  .profile-handoff-link.zone:hover { border-color:var(--gold); background:rgba(245,200,66,0.06); }
+  .profile-handoff-link.pace:hover { border-color:var(--blue); background:rgba(126,184,255,0.06); }
 
   @media(max-width:560px) {
     .history-item.header { display:none; }
@@ -211,7 +224,17 @@
 
   <!-- Hero -->
   <header class="hero">
-    <span class="beaker-icon" aria-hidden="true">⚗️</span>
+    <span class="mode-glyph mode-glyph--training" aria-hidden="true">
+      <svg class="mode-glyph__svg" viewBox="0 0 44 44" focusable="false">
+        <path class="glyph-line" d="M18 7v9.5l-7.3 14.4A4 4 0 0 0 14.4 37h15.2a4 4 0 0 0 3.7-6.1L26 16.5V7"/>
+        <path class="glyph-line" d="M16 7h12"/>
+        <path class="glyph-line glyph-ticks" d="M26.5 20h3M28 24h3M29 28h2.5"/>
+        <path class="glyph-line glyph-liquid" d="M13.5 29c3.2-1.8 5.5 1.8 8.5 0s5.4-1.8 8.5 0"/>
+        <circle class="glyph-bubble" style="--i:0" cx="18" cy="32" r="1"/>
+        <circle class="glyph-bubble" style="--i:1" cx="23" cy="29.5" r="0.9"/>
+        <circle class="glyph-bubble" style="--i:2" cx="27.5" cy="32.5" r="0.8"/>
+      </svg>
+    </span>
     <h1 class="logo">Goldilocks</h1>
     <p class="logo-sub">Training Protocol</p>
     <div class="tagline">calibrate your curve · <em>own your data</em></div>
@@ -439,15 +462,22 @@
 
     <!-- Save to Goldilocks -->
     <div class="card green-card">
-      <div class="sec">Save Profile to Goldilocks Zone</div>
+      <div class="sec">Save Profile to Goldilocks</div>
       <div style="font-size:10px;color:var(--muted);margin-bottom:12px;line-height:1.7">
-        This will add a named profile to the Goldilocks Zone dropdown. If a profile with this name already exists, this session will be averaged in.
+        This profile will be available in both Zone and Pace. Saving the same name averages this session into it.
       </div>
       <div style="margin-bottom:10px">
         <label class="field-label" for="profileName">Profile Name</label>
         <input class="profile-name-input" type="text" id="profileName" value="seeholmes" maxlength="24" placeholder="your name">
       </div>
-      <button class="save-btn" id="saveProfileBtn" type="button" onclick="saveProfile()">✦ Save Profile to Goldilocks Zone</button>
+      <button class="save-btn" id="saveProfileBtn" type="button" onclick="saveProfile()">✦ Save Profile</button>
+      <div class="profile-handoff" id="profileHandoff" hidden>
+        <div class="profile-handoff-title">Profile saved · choose a planner</div>
+        <div class="profile-handoff-actions">
+          <a class="profile-handoff-link zone" href="goldilocks-zone.html">Plan in Zone →</a>
+          <a class="profile-handoff-link pace" href="goldilocks-cruise.html">Plan in Pace →</a>
+        </div>
+      </div>
     </div>
 
     <!-- Session history -->
@@ -922,9 +952,7 @@ function finishProtocol() {
     completedProtocolId = protocolId;
     savedProtocolId = null;
   }
-  const saveButton = document.getElementById('saveProfileBtn');
-  saveButton.disabled = savedProtocolId === completedProtocolId;
-  saveButton.textContent = saveButton.disabled ? '✓ Profile Saved' : '✦ Save Profile to Goldilocks Zone';
+  updateSavedProfileUi(savedProtocolId === completedProtocolId);
 
   document.getElementById('phaseActive').classList.add('hidden');
   document.getElementById('phaseResults').classList.remove('hidden');
@@ -1121,7 +1149,7 @@ function saveProfile() {
   renderHistory();
   saveTrainingSession();
 
-  showToast(`Profile "${name}" saved`, `${sessions} session${sessions > 1 ? 's' : ''} · ${conf} confidence · open Goldilocks Zone to use`);
+  showToast(`Profile "${name}" saved`, `${sessions} session${sessions > 1 ? 's' : ''} · ${conf} confidence · available in Zone and Pace`);
 }
 
 // ── Session history ───────────────────────────────────────────
@@ -1209,11 +1237,16 @@ function readHistory() {
   }
 }
 
+function updateSavedProfileUi(isSaved) {
+  const button = document.getElementById('saveProfileBtn');
+  button.disabled = isSaved;
+  button.textContent = isSaved ? '✓ Profile Saved' : '✦ Save Profile';
+  document.getElementById('profileHandoff').hidden = !isSaved;
+}
+
 function markProtocolSaved() {
   savedProtocolId = completedProtocolId;
-  const button = document.getElementById('saveProfileBtn');
-  button.disabled = true;
-  button.textContent = '✓ Profile Saved';
+  updateSavedProfileUi(true);
 }
 
 function showToast(message, detail = '', tone = 'gold') {
@@ -1360,8 +1393,7 @@ function resetToSetup() {
   setFasted(false);
   document.getElementById('curvePreviewCard').classList.add('hidden');
   document.getElementById('fastedResultNote').style.display = 'none';
-  document.getElementById('saveProfileBtn').disabled = false;
-  document.getElementById('saveProfileBtn').textContent = '✦ Save Profile to Goldilocks Zone';
+  updateSavedProfileUi(false);
   clearProtocolUi();
   clearSavedTrainingSession();
   updateSetupInfo();
@@ -1383,38 +1415,7 @@ function clearProtocolUi() {
 });
 
 // ── Theme system (shared with Goldilocks Zone) ─────────────────
-const THEMES = {
-  cosmos:    { name:'Cosmos',    '--space':'#08090d','--deep':'#0e1018','--surface':'#13151f','--border':'#1e2130','--text':'#e8e0cc','--muted':'#aaa3bb','--logo-a':'#f5c842','--logo-b':'#e8a020','--logo-c':'#ff8c3a','--accent':'#f5c842','--accent2':'#e8a020' },
-  navy:      { name:'Navy',      '--space':'#0d1117','--deep':'#010409','--surface':'#161b22','--border':'#21262d','--text':'#e6edf3','--muted':'#aab3bd','--logo-a':'#f5c842','--logo-b':'#e8a020','--logo-c':'#ff8c3a','--accent':'#f5c842','--accent2':'#e8a020' },
-  espresso:  { name:'Espresso',  '--space':'#120e0a','--deep':'#0a0705','--surface':'#1c1510','--border':'#2e2218','--text':'#e8ddd0','--muted':'#b29a88','--logo-a':'#f5c842','--logo-b':'#d4956a','--logo-c':'#c0622a','--accent':'#f5c842','--accent2':'#d4956a' },
-  parchment: { name:'Parchment', '--space':'#f5f0e8','--deep':'#ede8de','--surface':'#ffffff','--border':'#e0d8cc','--text':'#2a2420','--muted':'#6f625b','--logo-a':'#c8820a','--logo-b':'#e8a020','--logo-c':'#d4600a','--accent':'#c8820a','--accent2':'#b07010' },
-  honey:     { name:'Honey',     '--space':'#fdf4e3','--deep':'#f8edd8','--surface':'#fff8ec','--border':'#f0dab0','--text':'#3a2808','--muted':'#735421','--logo-a':'#d4700a','--logo-b':'#f5a820','--logo-c':'#e87010','--accent':'#c07010','--accent2':'#b06010' },
-  slate:     { name:'Slate',     '--space':'#eef2f8','--deep':'#e4eaf4','--surface':'#ffffff','--border':'#d0dcee','--text':'#1a2840','--muted':'#5d6c88','--logo-a':'#c8820a','--logo-b':'#e8a020','--logo-c':'#ff8c3a','--accent':'#c8820a','--accent2':'#b07010' },
-};
-const THEME_KEY = 'goldilocks_theme';
-
-function applyTheme(id) {
-  const t = THEMES[id] || THEMES.cosmos;
-  const root = document.documentElement;
-  const lightTheme = ['parchment','honey','slate'].includes(id);
-  const primaryAccent = lightTheme ? '#765000' : t['--accent'];
-  const secondaryAccent = lightTheme ? '#654300' : t['--accent2'];
-  ['--space','--deep','--surface','--border','--text','--muted'].forEach(v => root.style.setProperty(v, t[v]));
-  root.style.setProperty('--accent', primaryAccent);
-  root.style.setProperty('--accent2', secondaryAccent);
-  const logoGrad = `linear-gradient(135deg,${t['--logo-a']} 0%,${t['--logo-b']} 50%,${t['--logo-c']} 100%)`;
-  document.querySelectorAll('.logo').forEach(el => el.style.backgroundImage = logoGrad);
-  root.style.setProperty('--gold',  primaryAccent);
-  root.style.setProperty('--gold2', secondaryAccent);
-  root.style.setProperty('--blue', lightTheme ? '#245f9e' : '#7eb8ff');
-  root.style.setProperty('--green', lightTheme ? '#1f6b4f' : '#52e09c');
-  root.style.setProperty('--amber', lightTheme ? '#8a3f00' : '#ff8c3a');
-  root.style.setProperty('--danger', lightTheme ? '#a12626' : '#ff5a5a');
-  document.querySelectorAll('.theme-swatch').forEach(sw => {
-    const selected = sw.dataset.theme === id;
-    sw.style.boxShadow = selected ? `0 0 0 2px ${t['--space']}, 0 0 0 4px ${primaryAccent}` : 'none';
-    sw.setAttribute('aria-pressed', String(selected));
-  });
+function redrawThemeCharts() {
   const chartResults = readings.length >= 3 ? calcResults() : null;
   if (chartResults) {
     setTimeout(() => {
@@ -1422,38 +1423,19 @@ function applyTheme(id) {
       drawChart('resultChart', chartResults);
     }, 0);
   }
-  try { localStorage.setItem(THEME_KEY, id); } catch(e) {}
 }
 
-function renderThemePicker() {
-  const el = document.getElementById('themePicker');
-  if (!el) return;
-  el.replaceChildren();
-  Object.entries(THEMES).forEach(([id, theme]) => {
-    const swatch = document.createElement('button');
-    swatch.type = 'button';
-    swatch.className = 'theme-swatch';
-    swatch.dataset.theme = id;
-    swatch.title = theme.name;
-    swatch.setAttribute('aria-label', `Use ${theme.name} theme`);
-    swatch.setAttribute('aria-pressed', 'false');
-    swatch.style.background = `linear-gradient(135deg,${theme['--logo-a']},${theme['--logo-b']})`;
-    swatch.style.border = `2px solid ${theme['--border']}`;
-    swatch.addEventListener('click', () => applyTheme(id));
-    el.appendChild(swatch);
+function initTheme() {
+  GoldilocksTheme.init({
+    mode:'training',
+    pickerId:'themePicker',
+    onChange:redrawThemeCharts,
   });
-}
-
-function loadTheme() {
-  let id = 'cosmos';
-  try { id = localStorage.getItem(THEME_KEY) || 'cosmos'; } catch(e) {}
-  applyTheme(id);
 }
 
 // ── Init ──────────────────────────────────────────────────────
 (function init() {
-  renderThemePicker();
-  loadTheme();
+  initTheme();
   configureWeightInput(document.getElementById('units').value, false);
   updateSetupInfo();
   const restored = loadSavedTrainingSession();

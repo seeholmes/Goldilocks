@@ -3,13 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Build and track an evenly paced BAC cruise plan for harm reduction.">
+<meta name="description" content="Build and track a drink-by-drink Pace plan toward an estimated BAC at session end.">
 <meta name="theme-color" content="#08090d">
-<title>Goldilocks — Cruise</title>
+<title>Goldilocks — Pace</title>
 <link rel="icon" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="goldilocks-icons.css">
 <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@200;400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="goldilocks-theme.js"></script>
+<script>GoldilocksTheme.bootstrap('pace');</script>
 <style>
   :root {
     --space:   #08090d;
@@ -61,7 +64,8 @@
   .orbit-ring { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-52%); width: 320px; height: 120px; opacity: 0.18; pointer-events: none; }
   .star-icon { font-size: 26px; display: block; margin-bottom: 8px; filter: drop-shadow(0 0 12px rgba(126,184,255,0.9)); animation: pulse 4s ease-in-out infinite; }
   @keyframes pulse { 0%,100%{filter:drop-shadow(0 0 12px rgba(126,184,255,0.8))} 50%{filter:drop-shadow(0 0 22px rgba(126,184,255,1))} }
-  .logo { font-family:'Anybody',sans-serif; font-size:36px; font-weight:600; letter-spacing:-0.5px; background:linear-gradient(135deg,#7eb8ff 0%,#5a9aee 50%,#52e09c 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .logo { font-family:'Anybody',sans-serif; font-size:36px; font-weight:600; letter-spacing:-0.5px; background:linear-gradient(135deg,var(--logo-a,#7eb8ff) 0%,var(--logo-b,#5a9aee) 50%,var(--logo-c,#52e09c) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .logo-sub { font-family:'Anybody',sans-serif; font-size:13px; font-weight:200; color:var(--muted); letter-spacing:0.28em; text-transform:uppercase; margin-top:2px; }
   .tagline { color:var(--muted); margin-top:6px; font-size:10px; letter-spacing:0.18em; text-transform:uppercase; }
   .tagline em { font-style:normal; color:var(--blue); opacity:0.7; }
 
@@ -159,7 +163,7 @@
   .form-error.visible { display:block; }
   [aria-invalid="true"] { outline:2px solid rgba(255,90,90,0.55); outline-offset:-2px; }
   .start-btn:disabled { cursor:not-allowed; opacity:0.45; box-shadow:none; }
-  .theme-swatch { width:22px; height:22px; border-radius:50%; cursor:pointer; flex-shrink:0; transition:transform 0.15s; }
+  .theme-swatch { width:28px; height:28px; border-radius:50%; cursor:pointer; flex-shrink:0; transition:transform 0.15s; padding:0; }
   .theme-swatch:hover { transform:scale(1.2); }
   .theme-swatch:focus-visible, .dte.tappable:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
   .fasted-toggle { width:100%; font:inherit; color:inherit; text-align:left; }
@@ -201,9 +205,18 @@
       <ellipse cx="160" cy="60" rx="155" ry="52" stroke="url(#og)" stroke-width="1.5" stroke-dasharray="6 4"/>
       <defs><linearGradient id="og" x1="0" y1="0" x2="320" y2="0"><stop offset="0%" stop-color="#7eb8ff"/><stop offset="50%" stop-color="#5a9aee"/><stop offset="100%" stop-color="#52e09c"/></linearGradient></defs>
     </svg>
-    <span class="star-icon">⊹</span>
-    <h1 class="logo">Cruise</h1>
-    <div class="tagline">set your speed · <em>hit your mark</em></div>
+    <span class="mode-glyph mode-glyph--pace" aria-hidden="true">
+      <svg class="mode-glyph__svg" viewBox="0 0 44 44" focusable="false">
+        <path class="glyph-line glyph-track" d="M7.5 28.5C12.5 12.5 31.5 12.5 36.5 28.5"/>
+        <circle class="glyph-pace-node" style="--i:0" cx="8.5" cy="26.5" r="2"/>
+        <circle class="glyph-pace-node" style="--i:1" cx="15.5" cy="18.3" r="2"/>
+        <circle class="glyph-pace-node" style="--i:2" cx="28.5" cy="18.3" r="2"/>
+        <circle class="glyph-pace-node" style="--i:3" cx="35.5" cy="26.5" r="2"/>
+      </svg>
+    </span>
+    <h1 class="logo">Goldilocks</h1>
+    <div class="logo-sub">Pace</div>
+    <div class="tagline">plan your pace · <em>adjust as you go</em></div>
     <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-top:4px">v1.02</div>
     <a href="index.html" style="display:inline-block;margin-top:10px;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:4px 14px;transition:all 0.2s" onmouseover="this.style.color='var(--blue)';this.style.borderColor='rgba(126,184,255,0.4)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">← Mission Control</a>
     <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px">
@@ -311,24 +324,24 @@
       <span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">Drinking on an empty stomach</span>
     </button>
     <div id="fastedWarning" style="display:none;margin-top:8px;padding:10px 12px;background:rgba(255,140,58,0.08);border:1px solid rgba(255,140,58,0.25);border-radius:7px;font-size:10px;line-height:1.7;color:var(--amber)">
-      &#9888; Fasted: BAC will rise faster and peak higher — consider reducing your target ending BAC.
+      &#9888; Fasted: BAC will rise faster and peak higher — consider reducing your BAC goal at the end.
     </div>
   </section>
 
-  <!-- Cruise settings -->
+  <!-- Pace settings -->
   <section class="card" aria-labelledby="settingsHeading">
-    <h2 class="sec" id="settingsHeading">Cruise Settings</h2>
+    <h2 class="sec" id="settingsHeading">Session Goal</h2>
     <div style="margin-bottom:18px">
-      <label for="duration" style="display:block;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue2);opacity:0.8;margin-bottom:14px">Mission Duration</label>
+      <label for="duration" style="display:block;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue2);opacity:0.8;margin-bottom:14px">Session Length</label>
       <input type="range" id="duration" min="60" max="480" step="15" value="240" aria-describedby="durationVal durationResolution">
       <div class="slider-labels"><span>1h</span><span>4h 30m</span><span>8h</span></div>
       <div style="font-family:'Anybody',sans-serif;font-size:24px;font-weight:400;color:var(--blue);margin-top:8px" id="durationVal">4h</div>
       <div id="durationResolution" style="font-size:9px;color:var(--muted);margin-top:5px">15-minute increments</div>
     </div>
     <div>
-      <label class="field-label" for="bacEnd">Target Ending BAC</label>
+      <label class="field-label" for="bacEnd">Goal BAC at End</label>
       <div class="input-wrap"><input type="number" id="bacEnd" value="0.04" min="0.00" max="0.20" step="0.01"></div>
-      <div style="font-size:9px;color:var(--muted);margin-top:7px;line-height:1.6">Drinks are evenly spaced · session starts when you tap Launch.</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:7px;line-height:1.6">Pace spaces drinks across the session · timing begins when you tap Start.</div>
     </div>
     <div class="form-error" id="configError" role="alert" aria-live="assertive"></div>
   </section>
@@ -345,15 +358,15 @@
     </div>
     <div class="sum-pill ending">
       <div class="sum-val" id="summaryEnding">—</div>
-      <div class="sum-lbl">Ending BAC</div>
+      <div class="sum-lbl">Projected BAC at End</div>
     </div>
   </div>
 
-  <button class="start-btn" id="startBtn" onclick="startSession()">⊹ Launch Cruise</button>
+  <button class="start-btn" id="startBtn" onclick="startSession()">Start Pace Session</button>
   <button class="end-btn"   id="endBtn"   onclick="endSession()">✕ End Session</button>
 
   <section class="card" aria-labelledby="planLabel">
-    <h2 class="sec" id="planLabel">Flight Plan</h2>
+    <h2 class="sec" id="planLabel">Pace Plan</h2>
     <div id="timeline"></div>
     <div id="scheduleNote" class="schedule-note" aria-live="polite"></div>
     <div id="warnNote" role="status" aria-live="polite" style="display:none" class="warn-note"></div>
@@ -598,8 +611,8 @@ function validateConfig(focusInvalid = false) {
   let problem = null;
   if (!Number.isFinite(oz) || oz < 1 || oz > 64) problem = ['Drink size must be between 1 and 64 oz.', 'drinkOz'];
   else if (!Number.isFinite(abv) || abv < 0.5 || abv > 100) problem = ['ABV must be between 0.5% and 100%.', 'drinkAbv'];
-  else if (!Number.isFinite(target) || target < 0 || target > 0.2) problem = ['Target ending BAC must be between 0.00 and 0.20.', 'bacEnd'];
-  else if (!isValidDurationMinutes(requestedDurationMinutes)) problem = ['Mission duration must be between 1h and 8h in 15-minute increments.', 'duration'];
+  else if (!Number.isFinite(target) || target < 0 || target > 0.2) problem = ['Goal BAC at end must be between 0.00 and 0.20.', 'bacEnd'];
+  else if (!isValidDurationMinutes(requestedDurationMinutes)) problem = ['Session length must be between 1h and 8h in 15-minute increments.', 'duration'];
   else if (!isValidProfile(getActiveProfile())) problem = ['Enter a valid body weight and profile.', document.getElementById('profileSelect').value === 'custom' ? 'weight' : null];
   else {
     const alcoholGrams = oz * (abv / 100) * 29.5735 * 0.789;
@@ -614,11 +627,11 @@ function validateConfig(focusInvalid = false) {
     );
     const maximumEndpoint = maximumTrace.at(-1) ?? 0;
     if (maximumEndpoint + 0.002 < target) {
-      problem = [`This plan needs more than ${MAX_SLOTS} drinks in an hour. Choose a stronger drink or lower target.`, 'drinkAbv'];
+      problem = ['This goal cannot be reached within the pacing limit. Lower the goal or extend the session.', 'bacEnd'];
     } else {
       const candidate = buildCruisePlan(alcoholGrams, activeProfile, durationHours, target);
       if (candidate.plan.some((drinks, bucket) => drinks > capacityPlan[bucket])) {
-        problem = [`This plan needs more than ${MAX_SLOTS} drinks in an hour. Choose a stronger drink or lower target.`, 'drinkAbv'];
+        problem = ['This goal cannot be reached within the pacing limit. Lower the goal or extend the session.', 'bacEnd'];
       }
     }
   }
@@ -743,7 +756,7 @@ function renderTimeline() {
     else if (isNext)                sublabel = 'tap to log';
     else if (sessionComplete)       sublabel = 'not logged';
     else if (!sessionActive && i === drinkSchedule.length - 1)
-                                    sublabel = `ending BAC ${plannedEndpoint.toFixed(3)}`;
+                                    sublabel = `projected end ${plannedEndpoint.toFixed(3)}`;
     else if (!sessionActive)        sublabel = '';
     else                            sublabel = 'upcoming';
 
@@ -780,7 +793,7 @@ function update() {
       document.getElementById('summaryTotal').textContent = '—';
       document.getElementById('summarySpacing').textContent = '—';
       document.getElementById('summaryEnding').textContent = '—';
-      document.getElementById('scheduleNote').textContent = 'Fix the settings above to create a flight plan.';
+      document.getElementById('scheduleNote').textContent = 'Fix the settings above to create a Pace plan.';
       document.getElementById('timeline').replaceChildren();
     }
     return;
@@ -835,10 +848,10 @@ function update() {
     schedNote.textContent = `Session complete · ${loggedTotal} of ${total} planned drinks logged · final BAC ${projEnd.toFixed(3)}`;
   } else if (sessionActive) {
     const remaining = actualDrinkTimes.filter(t => t === null).length;
-    schedNote.textContent = `${remaining} drink${remaining === 1 ? '' : 's'} remaining · projected ending BAC ${projEnd.toFixed(3)}`;
+    schedNote.textContent = `${remaining} drink${remaining === 1 ? '' : 's'} remaining · projected BAC at end ${projEnd.toFixed(3)}`;
   } else if (total > 0) {
     const spacingLabel = total > 1 ? ` · one every ${fmtSpacing(result.spacing)}` : '';
-    schedNote.textContent = `${total} drink${total>1?'s':''}${spacingLabel} · ending BAC ${projEnd.toFixed(3)}`;
+    schedNote.textContent = `${total} drink${total>1?'s':''}${spacingLabel} · projected BAC at end ${projEnd.toFixed(3)}`;
   } else {
     schedNote.textContent = 'No drinks needed.';
   }
@@ -893,7 +906,7 @@ function recalcFromNow() {
 
   const schedNote = document.getElementById('scheduleNote');
   const remLabel  = n_rem > 0 ? `${n_rem} drink${n_rem>1?'s':''} remaining` : 'No more drinks needed';
-  schedNote.textContent = `${remLabel} · ending BAC ${projEnd.toFixed(3)}`;
+  schedNote.textContent = `${remLabel} · projected BAC at end ${projEnd.toFixed(3)}`;
 
   saveSession();
   updateLiveBac();
@@ -1169,7 +1182,7 @@ function activateSessionUI() {
   document.getElementById('startBtn').style.display = 'none';
   document.getElementById('endBtn').style.display   = 'block';
   document.getElementById('liveBacBar').classList.add('visible');
-  document.getElementById('planLabel').textContent  = 'Active Mission';
+  document.getElementById('planLabel').textContent  = 'Session in Progress';
   updateDrinkTrash();
 }
 
@@ -1208,7 +1221,7 @@ function endSession() {
   document.getElementById('startBtn').style.display = 'block';
   document.getElementById('endBtn').style.display   = 'none';
   document.getElementById('liveBacBar').classList.remove('visible');
-  document.getElementById('planLabel').textContent  = 'Flight Plan';
+  document.getElementById('planLabel').textContent  = 'Pace Plan';
   document.getElementById('duration').disabled = false;
   actualDrinkTimes = new Array(drinkSchedule.length).fill(null);
   loadCustomDrinks();
@@ -1364,76 +1377,15 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ── Theme system (shared with zone.html) ──────────────────────
-const THEMES = {
-  cosmos:    { name:'Cosmos',    dark:true,  '--space':'#08090d','--deep':'#0e1018','--surface':'#13151f','--border':'#1e2130','--text':'#e8e0cc','--muted':'#aaa3bb','--logo-a':'#7eb8ff','--logo-b':'#5a9aee','--logo-c':'#52e09c','--accent':'#7eb8ff','--accent2':'#5a9aee', },
-  navy:      { name:'Navy',      dark:true,  '--space':'#0d1117','--deep':'#010409','--surface':'#161b22','--border':'#21262d','--text':'#e6edf3','--muted':'#aab3bd','--logo-a':'#7eb8ff','--logo-b':'#5a9aee','--logo-c':'#52e09c','--accent':'#7eb8ff','--accent2':'#5a9aee', },
-  espresso:  { name:'Espresso',  dark:true,  '--space':'#120e0a','--deep':'#0a0705','--surface':'#1c1510','--border':'#2e2218','--text':'#e8ddd0','--muted':'#b29a88','--logo-a':'#7eb8ff','--logo-b':'#5a9aee','--logo-c':'#52e09c','--accent':'#7eb8ff','--accent2':'#5a9aee', },
-  parchment: { name:'Parchment', dark:false, '--space':'#f5f0e8','--deep':'#ede8de','--surface':'#ffffff','--border':'#e0d8cc','--text':'#2a2420','--muted':'#6f625b','--logo-a':'#3a80d4','--logo-b':'#5a9aee','--logo-c':'#2a9a6a','--accent':'#3a80d4','--accent2':'#2a6ab0', },
-  honey:     { name:'Honey',     dark:false, '--space':'#fdf4e3','--deep':'#f8edd8','--surface':'#fff8ec','--border':'#f0dab0','--text':'#3a2808','--muted':'#735421','--logo-a':'#3a80d4','--logo-b':'#5a9aee','--logo-c':'#2a9a6a','--accent':'#3a80d4','--accent2':'#2a6ab0', },
-  slate:     { name:'Slate',     dark:false, '--space':'#eef2f8','--deep':'#e4eaf4','--surface':'#ffffff','--border':'#d0dcee','--text':'#1a2840','--muted':'#5d6c88','--logo-a':'#3a80d4','--logo-b':'#5a9aee','--logo-c':'#2a9a6a','--accent':'#3a80d4','--accent2':'#2a6ab0', },
-};
-const THEME_KEY = 'goldilocks_theme';
-
-function applyTheme(id) {
-  const t = THEMES[id] || THEMES.cosmos;
-  const root = document.documentElement;
-  ['--space','--deep','--surface','--border','--text','--muted'].forEach(v => root.style.setProperty(v, t[v]));
-  const primaryAccent = t.dark ? t['--accent'] : '#245f9e';
-  const secondaryAccent = t.dark ? t['--accent2'] : '#325c98';
-  const logoGrad = `linear-gradient(135deg,${t['--logo-a']} 0%,${t['--logo-b']} 50%,${t['--logo-c']} 100%)`;
-  document.querySelectorAll('.logo').forEach(el => el.style.backgroundImage = logoGrad);
-  root.style.setProperty('--blue',  primaryAccent);
-  root.style.setProperty('--blue2', secondaryAccent);
-  root.style.setProperty('--gold', t.dark ? '#f5c842' : '#765000');
-  root.style.setProperty('--gold2', t.dark ? '#e8a020' : '#654300');
-  root.style.setProperty('--amber', t.dark ? '#ff8c3a' : '#8a3f00');
-  root.style.setProperty('--danger', t.dark ? '#ff5a5a' : '#a12626');
-  const bar = document.getElementById('liveBacBar');
-  if (bar) bar.style.background = t['--space'] + 'f2';
-  const style = document.getElementById('themeSliderStyle') || (() => {
-    const s = document.createElement('style'); s.id = 'themeSliderStyle'; document.head.appendChild(s); return s;
-  })();
-  style.textContent = `input[type="range"]::-webkit-slider-thumb { background: ${primaryAccent} !important; box-shadow: 0 0 10px ${primaryAccent}80 !important; }`;
-  document.querySelectorAll('.theme-swatch').forEach(sw => {
-    const selected = sw.dataset.theme === id;
-    sw.style.outline = '';
-    sw.style.boxShadow = selected ? `0 0 0 2px ${t['--space']}, 0 0 0 4px ${primaryAccent}` : 'none';
-    sw.setAttribute('aria-pressed', String(selected));
-  });
-  try { localStorage.setItem(THEME_KEY, id); } catch(e) {}
-}
-
-function renderThemePicker() {
-  const el = document.getElementById('themePicker');
-  if (!el) return;
-  el.replaceChildren();
-  Object.entries(THEMES).forEach(([id, t]) => {
-    const swatch = document.createElement('button');
-    swatch.type = 'button';
-    swatch.className = 'theme-swatch';
-    swatch.dataset.theme = id;
-    swatch.title = t.name;
-    swatch.setAttribute('aria-label', `Use ${t.name} theme`);
-    swatch.setAttribute('aria-pressed', 'false');
-    swatch.style.background = `linear-gradient(135deg,${t['--logo-a']},${t['--logo-b']})`;
-    swatch.style.border = `2px solid ${t['--border']}`;
-    swatch.addEventListener('click', () => applyTheme(id));
-    el.appendChild(swatch);
-  });
-}
-
-function loadTheme() {
-  let id = 'cosmos';
-  try { id = localStorage.getItem(THEME_KEY) || 'cosmos'; } catch(e) {}
-  applyTheme(id);
+function initTheme() {
+  GoldilocksTheme.init({ mode:'pace', pickerId:'themePicker' });
 }
 
 // ── Init ──────────────────────────────────────────────────────
 (function init() {
   loadCalibratedProfiles();
   loadCustomDrinks();
-  renderThemePicker();
-  loadTheme();
+  initTheme();
   const restored = loadSavedSession();
   if (restored) {
     sessionActive = true;

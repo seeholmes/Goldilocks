@@ -7,24 +7,24 @@ Open the hosted app at [seeholmes.github.io/Goldilocks](https://seeholmes.github
 ## Modes
 
 - **Zone** (`goldilocks-zone.html`) builds an hourly plan intended to stay within a selected BAC range and replans from logged drinks.
-- **Cruise** (`goldilocks-cruise.html`) spaces drinks across a session toward a selected ending BAC, with mission duration selectable in 15-minute increments.
+- **Pace** (`goldilocks-cruise.html`) spaces drinks across a session toward a selected ending BAC, with session length selectable in 15-minute increments. The legacy filename is retained for bookmark compatibility.
 - **Training** (`goldilocks-training.html`) records timed breathalyzer readings and saves a calibrated profile after a validated regression.
 
 `index.html` is Mission Control and links to all three modes.
 
 ## Architecture
 
-The production app has no framework, bundler, backend, analytics, or device integration. Each mode is a standalone HTML page with inline presentation and controller code. Shared, testable BAC and calibration calculations live in `goldilocks-core.js`; shared custom-drink validation and storage live in `goldilocks-presets.js`.
+The production app has no framework, bundler, backend, analytics, or device integration. Each mode is a standalone HTML page with inline presentation and controller code. Shared, testable BAC and calibration calculations live in `goldilocks-core.js`; shared custom-drink validation and storage live in `goldilocks-presets.js`; shared theme behavior lives in `goldilocks-theme.js`; and Mission Control reads resumable state through the non-mutating `goldilocks-session-state.js` inspector.
 
 The only external runtime dependency is Google Fonts. User data stays in same-origin browser storage:
 
 | Key | Purpose |
 | --- | --- |
-| `goldilocks_profiles` | Profiles shared by Training, Zone, and Cruise |
+| `goldilocks_profiles` | Profiles shared by Training, Zone, and Pace |
 | `goldilocks_theme` | Theme shared by all modes |
-| `goldilocks_drinks` | Custom drinks shared by Zone and Cruise |
+| `goldilocks_drinks` | Custom drinks shared by Zone and Pace |
 | `goldilocks_v2_session` | Active Zone session |
-| `goldilocks_cruise_session` | Active Cruise session |
+| `goldilocks_cruise_session` | Active Pace session (legacy key retained for compatibility) |
 | `goldilocks_training_session` | Active Training protocol |
 | `goldilocks_training_history` | Last 20 completed training sessions |
 
