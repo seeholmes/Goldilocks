@@ -65,7 +65,8 @@ test('mode pages load the tested calculation core', () => {
       'bacPerDrink', 'simulate', 'estimateLiveBac', 'buildZoneSchedule', 'widmarkRisePerStd',
     ],
     'goldilocks-cruise.html': [
-      'bacPerDrink', 'simulate', 'estimateLiveBac', 'buildCruiseReplan',
+      'bacPerDrink', 'simulateDuration', 'estimateLiveBac',
+      'buildCruiseCapacityPlan', 'buildCruiseReplan',
     ],
     'goldilocks-training.html': [
       'calculateCalibration', 'fitLine', 'widmarkRisePerStd',
@@ -86,6 +87,34 @@ test('mode pages load the tested calculation core', () => {
       );
     }
   }
+});
+
+test('Zone and Cruise use the shared custom-drink store', () => {
+  for (const page of ['goldilocks-zone.html', 'goldilocks-cruise.html']) {
+    const html = read(page);
+    assert.match(
+      html,
+      /<script\s+src="goldilocks-presets\.js"\s*><\/script>/i,
+      `${page} must load goldilocks-presets.js`
+    );
+    assert.match(html, /GoldilocksPresets\.STORAGE_KEY/);
+    assert.match(html, /GoldilocksPresets\.read\s*\(/);
+    assert.match(html, /id="myDrinksGroup"/);
+    assert.match(html, /startsWith\('custom:'\)/);
+  }
+});
+
+test('Cruise exposes 15-minute mission-duration planning', () => {
+  const html = read('goldilocks-cruise.html');
+  const durationInput = html.match(/<input\b[^>]*\bid="duration"[^>]*>/i)?.[0] || '';
+  assert.match(durationInput, /\bmin="60"/i);
+  assert.match(durationInput, /\bmax="480"/i);
+  assert.match(durationInput, /\bstep="15"/i);
+  assert.match(html, /durationMinutes/);
+  assert.match(html, /formatDuration\s*\(/);
+  assert.match(html, /normalizeRestoredSession\s*\(/);
+  assert.match(html, /s\.hours\s*\*\s*60/);
+  assert.match(html, /s\.plan\.length\s*!==\s*bucketCount/);
 });
 
 test('pages expose a semantic top-level structure and reduced-motion fallback', () => {

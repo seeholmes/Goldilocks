@@ -36,17 +36,18 @@ const widmarkProfile = Object.freeze({
 });
 
 function planFromTiming(result, hours) {
-  const plan = new Array(hours).fill(0);
+  const bucketCount = Math.ceil(hours);
+  const plan = new Array(bucketCount).fill(0);
   for (let drink = 0; drink < result.n; drink += 1) {
     const offset = result.offsetHours + drink * result.spacing;
-    const hour = Math.max(0, Math.min(hours - 1, Math.floor(offset)));
+    const hour = Math.max(0, Math.min(bucketCount - 1, Math.floor(offset)));
     plan[hour] += 1;
   }
   return plan;
 }
 
 function assertCruiseInvariant(result, alcoholGrams, profile, hours, target) {
-  const trace = core.simulate(result.plan, alcoholGrams, profile);
+  const trace = core.simulateDuration(result.plan, alcoholGrams, profile, hours);
   const endpoint = trace.at(-1) || 0;
   assert.equal(result.endpoint, endpoint);
   assert.ok(
@@ -70,6 +71,8 @@ test('publishes the same API as a browser global', () => {
   vm.runInContext(source, browser);
   assert.equal(typeof browser.GoldilocksCore, 'object');
   assert.equal(typeof browser.GoldilocksCore.buildZoneSchedule, 'function');
+  assert.equal(typeof browser.GoldilocksCore.simulateDuration, 'function');
+  assert.equal(typeof browser.GoldilocksCore.buildCruiseCapacityPlan, 'function');
   closeTo(browser.GoldilocksCore.STD_DRINK_G, core.STD_DRINK_G);
 });
 
@@ -102,6 +105,22 @@ test('simulates hourly drinking, metabolism, floor at zero, and an initial BAC',
   assert.deepEqual(
     core.simulate([1], core.STD_DRINK_G, calibratedProfile, 0.01),
     [0.015]
+  );
+});
+
+test('simulates proportional metabolism in a partial final Cruise hour', () => {
+  assert.deepEqual(
+    core.simulateDuration(
+      [1, 1],
+      core.STD_DRINK_G,
+      calibratedProfile,
+      1.25
+    ),
+    [0.005, 0.021]
+  );
+  assert.throws(
+    () => core.simulateDuration([1], core.STD_DRINK_G, calibratedProfile, 1.25),
+    /schedule must contain 2 hourly buckets/
   );
 });
 
@@ -184,6 +203,26 @@ test('returns an all-zero cruise plan for a zero target', () => {
       achievable: true,
     }
   );
+});
+
+test('returns the correct buckets for a zero-target fractional Cruise', () => {
+  assert.deepEqual(
+    core.buildCruisePlan(core.STD_DRINK_G, calibratedProfile, 1.25, 0),
+    {
+      n: 0,
+      plan: [0, 0],
+      spacing: 0,
+      offsetHours: 0,
+      endpoint: 0,
+      achievable: true,
+    }
+  );
+});
+
+test('scales Cruise capacity for a partial final hour', () => {
+  assert.deepEqual(core.buildCruiseCapacityPlan(1.25, 6), [6, 1]);
+  assert.deepEqual(core.buildCruiseCapacityPlan(1.5, 6), [6, 3]);
+  assert.deepEqual(core.buildCruiseCapacityPlan(1.75, 6), [6, 4]);
 });
 
 test('chooses an evenly timed cruise plan matching the target endpoint', () => {
@@ -290,6 +329,30 @@ test('Cruise endpoint and achievable fields match simulation across scenarios', 
   }
 });
 
+test('builds valid Cruise plans at quarter-hour durations', () => {
+  for (const duration of [1.25, 1.5, 4.25, 7.75]) {
+    const result = core.buildCruiseReplan(
+      core.STD_DRINK_G,
+      calibratedProfile,
+      duration,
+      0.04,
+      0,
+      [],
+      6
+    );
+    assert.equal(result.plan.length, Math.ceil(duration));
+    assert.ok(result.futureOffsets.every(offset => offset > 0 && offset < duration));
+    assert.deepEqual(planFromTiming(result, duration), result.plan);
+    assertCruiseInvariant(
+      result,
+      core.STD_DRINK_G,
+      calibratedProfile,
+      duration,
+      0.04
+    );
+  }
+});
+
 test('replans Cruise from actual logged drinks instead of the original count', () => {
   const result = core.buildCruiseReplan(
     core.STD_DRINK_G,
@@ -334,6 +397,26 @@ test('Cruise replan recommends no future drinks after actuals overshoot', () => 
   assert.deepEqual(result.plan, [3, 0]);
   assert.equal(result.endpoint, 0.03);
   assert.equal(result.achievable, false);
+});
+
+test('Cruise replan stays inside a fractional session after elapsed time', () => {
+  const result = core.buildCruiseReplan(
+    core.STD_DRINK_G,
+    calibratedProfile,
+    1.5,
+    0.04,
+    1.1,
+    [0.1],
+    6
+  );
+
+  assert.deepEqual(result.plan, [1, 2]);
+  assert.ok(result.futureOffsets.every(offset => offset > 1.1 && offset < 1.5));
+  assert.equal(result.endpoint, 0.038);
+  assert.equal(
+    result.endpoint,
+    core.simulateDuration(result.plan, core.STD_DRINK_G, calibratedProfile, 1.5).at(-1)
+  );
 });
 
 test('Cruise replan keeps future recommendations within the persisted session capacity', () => {

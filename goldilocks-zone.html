@@ -435,6 +435,7 @@
   <p class="disclaimer" id="disclaimerEl">⚠ For harm reduction only · Widmark estimates vary — food, hydration, meds and tolerance all affect real BAC · Never drive</p>
 </main>
 
+<script src="goldilocks-presets.js"></script>
 <script src="goldilocks-core.js"></script>
 <script>
 // ── Profiles ──────────────────────────────────────────────────
@@ -594,10 +595,7 @@ function deleteCustomDrink() {
   const name = val.slice(7);
   if (!confirm(`Delete drink "${name}"?`)) return;
 
-  let drinks = Object.create(null);
-  try { drinks = toSafeDrinkMap(JSON.parse(localStorage.getItem(DRINKS_KEY) || '{}')); } catch(e) {}
-  delete drinks[name];
-  try { localStorage.setItem(DRINKS_KEY, JSON.stringify(drinks)); } catch(e) {}
+  try { GoldilocksPresets.remove(localStorage, name); } catch(e) {}
 
   // Reset dropdown and reload
   document.getElementById('drinkPreset').value = '';
@@ -1186,6 +1184,7 @@ function endSession() {
   clearSavedSession();
   CONFIG_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = false; });
   updateProfileTrash();
+  loadCustomDrinks();
   updateDrinkTrash();
   document.getElementById('startBtn').style.display = 'block';
   document.getElementById('endBtn').style.display   = 'none';
@@ -1224,8 +1223,7 @@ function applyPreset() {
   // custom drinks stored as "custom:name"
   if (val.startsWith('custom:')) {
     const name = val.slice(7);
-    let drinks = Object.create(null);
-    try { drinks = toSafeDrinkMap(JSON.parse(localStorage.getItem(DRINKS_KEY) || '{}')); } catch(e) {}
+    const drinks = GoldilocksPresets.read(localStorage);
     const d = drinks[name];
     if (d) {
       document.getElementById('drinkOz').value  = d.oz;
@@ -1241,21 +1239,7 @@ function applyPreset() {
   update();
 }
 
-const DRINKS_KEY = 'goldilocks_drinks';
-
-function toSafeDrinkMap(value) {
-  const safe = Object.create(null);
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return safe;
-  Object.entries(value).forEach(([name, drink]) => {
-    const oz = Number(drink?.oz);
-    const abv = Number(drink?.abv);
-    if (!isUnsafeProfileKey(name) && Number.isFinite(oz) && oz >= 1 && oz <= 64 &&
-        Number.isFinite(abv) && abv >= 0.5 && abv <= 100) {
-      safe[name] = { oz, abv };
-    }
-  });
-  return safe;
-}
+const DRINKS_KEY = GoldilocksPresets.STORAGE_KEY;
 
 function saveCustomDrink() {
   if (sessionActive) return;
@@ -1270,14 +1254,12 @@ function saveCustomDrink() {
     return;
   }
 
-  let drinks = Object.create(null);
-  try { drinks = toSafeDrinkMap(JSON.parse(localStorage.getItem(DRINKS_KEY) || '{}')); } catch(e) {}
-  drinks[name] = { oz, abv };
-  try { localStorage.setItem(DRINKS_KEY, JSON.stringify(drinks)); } catch(e) { return; }
+  try { GoldilocksPresets.save(localStorage, name, { oz, abv }); } catch(e) { return; }
 
   loadCustomDrinks();
   // Select the newly saved drink in the dropdown
   document.getElementById('drinkPreset').value = `custom:${name}`;
+  updateDrinkTrash();
 
   const toast = document.createElement('div');
   toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(245,200,66,0.12);border:1px solid rgba(245,200,66,0.4);color:var(--gold);font-family:Space Mono,monospace;font-size:10px;letter-spacing:0.1em;padding:10px 18px;border-radius:8px;z-index:999;text-transform:uppercase;';
@@ -1287,11 +1269,10 @@ function saveCustomDrink() {
 }
 
 function loadCustomDrinks() {
-  let drinks = Object.create(null);
-  try { drinks = toSafeDrinkMap(JSON.parse(localStorage.getItem(DRINKS_KEY) || '{}')); } catch(e) {}
+  const drinks = GoldilocksPresets.read(localStorage);
   const group = document.getElementById('myDrinksGroup');
   if (!group) return;
-  group.innerHTML = '';
+  group.replaceChildren();
   const names = Object.keys(drinks);
   if (names.length === 0) { group.style.display = 'none'; return; }
   group.style.display = '';
@@ -1303,6 +1284,16 @@ function loadCustomDrinks() {
     group.appendChild(opt);
   });
 }
+
+window.addEventListener('storage', event => {
+  if (event.key !== DRINKS_KEY || sessionActive) return;
+  const select = document.getElementById('drinkPreset');
+  const selected = select.value;
+  loadCustomDrinks();
+  select.value = findOptionByValue(select, selected) ? selected : '';
+  if (select.value.startsWith('custom:')) applyPreset();
+  updateDrinkTrash();
+});
 
 // ── Wake recovery ─────────────────────────────────────────────
 document.addEventListener('visibilitychange', () => {

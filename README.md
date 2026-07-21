@@ -7,14 +7,14 @@ Open the hosted app at [seeholmes.github.io/Goldilocks](https://seeholmes.github
 ## Modes
 
 - **Zone** (`goldilocks-zone.html`) builds an hourly plan intended to stay within a selected BAC range and replans from logged drinks.
-- **Cruise** (`goldilocks-cruise.html`) spaces drinks across a session toward a selected ending BAC.
+- **Cruise** (`goldilocks-cruise.html`) spaces drinks across a session toward a selected ending BAC, with mission duration selectable in 15-minute increments.
 - **Training** (`goldilocks-training.html`) records timed breathalyzer readings and saves a calibrated profile after a validated regression.
 
 `index.html` is Mission Control and links to all three modes.
 
 ## Architecture
 
-The production app has no framework, bundler, backend, analytics, or device integration. Each mode is a standalone HTML page with inline presentation and controller code. Shared, testable BAC and calibration calculations live in `goldilocks-core.js`.
+The production app has no framework, bundler, backend, analytics, or device integration. Each mode is a standalone HTML page with inline presentation and controller code. Shared, testable BAC and calibration calculations live in `goldilocks-core.js`; shared custom-drink validation and storage live in `goldilocks-presets.js`.
 
 The only external runtime dependency is Google Fonts. User data stays in same-origin browser storage:
 
@@ -22,7 +22,7 @@ The only external runtime dependency is Google Fonts. User data stays in same-or
 | --- | --- |
 | `goldilocks_profiles` | Profiles shared by Training, Zone, and Cruise |
 | `goldilocks_theme` | Theme shared by all modes |
-| `goldilocks_drinks` | Zone custom drinks |
+| `goldilocks_drinks` | Custom drinks shared by Zone and Cruise |
 | `goldilocks_v2_session` | Active Zone session |
 | `goldilocks_cruise_session` | Active Cruise session |
 | `goldilocks_training_session` | Active Training protocol |

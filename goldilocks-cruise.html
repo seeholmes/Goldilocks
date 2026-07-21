@@ -260,8 +260,9 @@
     <h2 class="sec" id="drinkHeading">Your Drink</h2>
     <div style="margin-bottom:10px">
       <label class="field-label" for="drinkPreset">Quick Select</label>
-      <div class="select-wrap">
-        <select id="drinkPreset" onchange="applyPreset()">
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="select-wrap" style="flex:1">
+          <select id="drinkPreset" onchange="applyPreset(); updateDrinkTrash()">
           <option value="">— choose a preset —</option>
           <optgroup label="Beer">
             <option value="12|4.2">Beer — Can (12oz, 4.2%)</option>
@@ -281,7 +282,10 @@
             <option value="8|10.0">Cocktail — Approx (8oz, 10%)</option>
           </optgroup>
           <option value="custom">Custom →</option>
-        </select>
+          <optgroup label="─── My Drinks ───" id="myDrinksGroup" style="display:none"></optgroup>
+          </select>
+        </div>
+        <button type="button" id="drinkTrashBtn" onclick="deleteCustomDrink()" aria-label="Delete selected drink" title="Delete drink" style="display:none;padding:9px 12px;background:rgba(255,90,90,0.08);border:1px solid rgba(255,90,90,0.25);border-radius:7px;color:var(--danger);font-size:14px;cursor:pointer;transition:all 0.2s;flex-shrink:0" onmouseover="this.style.background='rgba(255,90,90,0.18)'" onmouseout="this.style.background='rgba(255,90,90,0.08)'">🗑</button>
       </div>
     </div>
     <div class="row2">
@@ -295,6 +299,13 @@
       </div>
     </div>
     <div class="pure-alc-note">Pure alcohol per drink: <span id="pureAlcDisplay">—</span></div>
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+      <div class="input-wrap" style="flex:1">
+        <input type="text" id="saveDrinkName" aria-label="Drink name" placeholder="name this drink" maxlength="28"
+          style="background:transparent;border:none;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;padding:9px 12px;width:100%;outline:none;">
+      </div>
+      <button type="button" id="saveDrinkBtn" onclick="saveCustomDrink()" style="padding:9px 16px;background:rgba(126,184,255,0.08);border:1px solid rgba(126,184,255,0.3);border-radius:7px;color:var(--blue);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;white-space:nowrap;transition:all 0.2s">Save Drink</button>
+    </div>
     <button type="button" class="fasted-toggle" id="fastedToggle" aria-pressed="false" style="margin-top:12px;display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--deep);border:1px solid var(--border);border-radius:7px;cursor:pointer" onclick="toggleFasted()">
       <span id="fastedBox" aria-hidden="true" style="width:16px;height:16px;border:1px solid var(--muted);border-radius:4px;flex-shrink:0;transition:all 0.2s;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--space)"></span>
       <span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">Drinking on an empty stomach</span>
@@ -309,9 +320,10 @@
     <h2 class="sec" id="settingsHeading">Cruise Settings</h2>
     <div style="margin-bottom:18px">
       <label for="duration" style="display:block;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue2);opacity:0.8;margin-bottom:14px">Mission Duration</label>
-      <input type="range" id="duration" min="1" max="8" step="1" value="4" aria-describedby="durationVal">
-      <div class="slider-labels"><span>1h</span><span>4h</span><span>8h</span></div>
-      <div style="font-family:'Anybody',sans-serif;font-size:24px;font-weight:400;color:var(--blue);margin-top:8px" id="durationVal">4 hours</div>
+      <input type="range" id="duration" min="60" max="480" step="15" value="240" aria-describedby="durationVal durationResolution">
+      <div class="slider-labels"><span>1h</span><span>4h 30m</span><span>8h</span></div>
+      <div style="font-family:'Anybody',sans-serif;font-size:24px;font-weight:400;color:var(--blue);margin-top:8px" id="durationVal">4h</div>
+      <div id="durationResolution" style="font-size:9px;color:var(--muted);margin-top:5px">15-minute increments</div>
     </div>
     <div>
       <label class="field-label" for="bacEnd">Target Ending BAC</label>
@@ -350,6 +362,7 @@
   <p class="disclaimer" id="disclaimerEl">⚠ For harm reduction only · Widmark estimates vary — food, hydration, meds and tolerance all affect real BAC · Never drive</p>
 </main>
 
+<script src="goldilocks-presets.js"></script>
 <script src="goldilocks-core.js"></script>
 <script>
 // ── Profiles ──────────────────────────────────────────────────
@@ -367,6 +380,11 @@ const PROFILES = {
 const STD_DRINK_G = GoldilocksCore.STD_DRINK_G;
 const MAX_SLOTS   = 6;
 const STORAGE_KEY = 'goldilocks_cruise_session';
+const DRINKS_KEY = GoldilocksPresets.STORAGE_KEY;
+const MIN_DURATION_MINUTES = 60;
+const MAX_DURATION_MINUTES = 480;
+const DURATION_STEP_MINUTES = 15;
+const MAX_SESSION_DRINKS = (MAX_DURATION_MINUTES / 60) * MAX_SLOTS;
 
 let sessionActive    = false;
 let sessionStartTs   = null;
@@ -376,7 +394,7 @@ let actualDrinkTimes = [];   // per-drink timestamps (actual), null if not yet l
 let ag               = 0;
 let profile          = PROFILES.seeholmes;
 let bacEnd           = 0.04;
-let hours            = 4;
+let durationMinutes  = 240;
 let clockInterval    = null;
 let sessionComplete  = false;
 let planSpacing      = 0;
@@ -501,9 +519,30 @@ function loadCalibratedProfiles() {
 }
 
 // ── Math ──────────────────────────────────────────────────────
-// Discrete hourly simulate — identical model to zone.html
-function simulate(sched, a, p) {
-  return GoldilocksCore.simulate(sched, a, p);
+function isValidDurationMinutes(value) {
+  return Number.isInteger(value)
+    && value >= MIN_DURATION_MINUTES
+    && value <= MAX_DURATION_MINUTES
+    && value % DURATION_STEP_MINUTES === 0;
+}
+
+function getDurationHours(minutes = durationMinutes) {
+  return minutes / 60;
+}
+
+function getDurationBucketCount(minutes = durationMinutes) {
+  return Math.ceil(getDurationHours(minutes));
+}
+
+function formatDuration(minutes) {
+  const wholeHours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (!remainingMinutes) return `${wholeHours}h`;
+  return `${wholeHours}h ${remainingMinutes}m`;
+}
+
+function simulateCruise(sched, a, p, minutes = durationMinutes) {
+  return GoldilocksCore.simulateDuration(sched, a, p, getDurationHours(minutes));
 }
 
 function getAlcGrams() {
@@ -519,8 +558,8 @@ function bpd(a, p) {
 }
 
 // Build a phase-aware cruise plan within the UI's hourly recommendation cap.
-function buildCruisePlan(ag, p, T, B_end) {
-  return GoldilocksCore.buildCruiseReplan(ag, p, T, B_end, 0, [], MAX_SLOTS);
+function buildCruisePlan(ag, p, durationHours, B_end) {
+  return GoldilocksCore.buildCruiseReplan(ag, p, durationHours, B_end, 0, [], MAX_SLOTS);
 }
 
 function fmtSpacing(spacingHours) {
@@ -555,23 +594,30 @@ function validateConfig(focusInvalid = false) {
   const oz = parseFloat(document.getElementById('drinkOz').value);
   const abv = parseFloat(document.getElementById('drinkAbv').value);
   const target = parseFloat(document.getElementById('bacEnd').value);
-  const duration = Number(document.getElementById('duration').value);
+  const requestedDurationMinutes = Number(document.getElementById('duration').value);
   let problem = null;
   if (!Number.isFinite(oz) || oz < 1 || oz > 64) problem = ['Drink size must be between 1 and 64 oz.', 'drinkOz'];
   else if (!Number.isFinite(abv) || abv < 0.5 || abv > 100) problem = ['ABV must be between 0.5% and 100%.', 'drinkAbv'];
   else if (!Number.isFinite(target) || target < 0 || target > 0.2) problem = ['Target ending BAC must be between 0.00 and 0.20.', 'bacEnd'];
-  else if (!Number.isInteger(duration) || duration < 1 || duration > 8) problem = ['Mission duration must be between 1 and 8 hours.', 'duration'];
+  else if (!isValidDurationMinutes(requestedDurationMinutes)) problem = ['Mission duration must be between 1h and 8h in 15-minute increments.', 'duration'];
   else if (!isValidProfile(getActiveProfile())) problem = ['Enter a valid body weight and profile.', document.getElementById('profileSelect').value === 'custom' ? 'weight' : null];
   else {
     const alcoholGrams = oz * (abv / 100) * 29.5735 * 0.789;
     const activeProfile = getActiveProfile();
-    const maximumTrace = GoldilocksCore.simulate(new Array(duration).fill(MAX_SLOTS), alcoholGrams, activeProfile);
-    const maximumEndpoint = maximumTrace[duration - 1] ?? 0;
+    const durationHours = getDurationHours(requestedDurationMinutes);
+    const capacityPlan = GoldilocksCore.buildCruiseCapacityPlan(durationHours, MAX_SLOTS);
+    const maximumTrace = GoldilocksCore.simulateDuration(
+      capacityPlan,
+      alcoholGrams,
+      activeProfile,
+      durationHours
+    );
+    const maximumEndpoint = maximumTrace.at(-1) ?? 0;
     if (maximumEndpoint + 0.002 < target) {
       problem = [`This plan needs more than ${MAX_SLOTS} drinks in an hour. Choose a stronger drink or lower target.`, 'drinkAbv'];
     } else {
-      const candidate = buildCruisePlan(alcoholGrams, activeProfile, duration, target);
-      if (candidate.plan.some(drinks => drinks > MAX_SLOTS)) {
+      const candidate = buildCruisePlan(alcoholGrams, activeProfile, durationHours, target);
+      if (candidate.plan.some((drinks, bucket) => drinks > capacityPlan[bucket])) {
         problem = [`This plan needs more than ${MAX_SLOTS} drinks in an hour. Choose a stronger drink or lower target.`, 'drinkAbv'];
       }
     }
@@ -626,15 +672,21 @@ function getStart() {
 function getCurrentHour() {
   if (!sessionActive || !sessionStartTs) return -1;
   const elapsed = (Date.now() - sessionStartTs) / 3600000;
-  return Math.max(0, Math.min(Math.floor(elapsed), hours - 1));
+  return Math.max(0, Math.min(Math.floor(elapsed), getDurationBucketCount() - 1));
 }
 
 function getFracThroughHour() {
   if (!sessionActive) return 0;
-  const e = (Date.now() - sessionStartTs) / 3600000;
-  if (e <= 0) return 0;
-  if (e >= hours || sessionComplete) return 1;
-  return Math.max(0, Math.min(1, e - Math.floor(e)));
+  const durationHours = getDurationHours();
+  const elapsedHours = Math.max(
+    0,
+    Math.min(durationHours, (Date.now() - sessionStartTs) / 3600000)
+  );
+  const currentBucket = Math.max(
+    0,
+    Math.min(Math.floor(elapsedHours), getDurationBucketCount() - 1)
+  );
+  return Math.max(0, Math.min(1, elapsedHours - currentBucket));
 }
 
 // Build timestamps from the phase-aware plan returned by the shared core.
@@ -735,13 +787,14 @@ function update() {
   }
   profile = getActiveProfile();
   bacEnd  = parseFloat(document.getElementById('bacEnd').value);
-  hours   = Number(document.getElementById('duration').value);
+  durationMinutes = Number(document.getElementById('duration').value);
+  const durationHours = getDurationHours();
 
   updateWidmarkChip(profile, ag);
 
   let result;
   if (!sessionActive) {
-    result = buildCruisePlan(ag, profile, hours, bacEnd);
+    result = buildCruisePlan(ag, profile, durationHours, bacEnd);
     plan = result.plan;
     planSpacing = result.spacing;
     planOffsetHours = result.offsetHours;
@@ -762,8 +815,8 @@ function update() {
   }
 
   const total    = result.n;
-  const trace    = simulate(plan, ag, profile);
-  const projEnd  = sessionActive ? (trace[hours - 1] ?? 0) : result.endpoint;
+  const trace    = simulateCruise(plan, ag, profile);
+  const projEnd  = sessionActive ? (trace.at(-1) ?? 0) : result.endpoint;
 
   const loggedTotal = actualDrinkTimes.filter(t => t !== null).length;
   document.getElementById('summaryTotal').textContent   = sessionComplete ? loggedTotal : (total > 0 ? total : '0');
@@ -806,7 +859,8 @@ function update() {
 function recalcFromNow() {
   if (!sessionActive || sessionComplete) return;
   const now          = Date.now();
-  const elapsedHours = Math.max(0, Math.min(hours, (now - sessionStartTs) / 3600000));
+  const durationHours = getDurationHours();
+  const elapsedHours = Math.max(0, Math.min(durationHours, (now - sessionStartTs) / 3600000));
 
   // Collect actual logged times
   const doneTimes = actualDrinkTimes.filter(t => t !== null).sort((a, b) => a - b);
@@ -814,7 +868,7 @@ function recalcFromNow() {
   const result = GoldilocksCore.buildCruiseReplan(
     ag,
     profile,
-    hours,
+    durationHours,
     bacEnd,
     elapsedHours,
     actualOffsets,
@@ -878,7 +932,7 @@ function showWarn(msg) {
 // ── Live BAC ──────────────────────────────────────────────────
 function finalizeIfDurationElapsed() {
   if (!sessionActive || sessionComplete || !sessionStartTs) return sessionComplete;
-  const sessionEndTs = sessionStartTs + hours * 3600000;
+  const sessionEndTs = sessionStartTs + durationMinutes * 60000;
   if (Date.now() < sessionEndTs) return false;
   sessionComplete = true;
   clearInterval(clockInterval);
@@ -893,15 +947,16 @@ function finalizeIfDurationElapsed() {
   }
   drinkSchedule = boundedSchedule;
   actualDrinkTimes = boundedActuals;
-  plan = new Array(hours).fill(0);
+  const bucketCount = getDurationBucketCount();
+  plan = new Array(bucketCount).fill(0);
   actualDrinkTimes.forEach(timestamp => {
     if (timestamp === null) return;
-    const hour = Math.max(0, Math.min(hours - 1, Math.floor((timestamp - sessionStartTs) / 3600000)));
-    plan[hour]++;
+    const bucket = Math.max(0, Math.min(bucketCount - 1, Math.floor((timestamp - sessionStartTs) / 3600000)));
+    plan[bucket]++;
   });
   const logged = actualDrinkTimes.filter(timestamp => timestamp !== null).length;
-  const finalTrace = simulate(plan, ag, profile);
-  const finalBac = finalTrace[hours - 1] ?? 0;
+  const finalTrace = simulateCruise(plan, ag, profile);
+  const finalBac = finalTrace.at(-1) ?? 0;
   planSpacing = 0;
   planOffsetHours = 0;
   plannedEndpoint = finalBac;
@@ -926,10 +981,11 @@ function updateLiveBac() {
   // Count actual logged drinks per completed hour and current hour
   const completed = new Array(Math.max(0, curHour)).fill(0);
   let curActual   = 0;
+  const bucketCount = getDurationBucketCount();
   for (let i = 0; i < actualDrinkTimes.length; i++) {
     const t = actualDrinkTimes[i];
     if (t === null) continue;
-    const h = Math.max(0, Math.min(hours - 1, Math.floor((t - sessionStartTs) / 3600000)));
+    const h = Math.max(0, Math.min(bucketCount - 1, Math.floor((t - sessionStartTs) / 3600000)));
     if (h < curHour)       completed[h]++;
     else if (h === curHour) curActual++;
   }
@@ -960,7 +1016,7 @@ function saveSession() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       sessionStartTs, plan, drinkSchedule, actualDrinkTimes,
-      hours, bacEnd, ag, sessionComplete,
+      durationMinutes, bacEnd, ag, sessionComplete,
       planSpacing, planOffsetHours, plannedEndpoint, planAchievable,
       profileName: document.getElementById('profileSelect').value,
       drinkOz:   document.getElementById('drinkOz').value,
@@ -975,24 +1031,33 @@ function saveSession() {
 
 function clearSavedSession() { try { localStorage.removeItem(STORAGE_KEY); } catch(e) {} }
 
+function normalizeRestoredSession(s) {
+  if (!s || typeof s !== 'object' || Array.isArray(s)) return s;
+  if (s.durationMinutes !== undefined) return s;
+  if (Number.isInteger(s.hours)) return { ...s, durationMinutes: s.hours * 60 };
+  return s;
+}
+
 function isValidRestoredSession(s) {
   if (!s || typeof s !== 'object') return false;
-  if (!Number.isInteger(s.hours) || s.hours < 1 || s.hours > 8) return false;
+  if (!isValidDurationMinutes(s.durationMinutes)) return false;
+  const durationHours = getDurationHours(s.durationMinutes);
+  const bucketCount = getDurationBucketCount(s.durationMinutes);
   if (s.sessionComplete !== undefined && typeof s.sessionComplete !== 'boolean') return false;
   if (!Number.isFinite(s.sessionStartTs) || s.sessionStartTs > Date.now() + 5 * 60000) return false;
-  if (Date.now() > s.sessionStartTs + (s.hours + 1) * 3600000) return false;
+  if (Date.now() > s.sessionStartTs + (s.durationMinutes + 60) * 60000) return false;
   if (!Number.isFinite(s.bacEnd) || s.bacEnd < 0 || s.bacEnd > 0.2) return false;
-  if (s.planSpacing !== undefined && (!Number.isFinite(s.planSpacing) || s.planSpacing < 0 || s.planSpacing > s.hours + 1e-6)) return false;
-  if (s.planOffsetHours !== undefined && (!Number.isFinite(s.planOffsetHours) || s.planOffsetHours < 0 || s.planOffsetHours > s.hours + 1e-6)) return false;
+  if (s.planSpacing !== undefined && (!Number.isFinite(s.planSpacing) || s.planSpacing < 0 || s.planSpacing > durationHours + 1e-6)) return false;
+  if (s.planOffsetHours !== undefined && (!Number.isFinite(s.planOffsetHours) || s.planOffsetHours < 0 || s.planOffsetHours > durationHours + 1e-6)) return false;
   if (s.plannedEndpoint !== undefined && (!Number.isFinite(s.plannedEndpoint) || s.plannedEndpoint < 0)) return false;
   if (s.planAchievable !== undefined && typeof s.planAchievable !== 'boolean') return false;
   if (!Number.isFinite(s.ag) || s.ag <= 0 || s.ag > 1600 || !isValidProfile(s.profile)) return false;
   if (typeof s.profileName !== 'string' || s.profileName !== s.profile.name) return false;
   if (s.profileName.toLowerCase() === 'custom' && s.profileName !== 'custom') return false;
-  if (!Array.isArray(s.plan) || s.plan.length !== s.hours || s.plan.some(v => !Number.isInteger(v) || v < 0 || v > s.hours * MAX_SLOTS)) return false;
-  if (!Array.isArray(s.drinkSchedule) || s.drinkSchedule.length > s.hours * MAX_SLOTS || s.drinkSchedule.some(v => !Number.isFinite(v))) return false;
+  if (!Array.isArray(s.plan) || s.plan.length !== bucketCount || s.plan.some(v => !Number.isInteger(v) || v < 0 || v > MAX_SESSION_DRINKS)) return false;
+  if (!Array.isArray(s.drinkSchedule) || s.drinkSchedule.length > MAX_SESSION_DRINKS || s.drinkSchedule.some(v => !Number.isFinite(v))) return false;
   if (!Array.isArray(s.actualDrinkTimes) || s.actualDrinkTimes.length !== s.drinkSchedule.length || s.actualDrinkTimes.some(v => v !== null && !Number.isFinite(v))) return false;
-  const sessionEndTs = s.sessionStartTs + s.hours * 3600000;
+  const sessionEndTs = s.sessionStartTs + s.durationMinutes * 60000;
   if (s.sessionComplete === true && Date.now() < sessionEndTs) return false;
   let previousScheduled = -Infinity;
   let previousActual = -Infinity;
@@ -1013,13 +1078,13 @@ function isValidRestoredSession(s) {
         || actual < previousActual) return false;
     previousActual = actual;
   }
-  const reconstructedPlan = new Array(s.hours).fill(0);
+  const reconstructedPlan = new Array(bucketCount).fill(0);
   s.drinkSchedule.forEach((scheduled, index) => {
     const actual = s.actualDrinkTimes[index];
     if (s.sessionComplete === true && actual === null) return;
     const timestamp = actual === null ? scheduled : actual;
-    const hour = Math.max(0, Math.min(s.hours - 1, Math.floor((timestamp - s.sessionStartTs) / 3600000)));
-    reconstructedPlan[hour]++;
+    const bucket = Math.max(0, Math.min(bucketCount - 1, Math.floor((timestamp - s.sessionStartTs) / 3600000)));
+    reconstructedPlan[bucket]++;
   });
   if (reconstructedPlan.some((count, hour) => count !== s.plan[hour])) return false;
   if (!Number.isFinite(Number(s.drinkOz)) || Number(s.drinkOz) < 1 || Number(s.drinkOz) > 64) return false;
@@ -1035,7 +1100,7 @@ function loadSavedSession() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
-    const s = JSON.parse(raw);
+    const s = normalizeRestoredSession(JSON.parse(raw));
     if (s?.profile?.useWidmark === true) s.profile = { ...s.profile, risePerStd: null };
     if (!isValidRestoredSession(s)) { clearSavedSession(); return false; }
 
@@ -1053,8 +1118,8 @@ function loadSavedSession() {
 
     document.getElementById('drinkOz').value   = s.drinkOz;
     document.getElementById('drinkAbv').value  = s.drinkAbv;
-    document.getElementById('duration').value  = s.hours;
-    document.getElementById('durationVal').textContent = s.hours == 1 ? '1 hour' : `${s.hours} hours`;
+    document.getElementById('duration').value  = s.durationMinutes;
+    document.getElementById('durationVal').textContent = formatDuration(s.durationMinutes);
     document.getElementById('bacEnd').value    = s.bacEnd;
     profileSelect.value = restoredProfileName;
     document.getElementById('weight').value = s.weight;
@@ -1071,7 +1136,7 @@ function loadSavedSession() {
     plan             = s.plan;
     drinkSchedule    = s.drinkSchedule;
     actualDrinkTimes = s.actualDrinkTimes;
-    hours            = s.hours;
+    durationMinutes  = s.durationMinutes;
     bacEnd           = s.bacEnd;
     ag               = s.ag;
     profile          = s.profile;
@@ -1084,7 +1149,7 @@ function loadSavedSession() {
       : (drinkSchedule.length ? Math.max(0, (drinkSchedule[0] - sessionStartTs) / 3600000) : 0);
     plannedEndpoint  = Number.isFinite(s.plannedEndpoint)
       ? s.plannedEndpoint
-      : (simulate(plan, ag, profile)[hours - 1] ?? 0);
+      : (simulateCruise(plan, ag, profile).at(-1) ?? 0);
     planAchievable   = typeof s.planAchievable === 'boolean'
       ? s.planAchievable
       : Math.abs(plannedEndpoint - bacEnd) <= 0.002;
@@ -1097,7 +1162,7 @@ function checkHourTransitions() {
 }
 
 // ── Session controls ──────────────────────────────────────────
-const CONFIG_IDS = ['drinkOz','drinkAbv','bacEnd','drinkPreset','profileSelect','weight','units','sex'];
+const CONFIG_IDS = ['drinkOz','drinkAbv','bacEnd','drinkPreset','profileSelect','weight','units','sex','saveDrinkName','saveDrinkBtn'];
 
 function activateSessionUI() {
   CONFIG_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = true; });
@@ -1105,6 +1170,7 @@ function activateSessionUI() {
   document.getElementById('endBtn').style.display   = 'block';
   document.getElementById('liveBacBar').classList.add('visible');
   document.getElementById('planLabel').textContent  = 'Active Mission';
+  updateDrinkTrash();
 }
 
 function startSession() {
@@ -1112,12 +1178,12 @@ function startSession() {
   profile        = getActiveProfile();
   ag             = getAlcGrams();
   bacEnd         = parseFloat(document.getElementById('bacEnd').value);
-  hours          = Number(document.getElementById('duration').value);
+  durationMinutes = Number(document.getElementById('duration').value);
   sessionActive  = true;
   sessionComplete = false;
   sessionStartTs = Date.now();
 
-  const result   = buildCruisePlan(ag, profile, hours, bacEnd);
+  const result   = buildCruisePlan(ag, profile, getDurationHours(), bacEnd);
   plan           = result.plan;
   planSpacing    = result.spacing;
   planOffsetHours = result.offsetHours;
@@ -1145,29 +1211,38 @@ function endSession() {
   document.getElementById('planLabel').textContent  = 'Flight Plan';
   document.getElementById('duration').disabled = false;
   actualDrinkTimes = new Array(drinkSchedule.length).fill(null);
+  loadCustomDrinks();
+  updateDrinkTrash();
   update();
 }
 
 // ── Events ────────────────────────────────────────────────────
 document.getElementById('duration').addEventListener('input', function() {
-  let requestedHours = Number(this.value);
+  let requestedMinutes = Number(this.value);
   if (sessionActive && !sessionComplete) {
     const elapsedHours = Math.max(0, (Date.now() - sessionStartTs) / 3600000);
-    if (elapsedHours >= hours) {
-      this.value = String(hours);
+    if (elapsedHours >= getDurationHours()) {
+      this.value = String(durationMinutes);
       updateLiveBac();
       renderTimeline();
       return;
     }
-    const minimumDuration = Math.min(8, Math.floor(elapsedHours) + 1);
-    if (requestedHours < minimumDuration) {
-      requestedHours = minimumDuration;
-      this.value = String(minimumDuration);
-      showWarn(`Duration cannot end before the current session hour (${minimumDuration}h).`);
+    const elapsedMinutes = elapsedHours * 60;
+    const minimumDurationMinutes = Math.min(
+      MAX_DURATION_MINUTES,
+      Math.max(
+        MIN_DURATION_MINUTES,
+        Math.ceil((elapsedMinutes - 1e-7) / DURATION_STEP_MINUTES) * DURATION_STEP_MINUTES
+      )
+    );
+    if (requestedMinutes < minimumDurationMinutes) {
+      requestedMinutes = minimumDurationMinutes;
+      this.value = String(minimumDurationMinutes);
+      showWarn(`Duration cannot end before now (${formatDuration(minimumDurationMinutes)} minimum).`);
     }
   }
-  hours = requestedHours;
-  document.getElementById('durationVal').textContent = hours == 1 ? '1 hour' : `${hours} hours`;
+  durationMinutes = requestedMinutes;
+  document.getElementById('durationVal').textContent = formatDuration(durationMinutes);
   if (sessionActive) {
     recalcFromNow();
   } else {
@@ -1194,11 +1269,94 @@ function toggleFasted() {
 function applyPreset() {
   const val = document.getElementById('drinkPreset').value;
   if (!val || val === 'custom') return;
+  if (val.startsWith('custom:')) {
+    const name = val.slice(7);
+    const drink = GoldilocksPresets.read(localStorage)[name];
+    if (drink) {
+      document.getElementById('drinkOz').value = drink.oz;
+      document.getElementById('drinkAbv').value = drink.abv;
+      document.getElementById('saveDrinkName').value = name;
+      update();
+    }
+    return;
+  }
   const [oz, abv] = val.split('|');
   document.getElementById('drinkOz').value  = oz;
   document.getElementById('drinkAbv').value = abv;
   update();
 }
+
+function updateDrinkTrash() {
+  const val = document.getElementById('drinkPreset').value;
+  document.getElementById('drinkTrashBtn').style.display =
+    !sessionActive && val.startsWith('custom:') ? 'block' : 'none';
+}
+
+function loadCustomDrinks() {
+  const drinks = GoldilocksPresets.read(localStorage);
+  const group = document.getElementById('myDrinksGroup');
+  group.replaceChildren();
+  const names = Object.keys(drinks);
+  group.style.display = names.length ? '' : 'none';
+  names.forEach(name => {
+    const drink = drinks[name];
+    const option = document.createElement('option');
+    option.value = `custom:${name}`;
+    option.textContent = `${name} (${drink.oz}oz, ${drink.abv}%)`;
+    group.appendChild(option);
+  });
+}
+
+function saveCustomDrink() {
+  if (sessionActive) return;
+  const nameInput = document.getElementById('saveDrinkName');
+  const name = (nameInput.value || '').trim();
+  nameInput.setCustomValidity(GoldilocksPresets.isUnsafeName(name) ? 'Choose a different drink name.' : '');
+  if (!name || !nameInput.checkValidity()) {
+    nameInput.reportValidity();
+    nameInput.focus();
+    return;
+  }
+  const oz = parseFloat(document.getElementById('drinkOz').value);
+  const abv = parseFloat(document.getElementById('drinkAbv').value);
+  try {
+    GoldilocksPresets.save(localStorage, name, { oz, abv });
+  } catch(e) {
+    validateConfig(true);
+    return;
+  }
+
+  loadCustomDrinks();
+  document.getElementById('drinkPreset').value = `custom:${name}`;
+  updateDrinkTrash();
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(126,184,255,0.12);border:1px solid rgba(126,184,255,0.4);color:var(--blue);font-family:Space Mono,monospace;font-size:10px;letter-spacing:0.1em;padding:10px 18px;border-radius:8px;z-index:999;text-transform:uppercase;';
+  toast.textContent = `⊹ "${name}" saved`;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
+}
+
+function deleteCustomDrink() {
+  if (sessionActive) return;
+  const select = document.getElementById('drinkPreset');
+  if (!select.value.startsWith('custom:')) return;
+  const name = select.value.slice(7);
+  if (!confirm(`Delete drink "${name}"?`)) return;
+  try { GoldilocksPresets.remove(localStorage, name); } catch(e) { return; }
+  select.value = '';
+  loadCustomDrinks();
+  updateDrinkTrash();
+}
+
+window.addEventListener('storage', event => {
+  if (event.key !== DRINKS_KEY || sessionActive) return;
+  const select = document.getElementById('drinkPreset');
+  const selected = select.value;
+  loadCustomDrinks();
+  select.value = findOptionByValue(select, selected) ? selected : '';
+  if (select.value.startsWith('custom:')) applyPreset();
+  updateDrinkTrash();
+});
 
 // ── Wake recovery ─────────────────────────────────────────────
 document.addEventListener('visibilitychange', () => {
@@ -1273,6 +1431,7 @@ function loadTheme() {
 // ── Init ──────────────────────────────────────────────────────
 (function init() {
   loadCalibratedProfiles();
+  loadCustomDrinks();
   renderThemePicker();
   loadTheme();
   const restored = loadSavedSession();
@@ -1295,6 +1454,7 @@ function loadTheme() {
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
   } else {
+    updateDrinkTrash();
     update();
   }
 })();

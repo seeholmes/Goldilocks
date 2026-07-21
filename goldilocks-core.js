@@ -43,6 +43,24 @@
     return value;
   }
 
+  function requireDurationHours(value, name = 'durationHours') {
+    requirePositive(value, name);
+    const bucketCount = Math.ceil(value);
+    if (!Number.isSafeInteger(bucketCount)) {
+      throw new RangeError(`${name} creates too many hourly buckets`);
+    }
+    return value;
+  }
+
+  function durationBucketCount(durationHours) {
+    requireDurationHours(durationHours);
+    return Math.ceil(durationHours);
+  }
+
+  function durationBucketHours(durationHours, bucket) {
+    return Math.max(0, Math.min(1, durationHours - bucket));
+  }
+
   function requireProfile(profile) {
     if (!profile || typeof profile !== 'object' || Array.isArray(profile)) {
       throw new TypeError('profile must be an object');
@@ -120,6 +138,31 @@
     });
   }
 
+  function simulateDuration(
+    schedule,
+    alcoholGrams,
+    profile,
+    durationHours,
+    startBac = 0
+  ) {
+    requireSchedule(schedule, 'schedule');
+    requireDurationHours(durationHours);
+    const bucketCount = durationBucketCount(durationHours);
+    if (schedule.length !== bucketCount) {
+      throw new RangeError(`schedule must contain ${bucketCount} hourly buckets`);
+    }
+    const rise = bacPerDrink(alcoholGrams, profile);
+    const metabolism = requireMetabolism(profile);
+    let bac = requireNonNegative(startBac, 'startBac');
+
+    return schedule.map((drinks, bucket) => {
+      const bucketHours = durationBucketHours(durationHours, bucket);
+      bac = Math.max(0, bac + drinks * rise - metabolism * bucketHours);
+      requireFiniteResult(bac, `BAC at duration bucket ${bucket + 1}`);
+      return roundBac(bac);
+    });
+  }
+
   function estimateLiveBac(
     completedSchedule,
     currentDrinks,
@@ -192,41 +235,62 @@
     return schedule;
   }
 
-  function ceilNearInteger(value) {
-    const nearest = Math.round(value);
-    const tolerance = Number.EPSILON * Math.max(1, Math.abs(value)) * 8;
-    return Math.abs(value - nearest) <= tolerance ? nearest : Math.ceil(value);
+  function endingBac(plan, rise, metabolism, durationHours) {
+    let bac = 0;
+    for (let bucket = 0; bucket < plan.length; bucket += 1) {
+      const bucketHours = durationBucketHours(durationHours, bucket);
+      bac = Math.max(0, bac + plan[bucket] * rise - metabolism * bucketHours);
+      requireFiniteResult(bac, `BAC at duration bucket ${bucket + 1}`);
+    }
+    return roundBac(bac);
   }
 
-  // `phase` is the fraction of one drink-spacing interval before the first
-  // drink. Moving it through [0, 1) enumerates every hourly bin pattern that
-  // can result from evenly spaced timestamps.
-  function buildEvenlySpacedPlan(drinkCount, hours, phase) {
-    const plan = new Array(hours).fill(0);
-    let previousCount = 0;
-
-    for (let boundary = 1; boundary <= hours; boundary += 1) {
-      const beforeBoundary = Math.max(
-        0,
-        Math.min(
-          drinkCount,
-          ceilNearInteger(boundary * drinkCount / hours - phase)
-        )
-      );
-      plan[boundary - 1] = beforeBoundary - previousCount;
-      previousCount = beforeBoundary;
+  function planFromOffsets(offsets, durationHours) {
+    const bucketCount = durationBucketCount(durationHours);
+    const plan = new Array(bucketCount).fill(0);
+    for (const offset of offsets) {
+      const bucket = Math.max(0, Math.min(bucketCount - 1, Math.floor(offset)));
+      plan[bucket] += 1;
     }
-
     return plan;
   }
 
-  function endingBac(plan, rise, metabolism) {
-    let bac = 0;
-    for (let hour = 0; hour < plan.length; hour += 1) {
-      bac = Math.max(0, bac + plan[hour] * rise - metabolism);
-      requireFiniteResult(bac, `BAC at hour ${hour + 1}`);
+  function phaseCandidates(drinkCount, startHours, durationHours, spacing) {
+    const timingEpsilon = 1e-9;
+    const boundaries = [0, 1];
+    for (let drink = 0; drink < drinkCount; drink += 1) {
+      for (let boundary = Math.floor(startHours) + 1; boundary < durationHours; boundary += 1) {
+        const phase = (boundary - startHours) / spacing - drink;
+        if (phase > timingEpsilon && phase < 1 - timingEpsilon) boundaries.push(phase);
+      }
     }
-    return roundBac(bac);
+    boundaries.sort((left, right) => left - right);
+    const unique = boundaries.filter(
+      (phase, index) => index === 0 || phase - boundaries[index - 1] > timingEpsilon
+    );
+    const candidates = [0];
+    for (let cell = 0; cell < unique.length - 1; cell += 1) {
+      candidates.push((unique[cell] + unique[cell + 1]) / 2);
+    }
+    return candidates;
+  }
+
+  function timingNudge(durationHours, phase, spacing) {
+    const boundaryNudge = Number.EPSILON * Math.max(1, durationHours) * 8;
+    const remainingMargin = Math.max(0, (1 - phase) * spacing);
+    return Math.min(boundaryNudge, remainingMargin / 2);
+  }
+
+  function buildCruiseCapacityPlan(durationHours, maximumDrinksPerHour = 6) {
+    requireDurationHours(durationHours);
+    requirePositiveInteger(maximumDrinksPerHour, 'maximumDrinksPerHour');
+    return Array.from(
+      { length: durationBucketCount(durationHours) },
+      (_, bucket) => Math.floor(
+        maximumDrinksPerHour * durationBucketHours(durationHours, bucket)
+        + BAC_COMPARISON_EPSILON
+      )
+    );
   }
 
   function isBetterCruiseCandidate(candidate, best, targetBac) {
@@ -243,16 +307,17 @@
     return candidate.offsetHours < best.offsetHours;
   }
 
-  function buildCruisePlan(alcoholGrams, profile, hours, targetBac) {
-    requirePositiveInteger(hours, 'hours');
+  function buildCruisePlan(alcoholGrams, profile, durationHours, targetBac) {
+    requireDurationHours(durationHours);
     requireNonNegative(targetBac, 'targetBac');
     const rise = bacPerDrink(alcoholGrams, profile);
     const metabolism = requireMetabolism(profile);
+    const bucketCount = durationBucketCount(durationHours);
 
     if (targetBac === 0) {
       return {
         n: 0,
-        plan: new Array(hours).fill(0),
+        plan: new Array(bucketCount).fill(0),
         spacing: 0,
         offsetHours: 0,
         endpoint: 0,
@@ -268,7 +333,7 @@
       targetBac
       + CRUISE_ENDPOINT_TOLERANCE
       + roundingAllowance
-      + hours * metabolism
+      + durationHours * metabolism
     ) / rise;
     requireFiniteResult(rawMaximumCount, 'maximum cruise drink count');
     const maximumCount = Math.ceil(rawMaximumCount);
@@ -278,7 +343,7 @@
 
     let best = {
       n: 0,
-      plan: new Array(hours).fill(0),
+      plan: new Array(bucketCount).fill(0),
       spacing: 0,
       offsetHours: 0,
       endpoint: 0,
@@ -288,15 +353,17 @@
     const comparisonEpsilon = BAC_COMPARISON_EPSILON;
 
     for (let drinkCount = 1; drinkCount <= maximumCount; drinkCount += 1) {
-      const timingSpacing = hours / drinkCount;
-      const phases = [0];
-      for (let phaseCell = 0; phaseCell < hours; phaseCell += 1) {
-        phases.push((phaseCell + 0.5) / hours);
-      }
+      const timingSpacing = durationHours / drinkCount;
+      const phases = phaseCandidates(drinkCount, 0, durationHours, timingSpacing);
 
       for (const phase of phases) {
-        const plan = buildEvenlySpacedPlan(drinkCount, hours, phase);
-        const endpoint = endingBac(plan, rise, metabolism);
+        const nudge = timingNudge(durationHours, phase, timingSpacing);
+        const offsets = Array.from(
+          { length: drinkCount },
+          (_, index) => (phase + index) * timingSpacing + nudge
+        );
+        const plan = planFromOffsets(offsets, durationHours);
+        const endpoint = endingBac(plan, rise, metabolism, durationHours);
         if (endpoint > maximumEndpoint + comparisonEpsilon) continue;
 
         const candidate = {
@@ -306,8 +373,7 @@
           // The first timestamp is start + offsetHours; each later timestamp
           // adds `spacing` hours. A machine-epsilon nudge keeps timestamps
           // that are mathematically on a boundary from rounding backward.
-          offsetHours: phase * timingSpacing
-            + Number.EPSILON * Math.max(1, hours) * 8,
+          offsetHours: offsets[0],
           endpoint,
           error: Math.abs(endpoint - targetBac),
         };
@@ -328,17 +394,17 @@
   function buildCruiseReplan(
     alcoholGrams,
     profile,
-    hours,
+    durationHours,
     targetBac,
     elapsedHours,
     actualDrinkOffsets,
     maximumDrinksPerHour = 6
   ) {
-    requirePositiveInteger(hours, 'hours');
+    requireDurationHours(durationHours);
     requireNonNegative(targetBac, 'targetBac');
     requireNonNegative(elapsedHours, 'elapsedHours');
-    if (elapsedHours > hours) {
-      throw new RangeError('elapsedHours must not exceed hours');
+    if (elapsedHours > durationHours) {
+      throw new RangeError('elapsedHours must not exceed durationHours');
     }
     requireSchedule(actualDrinkOffsets, 'actualDrinkOffsets');
     requirePositiveInteger(maximumDrinksPerHour, 'maximumDrinksPerHour');
@@ -346,18 +412,20 @@
     const rise = bacPerDrink(alcoholGrams, profile);
     const metabolism = requireMetabolism(profile);
     const timingEpsilon = 1e-9;
-    const basePlan = new Array(hours).fill(0);
+    const bucketCount = durationBucketCount(durationHours);
+    const capacityPlan = buildCruiseCapacityPlan(durationHours, maximumDrinksPerHour);
+    const basePlan = new Array(bucketCount).fill(0);
 
     for (let index = 0; index < actualDrinkOffsets.length; index += 1) {
       const offset = actualDrinkOffsets[index];
-      if (offset > elapsedHours + timingEpsilon || offset > hours + timingEpsilon) {
+      if (offset > elapsedHours + timingEpsilon || offset > durationHours + timingEpsilon) {
         throw new RangeError(`actualDrinkOffsets[${index}] must not be in the future`);
       }
-      const hour = Math.max(0, Math.min(hours - 1, Math.floor(offset)));
-      basePlan[hour] += 1;
+      const bucket = Math.max(0, Math.min(bucketCount - 1, Math.floor(offset)));
+      basePlan[bucket] += 1;
     }
 
-    const baseEndpoint = endingBac(basePlan, rise, metabolism);
+    const baseEndpoint = endingBac(basePlan, rise, metabolism, durationHours);
     let best = {
       n: 0,
       plan: basePlan,
@@ -368,7 +436,7 @@
       futureOffsets: [],
     };
 
-    const remainingHours = hours - elapsedHours;
+    const remainingHours = durationHours - elapsedHours;
     if (remainingHours <= timingEpsilon) {
       return {
         n: 0,
@@ -381,12 +449,12 @@
       };
     }
 
-    const currentHour = Math.min(hours - 1, Math.floor(elapsedHours));
+    const currentBucket = Math.min(bucketCount - 1, Math.floor(elapsedHours));
     let maximumFutureCount = 0;
-    for (let hour = currentHour; hour < hours; hour += 1) {
-      maximumFutureCount += Math.max(0, maximumDrinksPerHour - basePlan[hour]);
+    for (let bucket = currentBucket; bucket < bucketCount; bucket += 1) {
+      maximumFutureCount += Math.max(0, capacityPlan[bucket] - basePlan[bucket]);
     }
-    const maximumTotalCount = hours * maximumDrinksPerHour;
+    const maximumTotalCount = capacityPlan.reduce((sum, count) => sum + count, 0);
     if (!Number.isSafeInteger(maximumFutureCount) || !Number.isSafeInteger(maximumTotalCount)) {
       throw new RangeError('maximum future drink count must be a safe integer');
     }
@@ -400,42 +468,32 @@
 
     for (let drinkCount = 1; drinkCount <= maximumFutureCount; drinkCount += 1) {
       const timingSpacing = remainingHours / drinkCount;
-      const phaseBoundaries = [0, 1];
-
-      // A phase only changes the discrete plan when a future timestamp crosses
-      // an hourly boundary. Test one midpoint from every distinct phase cell.
-      for (let drink = 0; drink < drinkCount; drink += 1) {
-        for (let boundary = Math.floor(elapsedHours) + 1; boundary < hours; boundary += 1) {
-          const phase = (boundary - elapsedHours) / timingSpacing - drink;
-          if (phase > timingEpsilon && phase < 1 - timingEpsilon) {
-            phaseBoundaries.push(phase);
-          }
-        }
-      }
-      phaseBoundaries.sort((left, right) => left - right);
-      const uniqueBoundaries = phaseBoundaries.filter(
-        (phase, index) => index === 0 || phase - phaseBoundaries[index - 1] > timingEpsilon
+      const phases = phaseCandidates(
+        drinkCount,
+        elapsedHours,
+        durationHours,
+        timingSpacing
       );
 
-      for (let cell = 0; cell < uniqueBoundaries.length - 1; cell += 1) {
-        const phase = (uniqueBoundaries[cell] + uniqueBoundaries[cell + 1]) / 2;
+      for (const phase of phases) {
+        const nudge = timingNudge(durationHours, phase, timingSpacing);
         const futureOffsets = Array.from(
           { length: drinkCount },
-          (_, index) => elapsedHours + (phase + index) * timingSpacing
+          (_, index) => elapsedHours + (phase + index) * timingSpacing + nudge
         );
         const candidatePlan = basePlan.slice();
         let respectsHourlyLimit = true;
         for (const offset of futureOffsets) {
-          const hour = Math.max(0, Math.min(hours - 1, Math.floor(offset)));
-          if (candidatePlan[hour] >= maximumDrinksPerHour) {
+          const bucket = Math.max(0, Math.min(bucketCount - 1, Math.floor(offset)));
+          if (candidatePlan[bucket] >= capacityPlan[bucket]) {
             respectsHourlyLimit = false;
             break;
           }
-          candidatePlan[hour] += 1;
+          candidatePlan[bucket] += 1;
         }
         if (!respectsHourlyLimit) continue;
 
-        const endpoint = endingBac(candidatePlan, rise, metabolism);
+        const endpoint = endingBac(candidatePlan, rise, metabolism, durationHours);
         if (endpoint > maximumEndpoint + comparisonEpsilon) continue;
         const candidate = {
           n: drinkCount,
@@ -572,8 +630,10 @@
     widmarkRisePerStd,
     bacPerDrink,
     simulate,
+    simulateDuration,
     estimateLiveBac,
     buildZoneSchedule,
+    buildCruiseCapacityPlan,
     buildCruisePlan,
     buildCruiseReplan,
     fitLine,
