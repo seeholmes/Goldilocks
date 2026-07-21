@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Goldilocks — Cruise</title>
+<link rel="icon" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Anybody:wght@200;400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --space:   #08090d;
+    --deep:    #0e1018;
+    --surface: #13151f;
+    --border:  #1e2130;
+    --text:    #e8e0cc;
+    --muted:   #5a5570;
+    --gold:    #f5c842;
+    --gold2:   #e8a020;
+    --amber:   #ff8c3a;
+    --danger:  #ff5a5a;
+    --blue:    #7eb8ff;
+    --blue2:   #5a9aee;
+    --radius:  10px;
+    --glow:    0 0 24px rgba(126,184,255,0.18);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--space);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    padding: 0 0 80px;
+    font-size: 12px;
+    position: relative;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 15% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 42% 8%,  rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 73% 35%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 88% 12%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 5%  60%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 75%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 88%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 95% 55%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(2px 2px at 50% 30%, rgba(126,184,255,0.25) 0%, transparent 100%),
+      radial-gradient(2px 2px at 10% 80%, rgba(126,184,255,0.15) 0%, transparent 100%);
+    pointer-events: none; z-index: 0;
+  }
+  .container { max-width: 680px; margin: 0 auto; padding: 0 16px; position: relative; z-index: 1; }
+
+  /* Hero */
+  .hero { text-align: center; padding: 48px 0 36px; position: relative; }
+  .orbit-ring { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-52%); width: 320px; height: 120px; opacity: 0.18; pointer-events: none; }
+  .star-icon { font-size: 26px; display: block; margin-bottom: 8px; filter: drop-shadow(0 0 12px rgba(126,184,255,0.9)); animation: pulse 4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{filter:drop-shadow(0 0 12px rgba(126,184,255,0.8))} 50%{filter:drop-shadow(0 0 22px rgba(126,184,255,1))} }
+  .logo { font-family:'Anybody',sans-serif; font-size:36px; font-weight:600; letter-spacing:-0.5px; background:linear-gradient(135deg,#7eb8ff 0%,#5a9aee 50%,#52e09c 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .tagline { color:var(--muted); margin-top:6px; font-size:10px; letter-spacing:0.18em; text-transform:uppercase; }
+  .tagline em { font-style:normal; color:var(--blue); opacity:0.7; }
+
+  /* Cards */
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; margin-bottom:8px; position:relative; }
+  .card::before { content:''; position:absolute; inset:0; border-radius:var(--radius); background:linear-gradient(135deg,rgba(126,184,255,0.025) 0%,transparent 60%); pointer-events:none; }
+  .card.profile-card { border-color: rgba(126,184,255,0.2); }
+  .card.profile-card::before { background: linear-gradient(135deg,rgba(126,184,255,0.04) 0%,transparent 60%); }
+
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  @media(max-width:480px){.row2,.row3{grid-template-columns:1fr}}
+
+  .sec { font-size:9px; letter-spacing:0.18em; text-transform:uppercase; color:var(--blue2); opacity:0.8; margin-bottom:14px; }
+  .field-label { display:block; font-size:9px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  .input-wrap { display:flex; align-items:center; background:var(--deep); border:1px solid var(--border); border-radius:7px; overflow:hidden; transition:border-color 0.2s; }
+  .input-wrap:focus-within { border-color:var(--blue); box-shadow:0 0 0 2px rgba(126,184,255,0.08); }
+  input[type="number"],input[type="time"] { background:transparent; border:none; color:var(--text); font-family:'Space Mono',monospace; font-size:17px; padding:9px 12px; width:100%; outline:none; -moz-appearance:textfield; }
+  input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none}
+  input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(0.4) sepia(1);opacity:0.5}
+  .input-unit { color:var(--muted); font-size:10px; padding-right:11px; white-space:nowrap; flex-shrink:0; }
+  select { background:var(--deep); border:none; color:var(--text); font-family:'Space Mono',monospace; font-size:14px; padding:9px 12px; width:100%; outline:none; cursor:pointer; }
+  .select-wrap { background:var(--deep); border:1px solid var(--border); border-radius:7px; overflow:hidden; transition:border-color 0.2s; }
+  .select-wrap:focus-within { border-color:var(--blue); }
+  input[type="range"] { -webkit-appearance:none; width:100%; height:2px; background:var(--border); border-radius:100px; outline:none; cursor:pointer; margin:10px 0 5px; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; background:var(--blue); border-radius:50%; cursor:pointer; box-shadow:0 0 10px rgba(126,184,255,0.5); }
+  .slider-labels { display:flex; justify-content:space-between; color:var(--muted); font-size:9px; }
+  .pure-alc-note { color:var(--muted); font-size:10px; margin-top:9px; }
+
+  /* Widmark chip */
+  .widmark-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:12px; }
+  @media(max-width:480px){.widmark-strip{grid-template-columns:repeat(2,1fr)}}
+  .w-cell { background:var(--deep); border:1px solid var(--border); border-radius:6px; padding:8px 10px; text-align:center; }
+  .w-val { font-family:'Anybody',sans-serif; font-size:16px; font-weight:400; color:var(--blue); }
+  .w-lbl { font-size:8px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-top:2px; }
+
+  /* Live BAC sticky bar */
+  .live-bac-bar { display:none; position:sticky; top:0; z-index:100; background:rgba(8,9,13,0.95); border-bottom:1px solid var(--border); padding:12px 20px; backdrop-filter:blur(10px); align-items:center; gap:16px; }
+  .live-bac-bar.visible { display:flex; }
+  .live-bac-num { font-family:'Anybody',sans-serif; font-size:32px; font-weight:600; line-height:1; transition:color 0.5s; }
+  .live-bac-meta { flex:1; }
+  .live-bac-label { font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); }
+  .live-bac-status { font-size:11px; margin-top:3px; }
+  .live-progress-track { height:4px; background:var(--border); border-radius:100px; margin-top:6px; overflow:hidden; width:100%; }
+  .live-progress-fill { height:100%; border-radius:100px; transition:width 0.6s ease, background 0.4s; }
+  .live-time { font-size:10px; color:var(--muted); text-align:right; white-space:nowrap; }
+  .live-hour-lbl { font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--blue); }
+
+  /* Buttons */
+  .start-btn { width:100%; padding:16px; margin-bottom:8px; background:linear-gradient(135deg,rgba(126,184,255,0.12),rgba(90,154,238,0.08)); border:1px solid var(--blue2); border-radius:var(--radius); color:var(--blue); font-family:'Space Mono',monospace; font-size:13px; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; box-shadow:var(--glow); }
+  .start-btn:hover { background:linear-gradient(135deg,rgba(126,184,255,0.2),rgba(90,154,238,0.14)); }
+  .end-btn { width:100%; padding:12px; margin-bottom:8px; background:transparent; border:1px solid var(--danger); border-radius:var(--radius); color:var(--danger); font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; opacity:0.6; transition:all 0.2s; display:none; }
+  .end-btn:hover { opacity:1; background:rgba(255,90,90,0.06); }
+
+  /* Summary pills */
+  .summary-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+  .sum-pill { flex:1; min-width:120px; background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:14px 16px; text-align:center; }
+  .sum-val { font-family:'Anybody',sans-serif; font-size:28px; font-weight:400; color:var(--blue); line-height:1; }
+  .sum-lbl { font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-top:5px; }
+  .sum-pill.ending { border-color:rgba(126,184,255,0.25); }
+  .sum-pill.ending .sum-val { color:var(--blue); }
+
+  /* Timeline */
+  .hour-block { border:1px solid var(--border); border-radius:9px; margin-bottom:6px; overflow:hidden; transition:border-color 0.3s; }
+  .hour-block.current { border-color:var(--blue2); box-shadow:0 0 0 1px rgba(126,184,255,0.15); }
+  .hour-block.past    { opacity:0.65; }
+  .hour-block.has-drinks { border-color:rgba(126,184,255,0.25); }
+  .hour-top { display:grid; grid-template-columns:72px 1fr 56px; gap:8px; align-items:center; padding:9px 12px; background:var(--deep); }
+  .hour-block.current .hour-top { background:rgba(126,184,255,0.04); }
+  .hour-label { font-size:12px; color:var(--text); }
+  .hour-time  { font-size:9px; color:var(--muted); margin-top:2px; }
+  .hour-bac-val { text-align:right; font-size:12px; font-variant-numeric:tabular-nums; }
+  .hour-bar-wrap { height:3px; background:var(--space); overflow:hidden; }
+  .hour-bar-fill { height:100%; transition:width 0.5s ease, background 0.3s; }
+  .drink-slots { display:flex; align-items:center; gap:6px; padding:10px 12px; flex-wrap:wrap; }
+  .slot { width:34px; height:34px; border-radius:7px; border:1px solid var(--border); background:var(--space); display:flex; align-items:center; justify-content:center; font-size:16px; cursor:default; transition:all 0.15s; user-select:none; }
+  .slot.planned { border-color:rgba(126,184,255,0.5); background:rgba(126,184,255,0.06); }
+  .slot.consumed { border-color:var(--blue); background:rgba(126,184,255,0.18); box-shadow:0 0 8px rgba(126,184,255,0.2); }
+  .slot.extra { border-color:var(--amber); background:rgba(255,140,58,0.15); box-shadow:0 0 8px rgba(255,140,58,0.2); }
+  .slot.reserve { border-color:var(--border); background:transparent; opacity:0.4; }
+  .slot.reserve.live { opacity:0.7; cursor:pointer; }
+  .slot.reserve.live:hover { border-color:var(--blue2); background:rgba(126,184,255,0.05); opacity:1; }
+  .slot.planned.live { cursor:pointer; }
+  .slot.planned.live:hover { border-color:var(--blue); box-shadow:0 0 12px rgba(126,184,255,0.3); }
+  .current-indicator { display:none; align-items:center; gap:8px; padding:0 12px 10px; }
+  .hour-block.current .current-indicator { display:flex; }
+  .time-ring { width:100%; height:3px; background:var(--border); border-radius:100px; overflow:hidden; }
+  .time-ring-fill { height:100%; background:linear-gradient(90deg,var(--blue2),var(--blue)); border-radius:100px; transition:width 1s linear; }
+
+  /* Schedule note */
+  .schedule-note { font-size:10px; color:var(--muted); text-align:center; padding:12px 0 2px; border-top:1px solid var(--border); margin-top:10px; line-height:1.6; }
+  .schedule-note em { font-style:normal; color:var(--blue); }
+  .warn-note { font-size:10px; color:var(--amber); text-align:center; padding:10px 12px; background:rgba(255,140,58,0.06); border:1px solid rgba(255,140,58,0.2); border-radius:7px; margin-top:6px; line-height:1.6; }
+  .copy-btn { width:100%; margin-top:14px; padding:13px; background:transparent; border:1px solid var(--blue2); border-radius:8px; color:var(--blue2); font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; }
+  .copy-btn:hover { background:rgba(126,184,255,0.07); box-shadow:var(--glow); }
+  .copy-btn.copied { background:rgba(126,184,255,0.12); }
+  .disclaimer { color:var(--muted); font-size:9px; line-height:1.8; text-align:center; margin-top:24px; opacity:0.7; }
+</style>
+</head>
+<body>
+
+<div class="live-bac-bar" id="liveBacBar">
+  <div>
+    <div class="live-bac-label">Est. BAC</div>
+    <div class="live-bac-num" id="liveBacNum">0.000</div>
+  </div>
+  <div class="live-bac-meta">
+    <div class="live-bac-status" id="liveBacStatus">—</div>
+    <div class="live-progress-track"><div class="live-progress-fill" id="liveBacFill" style="width:0%"></div></div>
+  </div>
+  <div class="live-time">
+    <div class="live-hour-lbl" id="liveHourLbl">—</div>
+    <div id="liveClockEl">—</div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <svg class="orbit-ring" viewBox="0 0 320 120" fill="none">
+      <ellipse cx="160" cy="60" rx="155" ry="52" stroke="url(#og)" stroke-width="1.5" stroke-dasharray="6 4"/>
+      <defs><linearGradient id="og" x1="0" y1="0" x2="320" y2="0"><stop offset="0%" stop-color="#7eb8ff"/><stop offset="50%" stop-color="#5a9aee"/><stop offset="100%" stop-color="#52e09c"/></linearGradient></defs>
+    </svg>
+    <span class="star-icon">⊹</span>
+    <div class="logo">Cruise</div>
+    <div class="tagline">set your speed · <em>hit your mark</em></div>
+    <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);opacity:0.5;margin-top:4px">v1.01</div>
+    <a href="index.html" style="display:inline-block;margin-top:10px;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:4px 14px;transition:all 0.2s" onmouseover="this.style.color='var(--blue)';this.style.borderColor='rgba(126,184,255,0.4)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">← Mission Control</a>
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px">
+      <span style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted)">Theme</span>
+      <div id="themePicker" style="display:flex;gap:6px;align-items:center"></div>
+    </div>
+  </div>
+
+  <!-- Profile -->
+  <div class="card profile-card">
+    <div class="sec">Profile</div>
+    <div>
+      <span class="field-label">Who's drinking</span>
+      <div class="select-wrap">
+        <select id="profileSelect" onchange="applyProfile()">
+          <option value="seeholmes">seeholmes</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+    </div>
+    <div id="customProfileFields" style="display:none;margin-top:14px">
+      <div class="row3">
+        <div>
+          <span class="field-label">Body Weight</span>
+          <div class="input-wrap">
+            <input type="number" id="weight" value="160" min="80" max="500" step="1">
+            <span class="input-unit" id="weightUnit">lbs</span>
+          </div>
+        </div>
+        <div>
+          <span class="field-label">Units</span>
+          <div class="select-wrap">
+            <select id="units" onchange="onUnitsChange()"><option value="imperial">lbs</option><option value="metric">kg</option></select>
+          </div>
+        </div>
+        <div>
+          <span class="field-label">Biological Sex</span>
+          <div class="select-wrap">
+            <select id="sex"><option value="male">Male (r=0.68)</option><option value="female">Female (r=0.55)</option></select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="widmark-strip">
+      <div class="w-cell"><div class="w-val" id="wR">—</div><div class="w-lbl">Widmark r</div></div>
+      <div class="w-cell"><div class="w-val" id="wKg">—</div><div class="w-lbl">kg</div></div>
+      <div class="w-cell"><div class="w-val" id="wBpd">—</div><div class="w-lbl">BAC/std drink</div></div>
+      <div class="w-cell"><div class="w-val" id="wMetab">—</div><div class="w-lbl">Metab/hr</div></div>
+    </div>
+  </div>
+
+  <!-- Drink -->
+  <div class="card">
+    <div class="sec">Your Drink</div>
+    <div style="margin-bottom:10px">
+      <span class="field-label">Quick Select</span>
+      <div class="select-wrap">
+        <select id="drinkPreset" onchange="applyPreset()">
+          <option value="">— choose a preset —</option>
+          <optgroup label="Beer">
+            <option value="12|4.2">Beer — Can (12oz, 4.2%)</option>
+            <option value="12|5.0">Beer — Can (12oz, 5.0%)</option>
+            <option value="16|5.0">Beer — Pint (16oz, 5.0%)</option>
+            <option value="16|6.5">Beer — Pint IPA (16oz, 6.5%)</option>
+            <option value="20|5.0">Beer — Imperial Pint (20oz, 5.0%)</option>
+          </optgroup>
+          <optgroup label="Wine">
+            <option value="5|12.0">Wine — Standard Pour (5oz, 12%)</option>
+            <option value="6|13.5">Wine — Generous Pour (6oz, 13.5%)</option>
+            <option value="3|18.0">Wine — Fortified / Port (3oz, 18%)</option>
+          </optgroup>
+          <optgroup label="Spirits">
+            <option value="1.5|40.0">Shot (1.5oz, 40%)</option>
+            <option value="2|40.0">Double Shot (2oz, 40%)</option>
+            <option value="8|10.0">Cocktail — Approx (8oz, 10%)</option>
+          </optgroup>
+          <option value="custom">Custom →</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div>
+        <span class="field-label">Drink Size</span>
+        <div class="input-wrap"><input type="number" id="drinkOz" value="12" min="1" max="64" step="0.5"><span class="input-unit">oz</span></div>
+      </div>
+      <div>
+        <span class="field-label">ABV</span>
+        <div class="input-wrap"><input type="number" id="drinkAbv" value="5" min="0.5" max="100" step="0.1"><span class="input-unit">%</span></div>
+      </div>
+    </div>
+    <div class="pure-alc-note">Pure alcohol per drink: <span id="pureAlcDisplay">—</span></div>
+    <div style="margin-top:12px;display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--deep);border:1px solid var(--border);border-radius:7px;cursor:pointer" onclick="toggleFasted()">
+      <div id="fastedBox" style="width:16px;height:16px;border:1px solid var(--muted);border-radius:4px;flex-shrink:0;transition:all 0.2s;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--space)"></div>
+      <span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">Drinking on an empty stomach</span>
+    </div>
+    <div id="fastedWarning" style="display:none;margin-top:8px;padding:10px 12px;background:rgba(255,140,58,0.08);border:1px solid rgba(255,140,58,0.25);border-radius:7px;font-size:10px;line-height:1.7;color:var(--amber)">
+      &#9888; Fasted: BAC will rise faster and peak higher — consider reducing your target ending BAC.
+    </div>
+  </div>
+
+  <!-- Cruise settings -->
+  <div class="card">
+    <div class="sec">Cruise Settings</div>
+    <div class="row2" style="margin-bottom:14px">
+      <div>
+        <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue2);opacity:0.8;margin-bottom:14px">Mission Duration</div>
+        <input type="range" id="duration" min="1" max="8" step="1" value="4">
+        <div class="slider-labels"><span>1h</span><span>4h</span><span>8h</span></div>
+        <div style="font-family:'Anybody',sans-serif;font-size:24px;font-weight:400;color:var(--blue);margin-top:8px" id="durationVal">4 hours</div>
+      </div>
+      <div>
+        <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue2);opacity:0.8;margin-bottom:14px">Launch Time</div>
+        <div class="input-wrap"><input type="time" id="startTime" value="20:00"></div>
+      </div>
+    </div>
+    <div>
+      <span class="field-label">Target Ending BAC</span>
+      <div class="input-wrap"><input type="number" id="bacEnd" value="0.04" min="0.00" max="0.20" step="0.01"></div>
+      <div style="font-size:9px;color:var(--muted);margin-top:7px;line-height:1.6">Drinks will be evenly spaced so your BAC arrives at this value by the end of your last hour.</div>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-row">
+    <div class="sum-pill">
+      <div class="sum-val" id="summaryTotal">—</div>
+      <div class="sum-lbl">Drinks</div>
+    </div>
+    <div class="sum-pill">
+      <div class="sum-val" id="summarySpacing" style="font-size:20px">—</div>
+      <div class="sum-lbl">Spacing</div>
+    </div>
+    <div class="sum-pill ending">
+      <div class="sum-val" id="summaryEnding">—</div>
+      <div class="sum-lbl">Ending BAC</div>
+    </div>
+  </div>
+
+  <button class="start-btn" id="startBtn" onclick="startSession()">⊹ Launch Cruise</button>
+  <button class="end-btn"   id="endBtn"   onclick="endSession()">✕ End Session</button>
+
+  <div class="card">
+    <div class="sec" id="planLabel">Flight Plan</div>
+    <div id="timeline"></div>
+    <div id="scheduleNote" class="schedule-note"></div>
+    <div id="warnNote" style="display:none" class="warn-note"></div>
+    <button class="copy-btn" id="copyBtn">⊹ Transmit plan to clipboard</button>
+  </div>
+
+  <p class="disclaimer" id="disclaimerEl">⚠ For harm reduction only · Widmark estimates vary — food, hydration, meds and tolerance all affect real BAC · Never drive</p>
+</div>
+
+<script>
+// ── Profiles ──────────────────────────────────────────────────
+const PROFILES = {
+  seeholmes: {
+    name: 'seeholmes', weightKg: 185 * 0.453592, r: 0.68,
+    risePerStd: 0.02, metab: 0.015, useWidmark: false,
+  },
+  custom: {
+    name: 'custom', weightKg: 160 * 0.453592, r: 0.68,
+    risePerStd: null, metab: 0.015, useWidmark: true,
+  }
+};
+
+const STD_DRINK_G = 0.6 * 29.5735 * 0.789;
+const MAX_SLOTS   = 6;
+const STORAGE_KEY = 'goldilocks_cruise_session';
+
+let sessionActive  = false;
+let sessionStartTs = null;
+let actualDrinks   = [];
+let plan           = [];
+let drinkTimes     = [];   // exact hour offsets for each drink (continuous)
+let ag             = 0;
+let profile        = PROFILES.seeholmes;
+let bacEnd         = 0.04;
+let hours          = 4;
+let clockInterval  = null;
+
+// ── Profile helpers ───────────────────────────────────────────
+function getActiveProfile() {
+  const sel = document.getElementById('profileSelect').value;
+  if (PROFILES[sel] && sel !== 'custom') return PROFILES[sel];
+  const units  = document.getElementById('units').value;
+  let weight   = parseFloat(document.getElementById('weight').value) || 160;
+  if (units === 'imperial') weight *= 0.453592;
+  const sex    = document.getElementById('sex').value;
+  const r      = sex === 'male' ? 0.68 : 0.55;
+  return { name:'custom', weightKg: weight, r, risePerStd: null, metab: 0.015, useWidmark: true };
+}
+
+function applyProfile() {
+  const sel = document.getElementById('profileSelect').value;
+  document.getElementById('customProfileFields').style.display =
+    (sel === 'custom') ? 'block' : 'none';
+  update();
+}
+
+function onUnitsChange() {
+  document.getElementById('weightUnit').textContent =
+    document.getElementById('units').value === 'metric' ? 'kg' : 'lbs';
+  update();
+}
+
+function updateWidmarkChip(p, a) {
+  const stdBpd = bpd(STD_DRINK_G, p);
+  document.getElementById('wR').textContent     = p.r.toFixed(2);
+  document.getElementById('wKg').textContent    = p.weightKg.toFixed(1);
+  document.getElementById('wBpd').textContent   = stdBpd.toFixed(4);
+  document.getElementById('wMetab').textContent = p.metab.toFixed(3);
+}
+
+function loadCalibratedProfiles() {
+  try {
+    const raw = localStorage.getItem('goldilocks_profiles');
+    if (!raw) return;
+    const profiles = JSON.parse(raw);
+    const sel = document.getElementById('profileSelect');
+    Object.values(profiles).forEach(p => {
+      const conf     = p.confidence ? ` · ${p.confidence} conf` : '';
+      const sessions = p.sessions   ? ` · ${p.sessions} sess`   : '';
+      PROFILES[p.name] = {
+        name: p.name, weightKg: p.weightKg, r: p.r,
+        risePerStd: p.risePerStd, metab: p.metab, useWidmark: false, calibrated: true,
+      };
+      const existing = sel.querySelector(`option[value="${p.name}"]`);
+      if (existing) {
+        existing.textContent = `${p.name}${sessions}${conf}`;
+      } else {
+        const opt = document.createElement('option');
+        opt.value = p.name;
+        opt.textContent = `${p.name}${sessions}${conf}`;
+        const customOpt = sel.querySelector('option[value="custom"]');
+        sel.insertBefore(opt, customOpt);
+      }
+    });
+  } catch(e) {}
+}
+
+// ── Math ──────────────────────────────────────────────────────
+function getAlcGrams() {
+  const oz  = parseFloat(document.getElementById('drinkOz').value)  || 12;
+  const abv = parseFloat(document.getElementById('drinkAbv').value) || 5;
+  const pureOz = oz * (abv / 100);
+  document.getElementById('pureAlcDisplay').textContent = pureOz.toFixed(2) + ' oz';
+  return pureOz * 29.5735 * 0.789;
+}
+
+function bpd(a, p) {
+  if (!p.useWidmark && p.risePerStd != null)
+    return (a / STD_DRINK_G) * p.risePerStd;
+  return (a / (p.weightKg * 1000 * p.r)) * 100;
+}
+
+// Continuous BAC trace: BAC at end of hour h (1-indexed) given exact drink times
+function traceContinuous(times, ag, p, hrs) {
+  const δ = bpd(ag, p);
+  const β = p.metab;
+  return Array.from({length: hrs}, (_, i) => {
+    const h   = i + 1;
+    const bac = times
+      .filter(t => t < h)
+      .reduce((acc, t) => acc + Math.max(0, δ - β * (h - t)), 0);
+    return Math.round(bac * 1000) / 1000;
+  });
+}
+
+// Build the cruise plan: find n evenly-spaced drinks that achieve bacEnd at time T
+function buildCruisePlan(ag, p, T, B_end) {
+  const δ = bpd(ag, p);
+  const β = p.metab;
+
+  if (B_end <= 0) return { n: 0, times: [], plan: new Array(T).fill(0), achievable: true };
+
+  // Analytical solution: n = (B_end + β*T/2) / (δ - β*T/2)
+  const denom = δ - β * T / 2;
+  if (denom <= 0) return { achievable: false };
+
+  const nRaw = (B_end + β * T / 2) / denom;
+  if (nRaw < 0.5) return { n: 0, times: [], plan: new Array(T).fill(0), achievable: true };
+
+  const n = Math.min(20, Math.max(1, Math.round(nRaw)));
+  const spacing = T / n;
+  const times   = Array.from({length: n}, (_, i) => i * spacing);
+
+  // Bucket into hours for the timeline display
+  const hourPlan = new Array(T).fill(0);
+  times.forEach(t => { hourPlan[Math.min(Math.floor(t), T - 1)]++; });
+
+  return { n, spacing, times, plan: hourPlan, achievable: true };
+}
+
+function fmtSpacing(spacingHours) {
+  const totalMins = Math.round(spacingHours * 60);
+  if (totalMins >= 60) {
+    const h = Math.floor(totalMins / 60);
+    const m = totalMins % 60;
+    return m ? `${h}h ${m}m` : `${h}h`;
+  }
+  return `${totalMins}m`;
+}
+
+// Discrete hourly estimate for live BAC (same model as zone.html)
+function estimateLiveBac(completedSched, curDrinks, frac) {
+  let bac = 0;
+  for (let h = 0; h < completedSched.length; h++) {
+    bac += completedSched[h] * bpd(ag, profile);
+    bac = Math.max(0, bac - profile.metab);
+  }
+  bac += curDrinks * bpd(ag, profile);
+  bac = Math.max(0, bac - profile.metab * frac);
+  return Math.round(bac * 1000) / 1000;
+}
+
+// ── Colors ────────────────────────────────────────────────────
+function clrBac(bac) {
+  if (bac <= 0)         return 'var(--muted)';
+  if (bac <= bacEnd)    return 'var(--blue)';
+  if (bac <= bacEnd * 1.25) return 'var(--amber)';
+  return 'var(--danger)';
+}
+
+function barBg(bac) {
+  if (bac <= 0)         return 'var(--border)';
+  if (bac <= bacEnd)    return 'linear-gradient(90deg,#5a9aee,#7eb8ff)';
+  if (bac <= bacEnd * 1.25) return 'var(--amber)';
+  return 'var(--danger)';
+}
+
+function statusText(liveBac) {
+  if (liveBac <= 0)            return 'Sober';
+  const diff = liveBac - bacEnd;
+  if (Math.abs(diff) < 0.005) return '⊹ On target';
+  if (diff > 0.02)             return '⚠ Above target — slow down';
+  if (diff > 0)                return 'Slightly above target';
+  if (diff < -0.02)            return 'Below target — drink up';
+  return 'Slightly below target';
+}
+
+function fmt(base, off) {
+  const d = new Date(base.getTime() + off * 3600000);
+  let h = d.getHours(), m = d.getMinutes();
+  const ap = h >= 12 ? 'pm' : 'am';
+  h = h % 12 || 12;
+  return m === 0 ? `${h}${ap}` : `${h}:${m.toString().padStart(2,'0')}${ap}`;
+}
+
+function getStart() {
+  const [h,m] = document.getElementById('startTime').value.split(':').map(Number);
+  const d = new Date(); d.setHours(h,m,0,0); return d;
+}
+
+function getCurrentHour() {
+  if (!sessionActive || !sessionStartTs) return -1;
+  return Math.min(Math.floor((Date.now() - sessionStartTs) / 3600000), hours - 1);
+}
+
+function getFracThroughHour() {
+  if (!sessionActive) return 0;
+  const e = (Date.now() - sessionStartTs) / 3600000;
+  return e - Math.floor(e);
+}
+
+// ── Render ────────────────────────────────────────────────────
+function renderTimeline() {
+  const start    = getStart();
+  const trace    = traceContinuous(drinkTimes, ag, profile, hours);
+  const maxBac   = Math.max(...trace, bacEnd * 1.3, 0.05);
+  const curHour  = getCurrentHour();
+  const tlEl     = document.getElementById('timeline');
+  tlEl.innerHTML = '';
+
+  plan.forEach((planned, h) => {
+    const projBac  = trace[h];
+    const pct      = Math.min(100, (projBac / maxBac) * 100);
+    const isPast   = sessionActive && h < curHour;
+    const isCurrent= sessionActive && h === curHour;
+    const actual   = actualDrinks[h] !== undefined ? actualDrinks[h] : null;
+
+    const block = document.createElement('div');
+    block.className = 'hour-block' +
+      (isCurrent  ? ' current'   : '') +
+      (isPast     ? ' past'      : '') +
+      (planned > 0 ? ' has-drinks' : '');
+
+    block.innerHTML = `
+      <div class="hour-top">
+        <div><div class="hour-label">Hour ${h+1}</div><div class="hour-time">${fmt(start,h)} – ${fmt(start,h+1)}</div></div>
+        <div class="hour-bar-wrap"><div class="hour-bar-fill" style="width:${pct}%;background:${barBg(projBac)}"></div></div>
+        <div class="hour-bac-val" style="color:${clrBac(projBac)}">${projBac.toFixed(3)}</div>
+      </div>`;
+
+    const slotsDiv = document.createElement('div');
+    slotsDiv.className = 'drink-slots';
+
+    for (let s = 0; s < MAX_SLOTS; s++) {
+      const slot = document.createElement('div');
+      const isConsumed = actual !== null && s < actual;
+      const isPlanned  = s < planned;
+      if      (isConsumed && isPlanned)  slot.className = 'slot consumed';
+      else if (isConsumed && !isPlanned) slot.className = 'slot extra';
+      else if (isPlanned && !isConsumed) slot.className = 'slot planned' + (isCurrent ? ' live' : '');
+      else                               slot.className = 'slot reserve' + (isCurrent ? ' live' : '');
+      slot.textContent = (isConsumed || isPlanned || isCurrent) ? '🍺' : '';
+      if (!isConsumed && !isPlanned) slot.textContent = '';
+      if (isCurrent) slot.addEventListener('click', () => logDrink(h, s + 1));
+      slotsDiv.appendChild(slot);
+    }
+
+    const legend = document.createElement('div');
+    legend.style.cssText = 'font-size:9px;color:var(--muted);margin-left:4px;line-height:1.5;';
+    if (isCurrent) {
+      const c = actual !== null ? actual : 0;
+      legend.innerHTML = `<span style="color:var(--blue)">${c}</span>/${planned} planned`;
+    } else if (isPast) {
+      const c = actual !== null ? actual : 0;
+      legend.innerHTML = `<span style="color:${c > planned ? 'var(--amber)':'var(--blue2)'}">${c} had</span> · ${planned} planned`;
+    } else {
+      legend.innerHTML = `<span style="color:var(--blue2)">${planned}</span> planned`;
+    }
+    slotsDiv.appendChild(legend);
+    block.appendChild(slotsDiv);
+
+    if (isCurrent) {
+      const frac = getFracThroughHour();
+      const prog = document.createElement('div');
+      prog.className = 'current-indicator';
+      prog.innerHTML = `
+        <span style="color:var(--blue2);font-size:9px;white-space:nowrap">Hour in progress</span>
+        <div class="time-ring"><div class="time-ring-fill" id="timeRingFill" style="width:${frac*100}%"></div></div>
+        <span style="color:var(--muted);font-size:9px;white-space:nowrap">${Math.round(frac*60)}m</span>`;
+      block.appendChild(prog);
+    }
+
+    tlEl.appendChild(block);
+  });
+}
+
+function update() {
+  profile = getActiveProfile();
+  ag      = getAlcGrams();
+  bacEnd  = parseFloat(document.getElementById('bacEnd').value) || 0.04;
+  hours   = parseInt(document.getElementById('duration').value) || 4;
+
+  updateWidmarkChip(profile, ag);
+
+  const result = buildCruisePlan(ag, profile, hours, bacEnd);
+
+  const warnEl     = document.getElementById('warnNote');
+  const schedNote  = document.getElementById('scheduleNote');
+
+  if (!result.achievable) {
+    plan = new Array(hours).fill(0);
+    drinkTimes = [];
+    document.getElementById('summaryTotal').textContent   = '—';
+    document.getElementById('summarySpacing').textContent = '—';
+    document.getElementById('summaryEnding').textContent  = '—';
+    warnEl.style.display = 'block';
+    warnEl.textContent   = '⚠ Not achievable — each drink metabolizes away before session end. Try a stronger drink, larger pour, or shorter duration.';
+    schedNote.innerHTML  = '';
+    if (!sessionActive) {
+      actualDrinks = new Array(hours).fill(undefined);
+    }
+    renderTimeline();
+    return;
+  }
+
+  warnEl.style.display = 'none';
+  plan       = result.plan;
+  drinkTimes = result.times;
+
+  if (!sessionActive) {
+    actualDrinks = new Array(hours).fill(undefined);
+  }
+
+  const total = result.n;
+  const trace = traceContinuous(drinkTimes, ag, profile, hours);
+  const projEnd = trace[hours - 1];
+
+  document.getElementById('summaryTotal').textContent   = total > 0 ? total : '0';
+  document.getElementById('summarySpacing').textContent = total > 1 ? fmtSpacing(result.spacing) : '—';
+  document.getElementById('summaryEnding').textContent  = projEnd.toFixed(3);
+
+  if (total > 0) {
+    const drinkNumLabel = total === 1 ? '1 drink' : `${total} drinks`;
+    const spacingLabel  = total > 1 ? `, one every ${fmtSpacing(result.spacing)}` : '';
+    schedNote.innerHTML = `<em>${drinkNumLabel}</em>${spacingLabel} · first drink at T+0 · ending BAC <em>${projEnd.toFixed(3)}</em>`;
+  } else {
+    schedNote.innerHTML = `No drinks needed to reach <em>${bacEnd.toFixed(3)}</em> — target is at or below zero.`;
+  }
+
+  // Disclaimer
+  const p = profile;
+  const wDisplay = p.name === 'seeholmes'
+    ? '185 lbs · male · rise 0.02/std · metab 0.015/hr'
+    : `${(p.weightKg / 0.453592).toFixed(0)} lbs · ${document.getElementById('sex')?.value || ''} · Widmark r=${p.r} · metab ${p.metab}/hr`;
+  document.getElementById('disclaimerEl').innerHTML =
+    `⚠ For harm reduction only · ${wDisplay}<br>Estimates vary — food, hydration, meds and tolerance all affect real BAC · Never drive`;
+
+  renderTimeline();
+}
+
+// ── Log drink ─────────────────────────────────────────────────
+function logDrink(hour, upToSlot) {
+  actualDrinks[hour] = upToSlot;
+  saveSession();
+  updateLiveBac();
+  renderTimeline();
+}
+
+// ── Live BAC ──────────────────────────────────────────────────
+function updateLiveBac() {
+  if (!sessionActive) return;
+  const curHour = getCurrentHour();
+  const frac    = getFracThroughHour();
+
+  if (curHour > 0 && actualDrinks[curHour - 1] === undefined) {
+    actualDrinks[curHour - 1] = plan[curHour - 1];
+    renderTimeline();
+  }
+
+  const completed = [];
+  for (let h = 0; h < curHour; h++)
+    completed.push(actualDrinks[h] !== undefined ? actualDrinks[h] : plan[h]);
+  const curActual = actualDrinks[curHour] !== undefined ? actualDrinks[curHour] : 0;
+  const liveBac   = estimateLiveBac(completed, curActual, frac);
+
+  document.getElementById('liveBacNum').textContent    = liveBac.toFixed(3);
+  document.getElementById('liveBacNum').style.color    = clrBac(liveBac);
+  document.getElementById('liveBacStatus').textContent = statusText(liveBac);
+  document.getElementById('liveBacStatus').style.color = clrBac(liveBac);
+
+  const pct = Math.min(100, (liveBac / (bacEnd * 1.4 || 0.08)) * 100);
+  document.getElementById('liveBacFill').style.width      = pct + '%';
+  document.getElementById('liveBacFill').style.background = barBg(liveBac);
+
+  const rf = document.getElementById('timeRingFill');
+  if (rf) rf.style.width = (frac * 100) + '%';
+
+  const now = new Date();
+  let hh = now.getHours(), mm = now.getMinutes();
+  const ap = hh >= 12 ? 'pm' : 'am'; hh = hh % 12 || 12;
+  document.getElementById('liveClockEl').textContent  = `${hh}:${mm.toString().padStart(2,'0')} ${ap}`;
+  document.getElementById('liveHourLbl').textContent  = `Hour ${curHour + 1} of ${hours}`;
+}
+
+// ── Persistence ───────────────────────────────────────────────
+function saveSession() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      sessionStartTs, actualDrinks, plan, drinkTimes,
+      hours, bacEnd, ag,
+      profileName: document.getElementById('profileSelect').value,
+      drinkOz:   document.getElementById('drinkOz').value,
+      drinkAbv:  document.getElementById('drinkAbv').value,
+      startTime: document.getElementById('startTime').value,
+      weight:    document.getElementById('weight').value,
+      units:     document.getElementById('units').value,
+      sex:       document.getElementById('sex').value,
+      profile:   { weightKg: profile.weightKg, r: profile.r, risePerStd: profile.risePerStd, metab: profile.metab, useWidmark: profile.useWidmark, name: profile.name },
+    }));
+  } catch(e) {}
+}
+
+function clearSavedSession() { try { localStorage.removeItem(STORAGE_KEY); } catch(e) {} }
+
+function loadSavedSession() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    if ((Date.now() - s.sessionStartTs) / 3600000 > (s.hours + 1)) { clearSavedSession(); return false; }
+
+    document.getElementById('drinkOz').value   = s.drinkOz;
+    document.getElementById('drinkAbv').value  = s.drinkAbv;
+    document.getElementById('startTime').value = s.startTime;
+    document.getElementById('duration').value  = s.hours;
+    document.getElementById('durationVal').textContent = s.hours == 1 ? '1 hour' : `${s.hours} hours`;
+    document.getElementById('bacEnd').value    = s.bacEnd;
+    document.getElementById('profileSelect').value = s.profileName || 'seeholmes';
+    if (s.weight) document.getElementById('weight').value = s.weight;
+    if (s.units)  { document.getElementById('units').value = s.units; document.getElementById('weightUnit').textContent = s.units === 'metric' ? 'kg' : 'lbs'; }
+    if (s.sex)    document.getElementById('sex').value = s.sex;
+    document.getElementById('customProfileFields').style.display = s.profileName === 'custom' ? 'block' : 'none';
+
+    sessionStartTs = s.sessionStartTs;
+    actualDrinks   = s.actualDrinks;
+    plan           = s.plan;
+    drinkTimes     = s.drinkTimes || [];
+    hours          = s.hours;
+    bacEnd         = s.bacEnd;
+    ag             = s.ag;
+    profile        = s.profile;
+    return true;
+  } catch(e) { clearSavedSession(); return false; }
+}
+
+function checkHourTransitions() {
+  const curHour = getCurrentHour();
+  for (let h = 0; h < curHour; h++) {
+    if (actualDrinks[h] === undefined) actualDrinks[h] = 0;
+  }
+  saveSession();
+}
+
+// ── Session controls ──────────────────────────────────────────
+const CONFIG_IDS = ['drinkOz','drinkAbv','bacEnd','duration','startTime','drinkPreset','profileSelect','weight','units','sex'];
+
+function activateSessionUI() {
+  CONFIG_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = true; });
+  document.getElementById('startBtn').style.display = 'none';
+  document.getElementById('endBtn').style.display   = 'block';
+  document.getElementById('liveBacBar').classList.add('visible');
+  document.getElementById('planLabel').textContent  = 'Active Mission';
+}
+
+function startSession() {
+  profile        = getActiveProfile();
+  ag             = getAlcGrams();
+  bacEnd         = parseFloat(document.getElementById('bacEnd').value) || 0.04;
+  hours          = parseInt(document.getElementById('duration').value) || 4;
+  sessionActive  = true;
+  sessionStartTs = getStart().getTime();
+  actualDrinks   = new Array(hours).fill(undefined);
+
+  const result = buildCruisePlan(ag, profile, hours, bacEnd);
+  if (result && result.achievable) {
+    plan       = result.plan;
+    drinkTimes = result.times;
+  }
+
+  activateSessionUI();
+  saveSession();
+  updateLiveBac();
+  renderTimeline();
+  clockInterval = setInterval(() => { updateLiveBac(); renderTimeline(); }, 10000);
+}
+
+function endSession() {
+  sessionActive = false;
+  clearInterval(clockInterval);
+  clearSavedSession();
+  CONFIG_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = false; });
+  document.getElementById('startBtn').style.display = 'block';
+  document.getElementById('endBtn').style.display   = 'none';
+  document.getElementById('liveBacBar').classList.remove('visible');
+  document.getElementById('planLabel').textContent  = 'Flight Plan';
+  actualDrinks = new Array(hours).fill(undefined);
+  update();
+}
+
+// ── Events ────────────────────────────────────────────────────
+document.getElementById('duration').addEventListener('input', function() {
+  document.getElementById('durationVal').textContent = this.value == 1 ? '1 hour' : `${this.value} hours`;
+  update();
+});
+['weight','sex','drinkOz','drinkAbv','bacEnd','startTime'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) { el.addEventListener('input', update); el.addEventListener('change', update); }
+});
+
+// ── Copy ──────────────────────────────────────────────────────
+document.getElementById('copyBtn').addEventListener('click', function() {
+  const start  = getStart();
+  const oz     = parseFloat(document.getElementById('drinkOz').value) || 12;
+  const abv    = parseFloat(document.getElementById('drinkAbv').value) || 5;
+  const trace  = traceContinuous(drinkTimes, ag, profile, hours);
+  const total  = plan.reduce((a,b) => a+b, 0);
+  const totalStd = (total * ag / STD_DRINK_G).toFixed(1);
+  const projEnd  = trace[hours - 1].toFixed(3);
+  const timeStr  = document.getElementById('startTime').value;
+  const profLine = profile.name === 'seeholmes'
+    ? '185 lbs | male | rise 0.02/std | metab 0.015/hr'
+    : `${(profile.weightKg / 0.453592).toFixed(0)} lbs | ${document.getElementById('sex')?.value} | Widmark r=${profile.r} | metab ${profile.metab}/hr`;
+  const sep = '- - - - - - - - - - - - - - -';
+  let lines = [`GOLDILOCKS CRUISE — ${profile.name}`, `${timeStr} launch · ${hours}hr · Target ending BAC ${bacEnd.toFixed(2)}`, sep];
+  plan.forEach((drinks, h) => {
+    const bac  = trace[h];
+    const beer = drinks > 0 ? '🍺'.repeat(drinks) : '—';
+    const dLbl = drinks === 0 ? 'none' : `${drinks} drink${drinks>1?'s':''}`;
+    lines.push(`Hr ${h+1}  ${fmt(start,h)}-${fmt(start,h+1)}  ${dLbl}  BAC ${bac.toFixed(3)}  ${beer}`);
+  });
+  lines.push(sep);
+  lines.push(`Total: ${total} drinks | ${totalStd} std | Projected ending: ${projEnd}`);
+  lines.push(profLine);
+  const text = lines.join('\n');
+  const btn  = document.getElementById('copyBtn');
+  const ok   = () => { btn.textContent='✓ Transmitted'; btn.classList.add('copied'); setTimeout(()=>{btn.textContent='⊹ Transmit plan to clipboard';btn.classList.remove('copied')},3000); };
+  if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(text).then(ok).catch(()=>fallbackCopy(text,ok)); } else { fallbackCopy(text,ok); }
+});
+function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;top:0;left:0;opacity:0;pointer-events:none;';document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand('copy');cb();}catch(e){}document.body.removeChild(ta);}
+
+// ── Fasted toggle / preset ────────────────────────────────────
+let fasted = false;
+function toggleFasted() {
+  fasted = !fasted;
+  const box = document.getElementById('fastedBox'), warn = document.getElementById('fastedWarning');
+  box.style.background  = fasted ? 'var(--amber)' : 'transparent';
+  box.style.borderColor = fasted ? 'var(--amber)' : 'var(--muted)';
+  box.textContent       = fasted ? '✓' : '';
+  warn.style.display    = fasted ? 'block' : 'none';
+}
+function applyPreset() {
+  const val = document.getElementById('drinkPreset').value;
+  if (!val || val === 'custom') return;
+  const [oz, abv] = val.split('|');
+  document.getElementById('drinkOz').value  = oz;
+  document.getElementById('drinkAbv').value = abv;
+  update();
+}
+
+// ── Wake recovery ─────────────────────────────────────────────
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && sessionActive) { checkHourTransitions(); updateLiveBac(); renderTimeline(); }
+});
+
+// ── Theme system (shared with zone.html) ──────────────────────
+const THEMES = {
+  cosmos:    { name:'Cosmos',    dark:true,  '--space':'#08090d','--deep':'#0e1018','--surface':'#13151f','--border':'#1e2130','--text':'#e8e0cc','--muted':'#5a5570','--logo-a':'#7eb8ff','--logo-b':'#5a9aee','--logo-c':'#52e09c','--accent':'#7eb8ff','--accent2':'#5a9aee', },
+  navy:      { name:'Navy',      dark:true,  '--space':'#0d1117','--deep':'#010409','--surface':'#161b22','--border':'#21262d','--text':'#e6edf3','--muted':'#484f58','--logo-a':'#7eb8ff','--logo-b':'#5a9aee','--logo-c':'#52e09c','--accent':'#7eb8ff','--accent2':'#5a9aee', },
+  espresso:  { name:'Espresso',  dark:true,  '--space':'#120e0a','--deep':'#0a0705','--surface':'#1c1510','--border':'#2e2218','--text':'#e8ddd0','--muted':'#6a5040','--logo-a':'#7eb8ff','--logo-b':'#5a9aee','--logo-c':'#52e09c','--accent':'#7eb8ff','--accent2':'#5a9aee', },
+  parchment: { name:'Parchment', dark:false, '--space':'#f5f0e8','--deep':'#ede8de','--surface':'#ffffff','--border':'#e0d8cc','--text':'#2a2420','--muted':'#a09088','--logo-a':'#3a80d4','--logo-b':'#5a9aee','--logo-c':'#2a9a6a','--accent':'#3a80d4','--accent2':'#2a6ab0', },
+  honey:     { name:'Honey',     dark:false, '--space':'#fdf4e3','--deep':'#f8edd8','--surface':'#fff8ec','--border':'#f0dab0','--text':'#3a2808','--muted':'#c09050','--logo-a':'#3a80d4','--logo-b':'#5a9aee','--logo-c':'#2a9a6a','--accent':'#3a80d4','--accent2':'#2a6ab0', },
+  slate:     { name:'Slate',     dark:false, '--space':'#eef2f8','--deep':'#e4eaf4','--surface':'#ffffff','--border':'#d0dcee','--text':'#1a2840','--muted':'#8090b0','--logo-a':'#3a80d4','--logo-b':'#5a9aee','--logo-c':'#2a9a6a','--accent':'#3a80d4','--accent2':'#2a6ab0', },
+};
+const THEME_KEY = 'goldilocks_theme';
+
+function applyTheme(id) {
+  const t = THEMES[id] || THEMES.cosmos;
+  const root = document.documentElement;
+  ['--space','--deep','--surface','--border','--text','--muted'].forEach(v => root.style.setProperty(v, t[v]));
+  const logoGrad = `linear-gradient(135deg,${t['--logo-a']} 0%,${t['--logo-b']} 50%,${t['--logo-c']} 100%)`;
+  document.querySelectorAll('.logo').forEach(el => el.style.backgroundImage = logoGrad);
+  root.style.setProperty('--blue',  t['--accent']);
+  root.style.setProperty('--blue2', t['--accent2']);
+  const bar = document.getElementById('liveBacBar');
+  if (bar) bar.style.background = t['--space'] + 'f2';
+  const style = document.getElementById('themeSliderStyle') || (() => {
+    const s = document.createElement('style'); s.id = 'themeSliderStyle'; document.head.appendChild(s); return s;
+  })();
+  style.textContent = `input[type="range"]::-webkit-slider-thumb { background: ${t['--accent']} !important; box-shadow: 0 0 10px ${t['--accent']}80 !important; }`;
+  document.querySelectorAll('.theme-swatch').forEach(sw => {
+    sw.style.outline = sw.dataset.theme === id ? `2px solid ${t['--accent']}` : 'none';
+    sw.style.outlineOffset = '2px';
+  });
+  try { localStorage.setItem(THEME_KEY, id); } catch(e) {}
+}
+
+function renderThemePicker() {
+  const el = document.getElementById('themePicker');
+  if (!el) return;
+  el.innerHTML = Object.entries(THEMES).map(([id, t]) =>
+    `<div class="theme-swatch" data-theme="${id}" onclick="applyTheme('${id}')" title="${t.name}"
+      style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,${t['--logo-a']},${t['--logo-b']});border:2px solid ${t['--border']};cursor:pointer;flex-shrink:0;transition:transform 0.15s" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"></div>`
+  ).join('');
+}
+
+function loadTheme() {
+  let id = 'cosmos';
+  try { id = localStorage.getItem(THEME_KEY) || 'cosmos'; } catch(e) {}
+  applyTheme(id);
+}
+
+// ── Init ──────────────────────────────────────────────────────
+(function init() {
+  loadCalibratedProfiles();
+  loadTheme();
+  renderThemePicker();
+  const restored = loadSavedSession();
+  if (restored) {
+    sessionActive = true;
+    activateSessionUI();
+    checkHourTransitions();
+    update();
+    updateLiveBac();
+    renderTimeline();
+    clockInterval = setInterval(() => { updateLiveBac(); renderTimeline(); }, 10000);
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(126,184,255,0.12);border:1px solid rgba(126,184,255,0.4);color:var(--blue);font-family:Space Mono,monospace;font-size:10px;letter-spacing:0.1em;padding:10px 18px;border-radius:8px;z-index:999;text-transform:uppercase;';
+    toast.textContent = '⊹ Session restored';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  } else {
+    update();
+  }
+})();
+</script>
+</body>
+</html>
