@@ -1,137 +1,55 @@
-GOLDILOCKS — RELEASE NOTES
-Version 1.00
-March 2026
-──────────────────────────────────────────────────────────────────
+# Goldilocks
 
-OVERVIEW
-────────
-Goldilocks is a personal BAC planning and session tracking web app
-with a companion calibration tool. Designed for harm reduction —
-not too much, not too little, just right.
+Goldilocks is a browser-only BAC planning, session-tracking, and breathalyzer-calibration app built for harm reduction. It is deployed as a zero-build static site on GitHub Pages.
 
-Hosted at: seeholmes.github.io/Goldilocks/goldilocks-zone.html
-Training:  seeholmes.github.io/Goldilocks/goldilocks-training.html
+Open the hosted app at [seeholmes.github.io/Goldilocks](https://seeholmes.github.io/Goldilocks/).
 
+## Modes
 
-APPS
-────
-Two companion apps sharing a common design language and localStorage:
+- **Zone** (`goldilocks-zone.html`) builds an hourly plan intended to stay within a selected BAC range and replans from logged drinks.
+- **Cruise** (`goldilocks-cruise.html`) spaces drinks across a session toward a selected ending BAC.
+- **Training** (`goldilocks-training.html`) records timed breathalyzer readings and saves a calibrated profile after a validated regression.
 
-  Goldilocks (goldilocks-zone.html)
-    Plan and track a drinking session in real time. Estimates BAC
-    using a calibrated personal profile or Widmark formula.
+`index.html` is Mission Control and links to all three modes.
 
-  Goldilocks Training (goldilocks-training.html)
-    A timed breathalyzer calibration protocol. Derives personal
-    elimination rate and rise rate from real readings. Saves
-    calibrated profile data back to Goldilocks automatically.
+## Architecture
 
+The production app has no framework, bundler, backend, analytics, or device integration. Each mode is a standalone HTML page with inline presentation and controller code. Shared, testable BAC and calibration calculations live in `goldilocks-core.js`.
 
-CORE FEATURES
-─────────────
-  · BAC planning engine
-    Builds an hourly drink schedule to keep BAC within a target
-    zone (default 0.04–0.08). Whole drinks only, front-loaded to
-    reach the zone as early as possible.
+The only external runtime dependency is Google Fonts. User data stays in same-origin browser storage:
 
-  · Session tracking
-    Launch a session to log actual drinks per hour. BAC estimated
-    live every 10 seconds. Replans future hours automatically if
-    you drink more than planned.
+| Key | Purpose |
+| --- | --- |
+| `goldilocks_profiles` | Profiles shared by Training, Zone, and Cruise |
+| `goldilocks_theme` | Theme shared by all modes |
+| `goldilocks_drinks` | Zone custom drinks |
+| `goldilocks_v2_session` | Active Zone session |
+| `goldilocks_cruise_session` | Active Cruise session |
+| `goldilocks_training_session` | Active Training protocol |
+| `goldilocks_training_history` | Last 20 completed training sessions |
 
-  · Profile system
-    Hardcoded seeholmes profile (calibrated constants). Custom
-    Widmark profile (weight/sex). Save any custom profile by name
-    — persists to localStorage and appears in dropdown.
+Session records are validated and expire after their mode-specific recovery window.
 
-  · Calibration training protocol
-    T+0    Drink 1 standard drink
-    T+45   Reading 1 (absorption complete)
-    T+65   Reading 2
-    T+85   Reading 3 (protocol complete)
-    T+105  Optional 4th reading for improved confidence
-    Linear regression fits elimination curve. R² confidence
-    scoring. Fasted sessions record elimination only; rise rate
-    excluded from average. Multi-session averaging with low /
-    medium / high confidence levels.
+## Local development
 
-  · Shared localStorage architecture
-    goldilocks_profiles  — calibrated profile data (both apps)
-    goldilocks_theme     — color theme (both apps)
-    goldilocks_drinks    — saved custom drinks (main app)
-    goldilocks_v2_session — active session state (main app)
+Serve the repository with any static HTTP server, then open `index.html`. For example:
 
-  · Six color themes
-    Cosmos, Navy, Espresso, Parchment, Honey, Slate.
-    Selected via circular swatches in the hero. Persists across
-    both apps via shared localStorage key.
+```powershell
+python -m http.server 8000
+```
 
-  · Orbital summary widget
-    Two-arc ring: wide dim arc = session time elapsed, thin bright
-    arc = current/peak BAC. Arc color shifts blue → gold → amber
-    → red through the zone. Large planet orb displays drink count.
+Run the dependency-free regression suite with:
 
-  · In-zone hour badges
-    Completed hours show ⭐ if BAC was in zone, 💧 if not.
+```powershell
+npm test
+```
 
-  · Save custom drinks
-    Name and save any oz/ABV combination. Appears under My Drinks
-    in the Quick Select dropdown. Deletable via trash icon.
+There is no production build command; deployment publishes the repository files as-is.
 
-  · Delete profiles and drinks
-    Trash icon appears next to dropdown when a user-saved item is
-    selected. Built-in profiles (seeholmes, Custom) cannot be
-    deleted.
+## Change boundaries
 
-  · Android home screen icon support
-    manifest.json and manifest-training.json added for both apps.
-    Enables correct icon display when added to home screen on
-    Android/Chrome in addition to iOS/Safari.
+Changes to BAC math, schedule construction, calibration, profile shape, themes, or persistence must be checked across all affected modes. Add regression coverage for calculation changes before changing page behavior.
 
-  · Session resilience
-    Session state saved to localStorage on every action. Restored
-    automatically on page reload or tab refocus. Unlogged hours
-    filled with zero drinks (not plan) on transition. Session
-    expires 1 hour after planned end time.
+## Safety
 
-
-BUG FIXES (pre-release)
-────────────────────────
-  · Fixed BAC climbing overnight — unlogged hours were being
-    filled with planned drink counts instead of zero, causing BAC
-    to accumulate through sleep.
-
-  · Fixed BAC/std drink chip inflating when a non-standard drink
-    was configured — chip now always displays BAC per one standard
-    drink regardless of configured drink size.
-
-  · Fixed BAC override causing tracking to freeze after manual
-    correction — feature removed entirely in favour of profile
-    calibration as the accuracy mechanism.
-
-  · Fixed syntax error caused by missing function declaration
-    after patch to updateWidmarkChip.
-
-  · Fixed session expiry window tightened from hours+2 to hours+1
-    to reduce stale session restoration risk.
-
-
-KNOWN LIMITATIONS
-─────────────────
-  · BAC estimates are model-based and vary with food, hydration,
-    medication, and individual tolerance. Always use alongside
-    a breathalyzer, not instead of one.
-
-  · iOS home screen icon may show stale cache for existing users
-    after an icon update. Remove and re-add shortcut to refresh.
-
-  · Training app icon (apple-touch-icon-training.png) is a
-    placeholder flask design — to be replaced with final artwork.
-
-  · Widmark formula used for uncalibrated profiles. Run training
-    sessions for personal accuracy.
-
-
-NEVER DRIVE AFTER DRINKING.
-For harm reduction only.
-──────────────────────────────────────────────────────────────────
+BAC values are estimates, not measurements. Food, hydration, medication, timing, physiology, and other factors can materially affect actual BAC. Use a breathalyzer where appropriate, never use this app to decide whether it is safe to drive, and never drive after drinking.

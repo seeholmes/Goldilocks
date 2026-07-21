@@ -3,9 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Build and track an evenly paced BAC cruise plan for harm reduction.">
+<meta name="theme-color" content="#08090d">
 <title>Goldilocks — Cruise</title>
 <link rel="icon" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@200;400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -14,7 +17,7 @@
     --surface: #13151f;
     --border:  #1e2130;
     --text:    #e8e0cc;
-    --muted:   #5a5570;
+    --muted:   #aaa3bb;
     --gold:    #f5c842;
     --gold2:   #e8a020;
     --amber:   #ff8c3a;
@@ -72,7 +75,7 @@
   .row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
   @media(max-width:480px){.row2,.row3{grid-template-columns:1fr}}
 
-  .sec { font-size:9px; letter-spacing:0.18em; text-transform:uppercase; color:var(--blue2); opacity:0.8; margin-bottom:14px; }
+  .sec { display:block; font-size:9px; font-weight:400; letter-spacing:0.18em; text-transform:uppercase; color:var(--blue2); margin-bottom:14px; }
   .field-label { display:block; font-size:9px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
   .input-wrap { display:flex; align-items:center; background:var(--deep); border:1px solid var(--border); border-radius:7px; overflow:hidden; transition:border-color 0.2s; }
   .input-wrap:focus-within { border-color:var(--blue); box-shadow:0 0 0 2px rgba(126,184,255,0.08); }
@@ -84,6 +87,7 @@
   .select-wrap { background:var(--deep); border:1px solid var(--border); border-radius:7px; overflow:hidden; transition:border-color 0.2s; }
   .select-wrap:focus-within { border-color:var(--blue); }
   input[type="range"] { -webkit-appearance:none; width:100%; height:2px; background:var(--border); border-radius:100px; outline:none; cursor:pointer; margin:10px 0 5px; }
+  input[type="range"]:focus-visible { outline:2px solid var(--blue); outline-offset:4px; }
   input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; background:var(--blue); border-radius:50%; cursor:pointer; box-shadow:0 0 10px rgba(126,184,255,0.5); }
   .slider-labels { display:flex; justify-content:space-between; color:var(--muted); font-size:9px; }
   .pure-alc-note { color:var(--muted); font-size:10px; margin-top:9px; }
@@ -123,7 +127,7 @@
 
   /* Vertical drink timeline */
   .drink-timeline { padding: 4px 0 0; }
-  .dte { display:flex; align-items:flex-start; gap:10px; position:relative; }
+  .dte { display:flex; align-items:flex-start; gap:10px; position:relative; width:100%; border:0; background:transparent; color:inherit; font:inherit; text-align:left; }
   .dte-track { display:flex; flex-direction:column; align-items:center; flex-shrink:0; width:20px; }
   .dte-dot { width:14px; height:14px; border-radius:50%; border:2px solid var(--muted); background:var(--space); flex-shrink:0; transition:all 0.25s; }
   .dte.done .dte-dot  { background:var(--blue2); border-color:var(--blue); box-shadow:0 0 6px rgba(126,184,255,0.35); }
@@ -134,11 +138,11 @@
   .dte-time { font-size:11px; color:var(--muted); width:64px; flex-shrink:0; padding-top:1px; font-variant-numeric:tabular-nums; }
   .dte.done .dte-time { color:var(--blue2); }
   .dte-body { flex:1; padding-bottom:22px; }
-  .dte-label { font-size:12px; color:var(--text); }
+  .dte-label { display:block; font-size:12px; color:var(--text); }
   .dte.done .dte-label  { color:var(--muted); }
   .dte.next .dte-label  { color:var(--blue); }
   .dte.extra .dte-label { color:var(--amber); }
-  .dte-sub { font-size:9px; color:var(--muted); margin-top:3px; letter-spacing:0.05em; }
+  .dte-sub { display:block; font-size:9px; color:var(--muted); margin-top:3px; letter-spacing:0.05em; }
   .dte.tappable { cursor:pointer; }
   .dte.tappable:active .dte-dot { transform:scale(1.3); }
   /* Now line */
@@ -150,7 +154,28 @@
   .schedule-note { font-size:10px; color:var(--muted); text-align:center; padding:12px 0 2px; border-top:1px solid var(--border); margin-top:10px; line-height:1.6; }
   .schedule-note em { font-style:normal; color:var(--blue); }
   .warn-note { font-size:10px; color:var(--amber); text-align:center; padding:10px 12px; background:rgba(255,140,58,0.06); border:1px solid rgba(255,140,58,0.2); border-radius:7px; margin-top:6px; line-height:1.6; }
-.disclaimer { color:var(--muted); font-size:9px; line-height:1.8; text-align:center; margin-top:24px; opacity:0.7; }
+  .disclaimer { color:var(--muted); font-size:9px; line-height:1.8; text-align:center; margin-top:24px; white-space:pre-line; }
+  .form-error { display:none; color:var(--danger); background:rgba(255,90,90,0.07); border:1px solid rgba(255,90,90,0.3); border-radius:7px; padding:10px 12px; margin-top:10px; line-height:1.6; }
+  .form-error.visible { display:block; }
+  [aria-invalid="true"] { outline:2px solid rgba(255,90,90,0.55); outline-offset:-2px; }
+  .start-btn:disabled { cursor:not-allowed; opacity:0.45; box-shadow:none; }
+  .theme-swatch { width:22px; height:22px; border-radius:50%; cursor:pointer; flex-shrink:0; transition:transform 0.15s; }
+  .theme-swatch:hover { transform:scale(1.2); }
+  .theme-swatch:focus-visible, .dte.tappable:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
+  .fasted-toggle { width:100%; font:inherit; color:inherit; text-align:left; }
+  @media(max-width:360px) {
+    .container { padding:0 10px; }
+    .card { padding:16px 14px; }
+    .live-bac-bar { padding:10px 12px; gap:9px; }
+    .live-bac-num { font-size:27px; }
+    .live-time { font-size:9px; }
+    .summary-row { gap:5px; }
+    .sum-pill { min-width:95px; padding:12px 8px; }
+    .dte-time { width:56px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
+  }
 </style>
 </head>
 <body>
@@ -161,7 +186,7 @@
     <div class="live-bac-num" id="liveBacNum">0.000</div>
   </div>
   <div class="live-bac-meta">
-    <div class="live-bac-status" id="liveBacStatus">—</div>
+    <div class="live-bac-status" id="liveBacStatus" role="status" aria-live="polite">—</div>
     <div class="live-progress-track"><div class="live-progress-fill" id="liveBacFill" style="width:0%"></div></div>
   </div>
   <div class="live-time">
@@ -170,28 +195,28 @@
   </div>
 </div>
 
-<div class="container">
-  <div class="hero">
+<main class="container">
+  <header class="hero">
     <svg class="orbit-ring" viewBox="0 0 320 120" fill="none">
       <ellipse cx="160" cy="60" rx="155" ry="52" stroke="url(#og)" stroke-width="1.5" stroke-dasharray="6 4"/>
       <defs><linearGradient id="og" x1="0" y1="0" x2="320" y2="0"><stop offset="0%" stop-color="#7eb8ff"/><stop offset="50%" stop-color="#5a9aee"/><stop offset="100%" stop-color="#52e09c"/></linearGradient></defs>
     </svg>
     <span class="star-icon">⊹</span>
-    <div class="logo">Cruise</div>
+    <h1 class="logo">Cruise</h1>
     <div class="tagline">set your speed · <em>hit your mark</em></div>
-    <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);opacity:0.5;margin-top:4px">v1.01</div>
+    <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-top:4px">v1.02</div>
     <a href="index.html" style="display:inline-block;margin-top:10px;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:4px 14px;transition:all 0.2s" onmouseover="this.style.color='var(--blue)';this.style.borderColor='rgba(126,184,255,0.4)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">← Mission Control</a>
     <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px">
-      <span style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted)">Theme</span>
-      <div id="themePicker" style="display:flex;gap:6px;align-items:center"></div>
+      <span id="themePickerLabel" style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted)">Theme</span>
+      <div id="themePicker" role="group" aria-labelledby="themePickerLabel" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"></div>
     </div>
-  </div>
+  </header>
 
   <!-- Profile -->
-  <div class="card profile-card">
-    <div class="sec">Profile</div>
+  <section class="card profile-card" aria-labelledby="profileHeading">
+    <h2 class="sec" id="profileHeading">Profile</h2>
     <div>
-      <span class="field-label">Who's drinking</span>
+      <label class="field-label" for="profileSelect">Who's drinking</label>
       <div class="select-wrap">
         <select id="profileSelect" onchange="applyProfile()">
           <option value="seeholmes">seeholmes</option>
@@ -202,20 +227,20 @@
     <div id="customProfileFields" style="display:none;margin-top:14px">
       <div class="row3">
         <div>
-          <span class="field-label">Body Weight</span>
+          <label class="field-label" for="weight">Body Weight</label>
           <div class="input-wrap">
             <input type="number" id="weight" value="160" min="80" max="500" step="1">
             <span class="input-unit" id="weightUnit">lbs</span>
           </div>
         </div>
         <div>
-          <span class="field-label">Units</span>
+          <label class="field-label" for="units">Units</label>
           <div class="select-wrap">
             <select id="units" onchange="onUnitsChange()"><option value="imperial">lbs</option><option value="metric">kg</option></select>
           </div>
         </div>
         <div>
-          <span class="field-label">Biological Sex</span>
+          <label class="field-label" for="sex">Biological Sex</label>
           <div class="select-wrap">
             <select id="sex"><option value="male">Male (r=0.68)</option><option value="female">Female (r=0.55)</option></select>
           </div>
@@ -228,13 +253,13 @@
       <div class="w-cell"><div class="w-val" id="wBpd">—</div><div class="w-lbl">BAC/std drink</div></div>
       <div class="w-cell"><div class="w-val" id="wMetab">—</div><div class="w-lbl">Metab/hr</div></div>
     </div>
-  </div>
+  </section>
 
   <!-- Drink -->
-  <div class="card">
-    <div class="sec">Your Drink</div>
+  <section class="card" aria-labelledby="drinkHeading">
+    <h2 class="sec" id="drinkHeading">Your Drink</h2>
     <div style="margin-bottom:10px">
-      <span class="field-label">Quick Select</span>
+      <label class="field-label" for="drinkPreset">Quick Select</label>
       <div class="select-wrap">
         <select id="drinkPreset" onchange="applyPreset()">
           <option value="">— choose a preset —</option>
@@ -261,42 +286,43 @@
     </div>
     <div class="row2">
       <div>
-        <span class="field-label">Drink Size</span>
+        <label class="field-label" for="drinkOz">Drink Size</label>
         <div class="input-wrap"><input type="number" id="drinkOz" value="12" min="1" max="64" step="0.5"><span class="input-unit">oz</span></div>
       </div>
       <div>
-        <span class="field-label">ABV</span>
+        <label class="field-label" for="drinkAbv">ABV</label>
         <div class="input-wrap"><input type="number" id="drinkAbv" value="5" min="0.5" max="100" step="0.1"><span class="input-unit">%</span></div>
       </div>
     </div>
     <div class="pure-alc-note">Pure alcohol per drink: <span id="pureAlcDisplay">—</span></div>
-    <div style="margin-top:12px;display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--deep);border:1px solid var(--border);border-radius:7px;cursor:pointer" onclick="toggleFasted()">
-      <div id="fastedBox" style="width:16px;height:16px;border:1px solid var(--muted);border-radius:4px;flex-shrink:0;transition:all 0.2s;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--space)"></div>
+    <button type="button" class="fasted-toggle" id="fastedToggle" aria-pressed="false" style="margin-top:12px;display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--deep);border:1px solid var(--border);border-radius:7px;cursor:pointer" onclick="toggleFasted()">
+      <span id="fastedBox" aria-hidden="true" style="width:16px;height:16px;border:1px solid var(--muted);border-radius:4px;flex-shrink:0;transition:all 0.2s;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--space)"></span>
       <span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">Drinking on an empty stomach</span>
-    </div>
+    </button>
     <div id="fastedWarning" style="display:none;margin-top:8px;padding:10px 12px;background:rgba(255,140,58,0.08);border:1px solid rgba(255,140,58,0.25);border-radius:7px;font-size:10px;line-height:1.7;color:var(--amber)">
       &#9888; Fasted: BAC will rise faster and peak higher — consider reducing your target ending BAC.
     </div>
-  </div>
+  </section>
 
   <!-- Cruise settings -->
-  <div class="card">
-    <div class="sec">Cruise Settings</div>
+  <section class="card" aria-labelledby="settingsHeading">
+    <h2 class="sec" id="settingsHeading">Cruise Settings</h2>
     <div style="margin-bottom:18px">
-      <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue2);opacity:0.8;margin-bottom:14px">Mission Duration</div>
-      <input type="range" id="duration" min="1" max="8" step="1" value="4">
+      <label for="duration" style="display:block;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue2);opacity:0.8;margin-bottom:14px">Mission Duration</label>
+      <input type="range" id="duration" min="1" max="8" step="1" value="4" aria-describedby="durationVal">
       <div class="slider-labels"><span>1h</span><span>4h</span><span>8h</span></div>
       <div style="font-family:'Anybody',sans-serif;font-size:24px;font-weight:400;color:var(--blue);margin-top:8px" id="durationVal">4 hours</div>
     </div>
     <div>
-      <span class="field-label">Target Ending BAC</span>
+      <label class="field-label" for="bacEnd">Target Ending BAC</label>
       <div class="input-wrap"><input type="number" id="bacEnd" value="0.04" min="0.00" max="0.20" step="0.01"></div>
       <div style="font-size:9px;color:var(--muted);margin-top:7px;line-height:1.6">Drinks are evenly spaced · session starts when you tap Launch.</div>
     </div>
-  </div>
+    <div class="form-error" id="configError" role="alert" aria-live="assertive"></div>
+  </section>
 
   <!-- Summary -->
-  <div class="summary-row">
+  <div class="summary-row" aria-live="polite">
     <div class="sum-pill">
       <div class="sum-val" id="summaryTotal">—</div>
       <div class="sum-lbl">Drinks</div>
@@ -314,16 +340,17 @@
   <button class="start-btn" id="startBtn" onclick="startSession()">⊹ Launch Cruise</button>
   <button class="end-btn"   id="endBtn"   onclick="endSession()">✕ End Session</button>
 
-  <div class="card">
-    <div class="sec" id="planLabel">Flight Plan</div>
+  <section class="card" aria-labelledby="planLabel">
+    <h2 class="sec" id="planLabel">Flight Plan</h2>
     <div id="timeline"></div>
-    <div id="scheduleNote" class="schedule-note"></div>
-    <div id="warnNote" style="display:none" class="warn-note"></div>
-  </div>
+    <div id="scheduleNote" class="schedule-note" aria-live="polite"></div>
+    <div id="warnNote" role="status" aria-live="polite" style="display:none" class="warn-note"></div>
+  </section>
 
   <p class="disclaimer" id="disclaimerEl">⚠ For harm reduction only · Widmark estimates vary — food, hydration, meds and tolerance all affect real BAC · Never drive</p>
-</div>
+</main>
 
+<script src="goldilocks-core.js"></script>
 <script>
 // ── Profiles ──────────────────────────────────────────────────
 const PROFILES = {
@@ -337,7 +364,7 @@ const PROFILES = {
   }
 };
 
-const STD_DRINK_G = 0.6 * 29.5735 * 0.789;
+const STD_DRINK_G = GoldilocksCore.STD_DRINK_G;
 const MAX_SLOTS   = 6;
 const STORAGE_KEY = 'goldilocks_cruise_session';
 
@@ -346,23 +373,60 @@ let sessionStartTs   = null;
 let plan             = [];   // hourly drink counts (for BAC simulation)
 let drinkSchedule    = [];   // per-drink timestamps (planned)
 let actualDrinkTimes = [];   // per-drink timestamps (actual), null if not yet logged
-let drinkTimes       = [];   // kept for save-compat, unused
 let ag               = 0;
 let profile          = PROFILES.seeholmes;
 let bacEnd           = 0.04;
 let hours            = 4;
 let clockInterval    = null;
+let sessionComplete  = false;
+let planSpacing      = 0;
+let planOffsetHours  = 0;
+let plannedEndpoint  = 0;
+let planAchievable   = true;
 
 // ── Profile helpers ───────────────────────────────────────────
 function getActiveProfile() {
   const sel = document.getElementById('profileSelect').value;
   if (PROFILES[sel] && sel !== 'custom') return PROFILES[sel];
   const units  = document.getElementById('units').value;
-  let weight   = parseFloat(document.getElementById('weight').value) || 160;
+  let weight   = parseFloat(document.getElementById('weight').value);
   if (units === 'imperial') weight *= 0.453592;
   const sex    = document.getElementById('sex').value;
   const r      = sex === 'male' ? 0.68 : 0.55;
   return { name:'custom', weightKg: weight, r, risePerStd: null, metab: 0.015, useWidmark: true };
+}
+
+function findOptionByValue(select, value) {
+  return Array.from(select.options).find(option => option.value === value) || null;
+}
+
+function isUnsafeProfileKey(name) {
+  return typeof name === 'string' && ['__proto__','prototype','constructor'].includes(name.trim().toLowerCase());
+}
+
+function isReservedStoredProfileName(name) {
+  return typeof name === 'string' && (name.trim().toLowerCase() === 'custom' || isUnsafeProfileKey(name));
+}
+
+function toSafeProfileMap(value) {
+  const safe = Object.create(null);
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return safe;
+  Object.entries(value).forEach(([key, profileValue]) => {
+    if (!isReservedStoredProfileName(key)) safe[key] = profileValue;
+  });
+  return safe;
+}
+
+function isValidProfile(p) {
+  return !!p && typeof p === 'object' && typeof p.name === 'string' && p.name.trim().length > 0 && p.name.length <= 64 &&
+    !isUnsafeProfileKey(p.name) &&
+    Number.isFinite(p.weightKg) && p.weightKg >= 36.28 && p.weightKg <= 226.8 &&
+    Number.isFinite(p.r) && p.r >= 0.3 && p.r <= 1 &&
+    Number.isFinite(p.metab) && p.metab > 0 && p.metab <= 0.05 &&
+    typeof p.useWidmark === 'boolean' &&
+    (p.useWidmark
+      ? (p.risePerStd === null || (Number.isFinite(p.risePerStd) && p.risePerStd >= 0.001 && p.risePerStd <= 0.2))
+      : (Number.isFinite(p.risePerStd) && p.risePerStd >= 0.001 && p.risePerStd <= 0.2));
 }
 
 function applyProfile() {
@@ -373,8 +437,21 @@ function applyProfile() {
 }
 
 function onUnitsChange() {
-  document.getElementById('weightUnit').textContent =
-    document.getElementById('units').value === 'metric' ? 'kg' : 'lbs';
+  const unitsInput = document.getElementById('units');
+  const nextUnits = unitsInput.value;
+  const previousUnits = unitsInput.dataset.previousUnits || 'imperial';
+  const metric = nextUnits === 'metric';
+  const weightInput = document.getElementById('weight');
+  const currentWeight = parseFloat(weightInput.value);
+  if (Number.isFinite(currentWeight) && previousUnits !== nextUnits) {
+    const converted = metric ? currentWeight * 0.453592 : currentWeight / 0.453592;
+    weightInput.value = metric ? converted.toFixed(1) : converted.toFixed(0);
+  }
+  unitsInput.dataset.previousUnits = nextUnits;
+  document.getElementById('weightUnit').textContent = metric ? 'kg' : 'lbs';
+  weightInput.min = metric ? '36.3' : '80';
+  weightInput.max = metric ? '226.8' : '500';
+  weightInput.step = metric ? '0.1' : '1';
   update();
 }
 
@@ -390,23 +467,33 @@ function loadCalibratedProfiles() {
   try {
     const raw = localStorage.getItem('goldilocks_profiles');
     if (!raw) return;
-    const profiles = JSON.parse(raw);
+    const profiles = toSafeProfileMap(JSON.parse(raw));
     const sel = document.getElementById('profileSelect');
     Object.values(profiles).forEach(p => {
+      if (!p || typeof p !== 'object') return;
+      if (isReservedStoredProfileName(p.name)) return;
+      const useWidmark = typeof p.useWidmark === 'boolean' ? p.useWidmark : p.risePerStd == null;
+      const candidate = {
+        name: p.name,
+        weightKg: Number(p.weightKg),
+        r: Number(p.r),
+        risePerStd: useWidmark ? null : Number(p.risePerStd),
+        metab: Number(p.metab),
+        useWidmark,
+        calibrated: p.calibrated === true,
+      };
+      if (!isValidProfile(candidate)) return;
       const conf     = p.confidence ? ` · ${p.confidence} conf` : '';
       const sessions = p.sessions   ? ` · ${p.sessions} sess`   : '';
-      PROFILES[p.name] = {
-        name: p.name, weightKg: p.weightKg, r: p.r,
-        risePerStd: p.risePerStd, metab: p.metab, useWidmark: false, calibrated: true,
-      };
-      const existing = sel.querySelector(`option[value="${p.name}"]`);
+      PROFILES[p.name] = candidate;
+      const existing = findOptionByValue(sel, p.name);
       if (existing) {
         existing.textContent = `${p.name}${sessions}${conf}`;
       } else {
         const opt = document.createElement('option');
         opt.value = p.name;
         opt.textContent = `${p.name}${sessions}${conf}`;
-        const customOpt = sel.querySelector('option[value="custom"]');
+        const customOpt = findOptionByValue(sel, 'custom');
         sel.insertBefore(opt, customOpt);
       }
     });
@@ -416,48 +503,24 @@ function loadCalibratedProfiles() {
 // ── Math ──────────────────────────────────────────────────────
 // Discrete hourly simulate — identical model to zone.html
 function simulate(sched, a, p) {
-  let bac = 0;
-  return sched.map(d => {
-    bac += d * bpd(a, p);
-    bac = Math.max(0, bac - p.metab);
-    return Math.round(bac * 1000) / 1000;
-  });
+  return GoldilocksCore.simulate(sched, a, p);
 }
 
 function getAlcGrams() {
-  const oz  = parseFloat(document.getElementById('drinkOz').value)  || 12;
-  const abv = parseFloat(document.getElementById('drinkAbv').value) || 5;
+  const oz  = parseFloat(document.getElementById('drinkOz').value);
+  const abv = parseFloat(document.getElementById('drinkAbv').value);
   const pureOz = oz * (abv / 100);
-  document.getElementById('pureAlcDisplay').textContent = pureOz.toFixed(2) + ' oz';
+  document.getElementById('pureAlcDisplay').textContent = Number.isFinite(pureOz) ? pureOz.toFixed(2) + ' oz' : '—';
   return pureOz * 29.5735 * 0.789;
 }
 
 function bpd(a, p) {
-  if (!p.useWidmark && p.risePerStd != null)
-    return (a / STD_DRINK_G) * p.risePerStd;
-  return (a / (p.weightKg * 1000 * p.r)) * 100;
+  return GoldilocksCore.bacPerDrink(a, p);
 }
 
-// Build the cruise plan using the discrete hourly model (same as zone.html simulate).
-// Formula: n*δ − T*β = B_end  →  n = (B_end + T*β) / δ
+// Build a phase-aware cruise plan within the UI's hourly recommendation cap.
 function buildCruisePlan(ag, p, T, B_end) {
-  const δ = bpd(ag, p);
-  const β = p.metab;
-
-  if (B_end <= 0) return { n: 0, plan: new Array(T).fill(0), spacing: 0, achievable: true };
-
-  const nRaw = (B_end + T * β) / δ;
-  let n      = Math.min(24, Math.max(1, Math.round(nRaw)));
-  // Round can give one drink too many — trim if ending BAC would overshoot.
-  if (n * δ - T * β > B_end + 0.002) n = Math.max(1, n - 1);
-
-  // Distribute n drinks evenly; extras go in earlier hours
-  const base  = Math.floor(n / T);
-  const extra = n % T;
-  const plan  = Array.from({length: T}, (_, i) => base + (i < extra ? 1 : 0));
-
-  const spacing = n > 1 ? T / n : 0;
-  return { n, plan, spacing, achievable: true };
+  return GoldilocksCore.buildCruiseReplan(ag, p, T, B_end, 0, [], MAX_SLOTS);
 }
 
 function fmtSpacing(spacingHours) {
@@ -472,14 +535,49 @@ function fmtSpacing(spacingHours) {
 
 // Discrete hourly estimate for live BAC (same model as zone.html)
 function estimateLiveBac(completedSched, curDrinks, frac) {
-  let bac = 0;
-  for (let h = 0; h < completedSched.length; h++) {
-    bac += completedSched[h] * bpd(ag, profile);
-    bac = Math.max(0, bac - profile.metab);
+  return GoldilocksCore.estimateLiveBac(completedSched, curDrinks, frac, ag, profile);
+}
+
+const VALIDATED_IDS = ['drinkOz','drinkAbv','bacEnd','duration','weight'];
+
+function setConfigError(message, invalidId = null, focusInvalid = false) {
+  const error = document.getElementById('configError');
+  VALIDATED_IDS.forEach(id => document.getElementById(id)?.removeAttribute('aria-invalid'));
+  if (invalidId) document.getElementById(invalidId)?.setAttribute('aria-invalid', 'true');
+  error.textContent = message || '';
+  error.classList.toggle('visible', !!message);
+  const startButton = document.getElementById('startBtn');
+  if (startButton && !sessionActive) startButton.disabled = !!message;
+  if (focusInvalid && invalidId) document.getElementById(invalidId)?.focus();
+}
+
+function validateConfig(focusInvalid = false) {
+  const oz = parseFloat(document.getElementById('drinkOz').value);
+  const abv = parseFloat(document.getElementById('drinkAbv').value);
+  const target = parseFloat(document.getElementById('bacEnd').value);
+  const duration = Number(document.getElementById('duration').value);
+  let problem = null;
+  if (!Number.isFinite(oz) || oz < 1 || oz > 64) problem = ['Drink size must be between 1 and 64 oz.', 'drinkOz'];
+  else if (!Number.isFinite(abv) || abv < 0.5 || abv > 100) problem = ['ABV must be between 0.5% and 100%.', 'drinkAbv'];
+  else if (!Number.isFinite(target) || target < 0 || target > 0.2) problem = ['Target ending BAC must be between 0.00 and 0.20.', 'bacEnd'];
+  else if (!Number.isInteger(duration) || duration < 1 || duration > 8) problem = ['Mission duration must be between 1 and 8 hours.', 'duration'];
+  else if (!isValidProfile(getActiveProfile())) problem = ['Enter a valid body weight and profile.', document.getElementById('profileSelect').value === 'custom' ? 'weight' : null];
+  else {
+    const alcoholGrams = oz * (abv / 100) * 29.5735 * 0.789;
+    const activeProfile = getActiveProfile();
+    const maximumTrace = GoldilocksCore.simulate(new Array(duration).fill(MAX_SLOTS), alcoholGrams, activeProfile);
+    const maximumEndpoint = maximumTrace[duration - 1] ?? 0;
+    if (maximumEndpoint + 0.002 < target) {
+      problem = [`This plan needs more than ${MAX_SLOTS} drinks in an hour. Choose a stronger drink or lower target.`, 'drinkAbv'];
+    } else {
+      const candidate = buildCruisePlan(alcoholGrams, activeProfile, duration, target);
+      if (candidate.plan.some(drinks => drinks > MAX_SLOTS)) {
+        problem = [`This plan needs more than ${MAX_SLOTS} drinks in an hour. Choose a stronger drink or lower target.`, 'drinkAbv'];
+      }
+    }
   }
-  bac += curDrinks * bpd(ag, profile);
-  bac = Math.max(0, bac - profile.metab * frac);
-  return Math.round(bac * 1000) / 1000;
+  setConfigError(problem?.[0] || '', problem?.[1] || null, focusInvalid);
+  return !problem;
 }
 
 // ── Colors ────────────────────────────────────────────────────
@@ -503,7 +601,7 @@ function statusText(liveBac) {
   if (Math.abs(diff) < 0.005) return '⊹ On target';
   if (diff > 0.02)             return '⚠ Above target — slow down';
   if (diff > 0)                return 'Slightly above target';
-  if (diff < -0.02)            return 'Below target — drink up';
+  if (diff < -0.02)            return 'Below target — reassess your pace';
   return 'Slightly below target';
 }
 
@@ -527,29 +625,27 @@ function getStart() {
 
 function getCurrentHour() {
   if (!sessionActive || !sessionStartTs) return -1;
-  return Math.min(Math.floor((Date.now() - sessionStartTs) / 3600000), hours - 1);
+  const elapsed = (Date.now() - sessionStartTs) / 3600000;
+  return Math.max(0, Math.min(Math.floor(elapsed), hours - 1));
 }
 
 function getFracThroughHour() {
   if (!sessionActive) return 0;
   const e = (Date.now() - sessionStartTs) / 3600000;
-  return e - Math.floor(e);
+  if (e <= 0) return 0;
+  if (e >= hours || sessionComplete) return 1;
+  return Math.max(0, Math.min(1, e - Math.floor(e)));
 }
 
-// Build per-drink schedule: n evenly-spaced timestamps starting from startTs
-function initDrinkSchedule(n, startTs, durationMs) {
-  const spacing = n > 1 ? durationMs / n : durationMs;
-  return Array.from({length: n}, (_, i) => startTs + i * spacing);
-}
-
-// Rebuild hourly plan from current drinkSchedule + actualDrinkTimes
-function rebuildPlan() {
-  plan = new Array(hours).fill(0);
-  for (let i = 0; i < drinkSchedule.length; i++) {
-    const ts = actualDrinkTimes[i] !== null ? actualDrinkTimes[i] : drinkSchedule[i];
-    const h  = Math.max(0, Math.min(hours - 1, Math.floor((ts - sessionStartTs) / 3600000)));
-    plan[h]++;
+// Build timestamps from the phase-aware plan returned by the shared core.
+function initDrinkSchedule(result, startTs) {
+  if (Array.isArray(result.futureOffsets)) {
+    return result.futureOffsets.map(offset => startTs + offset * 3600000);
   }
+  return Array.from(
+    { length: result.n },
+    (_, i) => startTs + (result.offsetHours + i * result.spacing) * 3600000
+  );
 }
 
 // ── Render ────────────────────────────────────────────────────
@@ -560,123 +656,146 @@ function renderTimeline() {
 
   const now        = Date.now();
   const startTs    = sessionActive ? sessionStartTs : now;
-  const endTs      = startTs + hours * 3600000;
-  const nowInserted = !sessionActive; // planning mode: no "now" line needed
-
-  // Build BAC trace from effective plan for projected BAC labels
-  const effectivePlan = sessionActive ? (() => {
-    const p = new Array(hours).fill(0);
-    for (let i = 0; i < drinkSchedule.length; i++) {
-      const ts = actualDrinkTimes[i] !== null ? actualDrinkTimes[i] : drinkSchedule[i];
-      const h  = Math.max(0, Math.min(hours - 1, Math.floor((ts - startTs) / 3600000)));
-      p[h]++;
-    }
-    return p;
-  })() : plan;
-  const trace = simulate(effectivePlan, ag, profile);
+  const nowInserted = !sessionActive || sessionComplete; // planning/completed mode: no "now" line needed
 
   let nowLineAdded = nowInserted;
+  const appendNowLine = () => {
+    const nowDiv = document.createElement('div');
+    nowDiv.className = 'dt-now';
+    nowDiv.innerHTML = `<div class="dt-now-label">now</div><div class="dt-now-line"></div>`;
+    tlEl.appendChild(nowDiv);
+    nowLineAdded = true;
+  };
 
   drinkSchedule.forEach((schTs, i) => {
     const actualTs  = actualDrinkTimes[i];
     const isLogged  = actualTs !== null;
     const displayTs = isLogged ? actualTs : schTs;
-    const isNext    = sessionActive && !isLogged && (i === 0 || actualDrinkTimes[i - 1] !== null);
-    const isExtra   = isLogged && schTs > now + 300000; // logged way early
+    const isNext    = sessionActive && !sessionComplete && !isLogged && (i === 0 || actualDrinkTimes[i - 1] !== null);
 
     // Insert NOW line just before the first unlogged future drink
-    if (!nowLineAdded && sessionActive && !isLogged) {
-      nowLineAdded = true;
-      const nowDiv = document.createElement('div');
-      nowDiv.className = 'dt-now';
-      nowDiv.innerHTML = `<div class="dt-now-label">now</div><div class="dt-now-line"></div>`;
-      tlEl.appendChild(nowDiv);
-    }
+    if (!nowLineAdded && sessionActive && !isLogged && schTs > now) appendNowLine();
 
-    // BAC at this drink's hour
-    const drinkHour = Math.max(0, Math.min(hours - 1, Math.floor((displayTs - startTs) / 3600000)));
-    const projBac   = trace[drinkHour];
-
-    const dte = document.createElement('div');
+    const dte = document.createElement(isNext ? 'button' : 'div');
     dte.className = 'dte' +
-      (isLogged ? (isExtra ? ' extra' : ' done') : '') +
+      (isLogged ? ' done' : '') +
       (isNext   ? ' next' : '') +
-      (isNext   ? ' tappable' : (!isLogged && sessionActive ? ' tappable' : ''));
+      (isNext   ? ' tappable' : '');
 
     const timeStr = sessionActive
       ? fmtTs(displayTs)
       : fmtOffset(schTs - startTs);
 
     let sublabel = '';
-    if (isLogged && isExtra)        sublabel = 'logged early';
-    else if (isLogged)              sublabel = 'done';
+    if (isLogged)                   sublabel = 'done';
     else if (isNext)                sublabel = 'tap to log';
+    else if (sessionComplete)       sublabel = 'not logged';
     else if (!sessionActive && i === drinkSchedule.length - 1)
-                                    sublabel = `ending BAC ${projBac.toFixed(3)}`;
+                                    sublabel = `ending BAC ${plannedEndpoint.toFixed(3)}`;
     else if (!sessionActive)        sublabel = '';
     else                            sublabel = 'upcoming';
 
     dte.innerHTML = `
-      <div class="dte-time">${timeStr}</div>
-      <div class="dte-track">
-        <div class="dte-dot"></div>
-        ${i < drinkSchedule.length - 1 ? '<div class="dte-connector"></div>' : ''}
-      </div>
-      <div class="dte-body">
-        <div class="dte-label">Drink ${i + 1}</div>
-        ${sublabel ? `<div class="dte-sub">${sublabel}</div>` : ''}
-      </div>`;
+      <span class="dte-time">${timeStr}</span>
+      <span class="dte-track">
+        <span class="dte-dot"></span>
+        ${i < drinkSchedule.length - 1 ? '<span class="dte-connector"></span>' : ''}
+      </span>
+      <span class="dte-body">
+        <span class="dte-label">Drink ${i + 1}</span>
+        ${sublabel ? `<span class="dte-sub">${sublabel}</span>` : ''}
+      </span>`;
 
-    if (!isLogged && sessionActive) {
+    if (isNext) {
+      dte.type = 'button';
+      dte.setAttribute('aria-label', `Log drink ${i + 1}, scheduled ${timeStr}`);
       dte.addEventListener('click', () => logDrink(i));
     }
 
     tlEl.appendChild(dte);
   });
+  if (!nowLineAdded && sessionActive && !sessionComplete) appendNowLine();
 }
 
 function update() {
+  const valid = validateConfig(false);
+  ag = getAlcGrams();
+  if (!valid) {
+    if (!sessionActive) {
+      plan = [];
+      drinkSchedule = [];
+      actualDrinkTimes = [];
+      document.getElementById('summaryTotal').textContent = '—';
+      document.getElementById('summarySpacing').textContent = '—';
+      document.getElementById('summaryEnding').textContent = '—';
+      document.getElementById('scheduleNote').textContent = 'Fix the settings above to create a flight plan.';
+      document.getElementById('timeline').replaceChildren();
+    }
+    return;
+  }
   profile = getActiveProfile();
-  ag      = getAlcGrams();
-  bacEnd  = parseFloat(document.getElementById('bacEnd').value) || 0.04;
-  hours   = parseInt(document.getElementById('duration').value) || 4;
+  bacEnd  = parseFloat(document.getElementById('bacEnd').value);
+  hours   = Number(document.getElementById('duration').value);
 
   updateWidmarkChip(profile, ag);
 
-  const result = buildCruisePlan(ag, profile, hours, bacEnd);
-  plan         = result.plan;
+  let result;
+  if (!sessionActive) {
+    result = buildCruisePlan(ag, profile, hours, bacEnd);
+    plan = result.plan;
+    planSpacing = result.spacing;
+    planOffsetHours = result.offsetHours;
+    plannedEndpoint = result.endpoint;
+    planAchievable = result.achievable;
+    const previewStart = Date.now();
+    drinkSchedule = initDrinkSchedule(result, previewStart);
+    actualDrinkTimes = new Array(result.n).fill(null);
+  } else {
+    result = {
+      n: drinkSchedule.length,
+      plan,
+      spacing: planSpacing,
+      offsetHours: planOffsetHours,
+      endpoint: plannedEndpoint,
+      achievable: planAchievable,
+    };
+  }
 
   const total    = result.n;
   const trace    = simulate(plan, ag, profile);
-  const projEnd  = trace[hours - 1];
+  const projEnd  = sessionActive ? (trace[hours - 1] ?? 0) : result.endpoint;
 
-  document.getElementById('summaryTotal').textContent   = total > 0 ? total : '0';
-  document.getElementById('summarySpacing').textContent = total > 1 ? fmtSpacing(result.spacing) : '—';
+  const loggedTotal = actualDrinkTimes.filter(t => t !== null).length;
+  document.getElementById('summaryTotal').textContent   = sessionComplete ? loggedTotal : (total > 0 ? total : '0');
+  document.getElementById('summarySpacing').textContent = !sessionComplete && total > 1 ? fmtSpacing(result.spacing) : '—';
   document.getElementById('summaryEnding').textContent  = projEnd.toFixed(3);
-  document.getElementById('warnNote').style.display     = 'none';
-
-  const schedNote = document.getElementById('scheduleNote');
-  if (total > 0) {
-    const spacingLabel = total > 1 ? ` · one every ${fmtSpacing(result.spacing)}` : '';
-    schedNote.innerHTML = `<em>${total} drink${total>1?'s':''}</em>${spacingLabel} · ending BAC <em>${projEnd.toFixed(3)}</em>`;
-  } else {
-    schedNote.innerHTML = `No drinks needed.`;
+  if (!sessionActive) {
+    const warning = document.getElementById('warnNote');
+    warning.textContent = result.achievable
+      ? ''
+      : `Closest non-overshooting plan ends at BAC ${result.endpoint.toFixed(3)}.`;
+    warning.style.display = result.achievable ? 'none' : 'block';
   }
 
-  // Build preview schedule using now as tentative start
-  if (!sessionActive) {
-    const previewStart = Date.now();
-    drinkSchedule      = initDrinkSchedule(total, previewStart, hours * 3600000);
-    actualDrinkTimes   = new Array(total).fill(null);
+  const schedNote = document.getElementById('scheduleNote');
+  if (sessionComplete) {
+    schedNote.textContent = `Session complete · ${loggedTotal} of ${total} planned drinks logged · final BAC ${projEnd.toFixed(3)}`;
+  } else if (sessionActive) {
+    const remaining = actualDrinkTimes.filter(t => t === null).length;
+    schedNote.textContent = `${remaining} drink${remaining === 1 ? '' : 's'} remaining · projected ending BAC ${projEnd.toFixed(3)}`;
+  } else if (total > 0) {
+    const spacingLabel = total > 1 ? ` · one every ${fmtSpacing(result.spacing)}` : '';
+    schedNote.textContent = `${total} drink${total>1?'s':''}${spacingLabel} · ending BAC ${projEnd.toFixed(3)}`;
+  } else {
+    schedNote.textContent = 'No drinks needed.';
   }
 
   // Disclaimer
   const p = profile;
-  const wDisplay = p.name === 'seeholmes'
-    ? '185 lbs · male · rise 0.02/std · metab 0.015/hr'
-    : `${(p.weightKg / 0.453592).toFixed(0)} lbs · ${document.getElementById('sex')?.value || ''} · Widmark r=${p.r} · metab ${p.metab}/hr`;
-  document.getElementById('disclaimerEl').innerHTML =
-    `⚠ For harm reduction only · ${wDisplay}<br>Estimates vary — food, hydration, meds and tolerance all affect real BAC · Never drive`;
+  const modelDisplay = p.useWidmark ? `Widmark r=${p.r}` : `rise ${p.risePerStd.toFixed(3)}/std`;
+  const wDisplay = `${(p.weightKg / 0.453592).toFixed(0)} lbs · ${modelDisplay} · metab ${p.metab}/hr`;
+  document.getElementById('disclaimerEl').textContent =
+    `⚠ For harm reduction only · ${wDisplay}\nEstimates vary — food, hydration, meds and tolerance all affect real BAC · Never drive`;
 
   renderTimeline();
 }
@@ -685,42 +804,42 @@ function update() {
 // Called after logging a drink OR changing duration mid-session.
 // Re-derives how many drinks are still needed and rebuilds the schedule.
 function recalcFromNow() {
-  if (!sessionActive) return;
+  if (!sessionActive || sessionComplete) return;
   const now          = Date.now();
-  const sessionEndTs = sessionStartTs + hours * 3600000;
-  const T_rem        = Math.max(0, (sessionEndTs - now) / 3600000);
+  const elapsedHours = Math.max(0, Math.min(hours, (now - sessionStartTs) / 3600000));
 
   // Collect actual logged times
-  const doneTimes = actualDrinkTimes.filter(t => t !== null);
-  const n_logged  = doneTimes.length;
-
-  const δ = bpd(ag, profile);
-  const β = profile.metab;
-
-  // Compute n_total the same way buildCruisePlan does: round, then trim if overshoot.
-  let n_total = Math.max(0, Math.round((bacEnd + hours * β) / δ));
-  if (n_total * δ - hours * β > bacEnd + 0.002) n_total = Math.max(0, n_total - 1);
-  let n_rem = Math.max(0, n_total - n_logged);
-
-  // Space n_rem drinks evenly starting from now
-  const spacing  = n_rem > 0 ? T_rem / n_rem : 0;
-  const futureTs = Array.from({length: n_rem}, (_, j) => now + (j + 1) * spacing * 3600000);
+  const doneTimes = actualDrinkTimes.filter(t => t !== null).sort((a, b) => a - b);
+  const actualOffsets = doneTimes.map(timestamp => (timestamp - sessionStartTs) / 3600000);
+  const result = GoldilocksCore.buildCruiseReplan(
+    ag,
+    profile,
+    hours,
+    bacEnd,
+    elapsedHours,
+    actualOffsets,
+    MAX_SLOTS
+  );
+  const n_rem = result.n;
+  const futureTs = result.futureOffsets.map(offset => sessionStartTs + offset * 3600000);
+  planSpacing = result.spacing;
+  planOffsetHours = result.offsetHours;
 
   drinkSchedule    = [...doneTimes, ...futureTs];
   actualDrinkTimes = [...doneTimes, ...new Array(n_rem).fill(null)];
-
-  rebuildPlan();
+  plan = result.plan;
 
   // Refresh summary pills
-  const trace   = simulate(plan, ag, profile);
-  const projEnd = trace[Math.min(hours, trace.length) - 1];
+  const projEnd = result.endpoint;
+  plannedEndpoint = result.endpoint;
+  planAchievable = result.achievable;
   document.getElementById('summaryTotal').textContent   = drinkSchedule.length;
-  document.getElementById('summarySpacing').textContent = spacing > 0 ? fmtSpacing(spacing) : '—';
+  document.getElementById('summarySpacing').textContent = planSpacing > 0 ? fmtSpacing(planSpacing) : '—';
   document.getElementById('summaryEnding').textContent  = projEnd.toFixed(3);
 
   const schedNote = document.getElementById('scheduleNote');
-  const remLabel  = n_rem > 0 ? `<em>${n_rem}</em> drink${n_rem>1?'s':''} remaining` : 'No more drinks needed';
-  schedNote.innerHTML = `${remLabel} · ending BAC <em>${projEnd.toFixed(3)}</em>`;
+  const remLabel  = n_rem > 0 ? `${n_rem} drink${n_rem>1?'s':''} remaining` : 'No more drinks needed';
+  schedNote.textContent = `${remLabel} · ending BAC ${projEnd.toFixed(3)}`;
 
   saveSession();
   updateLiveBac();
@@ -730,7 +849,13 @@ function recalcFromNow() {
 // ── Log drink ─────────────────────────────────────────────────
 let earlyWarnTimer = null;
 function logDrink(i) {
-  if (!sessionActive || actualDrinkTimes[i] !== null) return;
+  if (!sessionActive || sessionComplete || actualDrinkTimes[i] !== null) return;
+  if (actualDrinkTimes.findIndex(timestamp => timestamp === null) !== i) return;
+  if (finalizeIfDurationElapsed()) {
+    updateLiveBac();
+    renderTimeline();
+    return;
+  }
   const now       = Date.now();
   const scheduled = drinkSchedule[i];
   const earlyMs   = scheduled - now;
@@ -751,8 +876,50 @@ function showWarn(msg) {
 }
 
 // ── Live BAC ──────────────────────────────────────────────────
+function finalizeIfDurationElapsed() {
+  if (!sessionActive || sessionComplete || !sessionStartTs) return sessionComplete;
+  const sessionEndTs = sessionStartTs + hours * 3600000;
+  if (Date.now() < sessionEndTs) return false;
+  sessionComplete = true;
+  clearInterval(clockInterval);
+  const boundedSchedule = [];
+  const boundedActuals = [];
+  for (let index = 0; index < drinkSchedule.length; index += 1) {
+    const scheduled = drinkSchedule[index];
+    const actual = actualDrinkTimes[index];
+    if (actual === null && scheduled > sessionEndTs) continue;
+    boundedSchedule.push(scheduled > sessionEndTs && actual !== null ? actual : scheduled);
+    boundedActuals.push(actual);
+  }
+  drinkSchedule = boundedSchedule;
+  actualDrinkTimes = boundedActuals;
+  plan = new Array(hours).fill(0);
+  actualDrinkTimes.forEach(timestamp => {
+    if (timestamp === null) return;
+    const hour = Math.max(0, Math.min(hours - 1, Math.floor((timestamp - sessionStartTs) / 3600000)));
+    plan[hour]++;
+  });
+  const logged = actualDrinkTimes.filter(timestamp => timestamp !== null).length;
+  const finalTrace = simulate(plan, ag, profile);
+  const finalBac = finalTrace[hours - 1] ?? 0;
+  planSpacing = 0;
+  planOffsetHours = 0;
+  plannedEndpoint = finalBac;
+  planAchievable = Math.abs(finalBac - bacEnd) <= 0.002;
+  document.getElementById('summaryTotal').textContent = String(logged);
+  document.getElementById('summarySpacing').textContent = '—';
+  document.getElementById('summaryEnding').textContent = finalBac.toFixed(3);
+  document.getElementById('scheduleNote').textContent =
+    `Session complete · ${logged} of ${drinkSchedule.length} planned drinks logged · final BAC ${finalBac.toFixed(3)}`;
+  document.getElementById('planLabel').textContent = 'Session Complete';
+  document.getElementById('duration').disabled = true;
+  saveSession();
+  return true;
+}
+
 function updateLiveBac() {
   if (!sessionActive) return;
+  finalizeIfDurationElapsed();
   const curHour = getCurrentHour();
   const frac    = getFracThroughHour();
 
@@ -770,10 +937,11 @@ function updateLiveBac() {
 
   document.getElementById('liveBacNum').textContent    = liveBac.toFixed(3);
   document.getElementById('liveBacNum').style.color    = clrBac(liveBac);
-  document.getElementById('liveBacStatus').textContent = statusText(liveBac);
+  document.getElementById('liveBacStatus').textContent = sessionComplete ? 'Session complete · final estimate' : statusText(liveBac);
   document.getElementById('liveBacStatus').style.color = clrBac(liveBac);
 
-  const pct = Math.min(100, (liveBac / (bacEnd * 1.4 || 0.08)) * 100);
+  const bacScale = bacEnd > 0 ? bacEnd * 1.4 : 0.08;
+  const pct = Math.min(100, (liveBac / bacScale) * 100);
   document.getElementById('liveBacFill').style.width      = pct + '%';
   document.getElementById('liveBacFill').style.background = barBg(liveBac);
 
@@ -782,7 +950,9 @@ function updateLiveBac() {
   const ap = hh >= 12 ? 'pm' : 'am'; hh = hh % 12 || 12;
   document.getElementById('liveClockEl').textContent  = `${hh}:${mm.toString().padStart(2,'0')} ${ap}`;
   const logged = actualDrinkTimes.filter(t => t !== null).length;
-  document.getElementById('liveHourLbl').textContent  = `${logged} / ${drinkSchedule.length} drinks`;
+  document.getElementById('liveHourLbl').textContent  = sessionComplete
+    ? `${logged} drinks logged · complete`
+    : `${logged} / ${drinkSchedule.length} drinks`;
 }
 
 // ── Persistence ───────────────────────────────────────────────
@@ -790,7 +960,8 @@ function saveSession() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       sessionStartTs, plan, drinkSchedule, actualDrinkTimes,
-      hours, bacEnd, ag,
+      hours, bacEnd, ag, sessionComplete,
+      planSpacing, planOffsetHours, plannedEndpoint, planAchievable,
       profileName: document.getElementById('profileSelect').value,
       drinkOz:   document.getElementById('drinkOz').value,
       drinkAbv:  document.getElementById('drinkAbv').value,
@@ -804,32 +975,119 @@ function saveSession() {
 
 function clearSavedSession() { try { localStorage.removeItem(STORAGE_KEY); } catch(e) {} }
 
+function isValidRestoredSession(s) {
+  if (!s || typeof s !== 'object') return false;
+  if (!Number.isInteger(s.hours) || s.hours < 1 || s.hours > 8) return false;
+  if (s.sessionComplete !== undefined && typeof s.sessionComplete !== 'boolean') return false;
+  if (!Number.isFinite(s.sessionStartTs) || s.sessionStartTs > Date.now() + 5 * 60000) return false;
+  if (Date.now() > s.sessionStartTs + (s.hours + 1) * 3600000) return false;
+  if (!Number.isFinite(s.bacEnd) || s.bacEnd < 0 || s.bacEnd > 0.2) return false;
+  if (s.planSpacing !== undefined && (!Number.isFinite(s.planSpacing) || s.planSpacing < 0 || s.planSpacing > s.hours + 1e-6)) return false;
+  if (s.planOffsetHours !== undefined && (!Number.isFinite(s.planOffsetHours) || s.planOffsetHours < 0 || s.planOffsetHours > s.hours + 1e-6)) return false;
+  if (s.plannedEndpoint !== undefined && (!Number.isFinite(s.plannedEndpoint) || s.plannedEndpoint < 0)) return false;
+  if (s.planAchievable !== undefined && typeof s.planAchievable !== 'boolean') return false;
+  if (!Number.isFinite(s.ag) || s.ag <= 0 || s.ag > 1600 || !isValidProfile(s.profile)) return false;
+  if (typeof s.profileName !== 'string' || s.profileName !== s.profile.name) return false;
+  if (s.profileName.toLowerCase() === 'custom' && s.profileName !== 'custom') return false;
+  if (!Array.isArray(s.plan) || s.plan.length !== s.hours || s.plan.some(v => !Number.isInteger(v) || v < 0 || v > s.hours * MAX_SLOTS)) return false;
+  if (!Array.isArray(s.drinkSchedule) || s.drinkSchedule.length > s.hours * MAX_SLOTS || s.drinkSchedule.some(v => !Number.isFinite(v))) return false;
+  if (!Array.isArray(s.actualDrinkTimes) || s.actualDrinkTimes.length !== s.drinkSchedule.length || s.actualDrinkTimes.some(v => v !== null && !Number.isFinite(v))) return false;
+  const sessionEndTs = s.sessionStartTs + s.hours * 3600000;
+  if (s.sessionComplete === true && Date.now() < sessionEndTs) return false;
+  let previousScheduled = -Infinity;
+  let previousActual = -Infinity;
+  let reachedUnloggedDrink = false;
+  for (let index = 0; index < s.drinkSchedule.length; index += 1) {
+    const scheduled = s.drinkSchedule[index];
+    const actual = s.actualDrinkTimes[index];
+    if (scheduled < s.sessionStartTs || scheduled > sessionEndTs || scheduled < previousScheduled) return false;
+    previousScheduled = scheduled;
+    if (actual === null) {
+      reachedUnloggedDrink = true;
+      continue;
+    }
+    if (reachedUnloggedDrink
+        || actual < s.sessionStartTs
+        || actual > sessionEndTs
+        || actual > Date.now() + 60000
+        || actual < previousActual) return false;
+    previousActual = actual;
+  }
+  const reconstructedPlan = new Array(s.hours).fill(0);
+  s.drinkSchedule.forEach((scheduled, index) => {
+    const actual = s.actualDrinkTimes[index];
+    if (s.sessionComplete === true && actual === null) return;
+    const timestamp = actual === null ? scheduled : actual;
+    const hour = Math.max(0, Math.min(s.hours - 1, Math.floor((timestamp - s.sessionStartTs) / 3600000)));
+    reconstructedPlan[hour]++;
+  });
+  if (reconstructedPlan.some((count, hour) => count !== s.plan[hour])) return false;
+  if (!Number.isFinite(Number(s.drinkOz)) || Number(s.drinkOz) < 1 || Number(s.drinkOz) > 64) return false;
+  if (!Number.isFinite(Number(s.drinkAbv)) || Number(s.drinkAbv) < 0.5 || Number(s.drinkAbv) > 100) return false;
+  const restoredWeight = Number(s.weight);
+  if (s.profileName === 'custom' && (!Number.isFinite(restoredWeight) || (s.units === 'imperial'
+    ? restoredWeight < 80 || restoredWeight > 500
+    : restoredWeight < 36.3 || restoredWeight > 226.8))) return false;
+  return ['imperial','metric'].includes(s.units) && ['male','female'].includes(s.sex);
+}
+
 function loadSavedSession() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
     const s = JSON.parse(raw);
-    if ((Date.now() - s.sessionStartTs) / 3600000 > (s.hours + 1)) { clearSavedSession(); return false; }
+    if (s?.profile?.useWidmark === true) s.profile = { ...s.profile, risePerStd: null };
+    if (!isValidRestoredSession(s)) { clearSavedSession(); return false; }
+
+    const profileSelect = document.getElementById('profileSelect');
+    const restoredProfileName = typeof s.profileName === 'string' && s.profileName ? s.profileName : s.profile.name;
+    if (restoredProfileName !== 'custom') {
+      PROFILES[restoredProfileName] = { ...s.profile, name: restoredProfileName };
+    }
+    if (restoredProfileName && !findOptionByValue(profileSelect, restoredProfileName)) {
+      const option = document.createElement('option');
+      option.value = restoredProfileName;
+      option.textContent = restoredProfileName;
+      profileSelect.insertBefore(option, findOptionByValue(profileSelect, 'custom'));
+    }
 
     document.getElementById('drinkOz').value   = s.drinkOz;
     document.getElementById('drinkAbv').value  = s.drinkAbv;
     document.getElementById('duration').value  = s.hours;
     document.getElementById('durationVal').textContent = s.hours == 1 ? '1 hour' : `${s.hours} hours`;
     document.getElementById('bacEnd').value    = s.bacEnd;
-    document.getElementById('profileSelect').value = s.profileName || 'seeholmes';
-    if (s.weight) document.getElementById('weight').value = s.weight;
-    if (s.units)  { document.getElementById('units').value = s.units; document.getElementById('weightUnit').textContent = s.units === 'metric' ? 'kg' : 'lbs'; }
-    if (s.sex)    document.getElementById('sex').value = s.sex;
-    document.getElementById('customProfileFields').style.display = s.profileName === 'custom' ? 'block' : 'none';
+    profileSelect.value = restoredProfileName;
+    document.getElementById('weight').value = s.weight;
+    document.getElementById('units').value = s.units;
+    document.getElementById('units').dataset.previousUnits = s.units;
+    document.getElementById('weightUnit').textContent = s.units === 'metric' ? 'kg' : 'lbs';
+    document.getElementById('weight').min = s.units === 'metric' ? '36.3' : '80';
+    document.getElementById('weight').max = s.units === 'metric' ? '226.8' : '500';
+    document.getElementById('weight').step = s.units === 'metric' ? '0.1' : '1';
+    document.getElementById('sex').value = s.sex;
+    document.getElementById('customProfileFields').style.display = restoredProfileName === 'custom' ? 'block' : 'none';
 
     sessionStartTs   = s.sessionStartTs;
     plan             = s.plan;
-    drinkSchedule    = s.drinkSchedule || [];
-    actualDrinkTimes = s.actualDrinkTimes || new Array((s.drinkSchedule || []).length).fill(null);
+    drinkSchedule    = s.drinkSchedule;
+    actualDrinkTimes = s.actualDrinkTimes;
     hours            = s.hours;
     bacEnd           = s.bacEnd;
     ag               = s.ag;
     profile          = s.profile;
+    sessionComplete  = s.sessionComplete === true;
+    planSpacing      = Number.isFinite(s.planSpacing)
+      ? s.planSpacing
+      : (drinkSchedule.length > 1 ? (drinkSchedule[1] - drinkSchedule[0]) / 3600000 : 0);
+    planOffsetHours  = Number.isFinite(s.planOffsetHours)
+      ? s.planOffsetHours
+      : (drinkSchedule.length ? Math.max(0, (drinkSchedule[0] - sessionStartTs) / 3600000) : 0);
+    plannedEndpoint  = Number.isFinite(s.plannedEndpoint)
+      ? s.plannedEndpoint
+      : (simulate(plan, ag, profile)[hours - 1] ?? 0);
+    planAchievable   = typeof s.planAchievable === 'boolean'
+      ? s.planAchievable
+      : Math.abs(plannedEndpoint - bacEnd) <= 0.002;
     return true;
   } catch(e) { clearSavedSession(); return false; }
 }
@@ -850,16 +1108,22 @@ function activateSessionUI() {
 }
 
 function startSession() {
+  if (!validateConfig(true)) return;
   profile        = getActiveProfile();
   ag             = getAlcGrams();
-  bacEnd         = parseFloat(document.getElementById('bacEnd').value) || 0.04;
-  hours          = parseInt(document.getElementById('duration').value) || 4;
+  bacEnd         = parseFloat(document.getElementById('bacEnd').value);
+  hours          = Number(document.getElementById('duration').value);
   sessionActive  = true;
+  sessionComplete = false;
   sessionStartTs = Date.now();
 
   const result   = buildCruisePlan(ag, profile, hours, bacEnd);
   plan           = result.plan;
-  drinkSchedule  = initDrinkSchedule(result.n, sessionStartTs, hours * 3600000);
+  planSpacing    = result.spacing;
+  planOffsetHours = result.offsetHours;
+  plannedEndpoint = result.endpoint;
+  planAchievable = result.achievable;
+  drinkSchedule  = initDrinkSchedule(result, sessionStartTs);
   actualDrinkTimes = new Array(result.n).fill(null);
 
   activateSessionUI();
@@ -871,6 +1135,7 @@ function startSession() {
 
 function endSession() {
   sessionActive = false;
+  sessionComplete = false;
   clearInterval(clockInterval);
   clearSavedSession();
   CONFIG_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = false; });
@@ -878,13 +1143,30 @@ function endSession() {
   document.getElementById('endBtn').style.display   = 'none';
   document.getElementById('liveBacBar').classList.remove('visible');
   document.getElementById('planLabel').textContent  = 'Flight Plan';
+  document.getElementById('duration').disabled = false;
   actualDrinkTimes = new Array(drinkSchedule.length).fill(null);
   update();
 }
 
 // ── Events ────────────────────────────────────────────────────
 document.getElementById('duration').addEventListener('input', function() {
-  hours = parseInt(this.value) || 4;
+  let requestedHours = Number(this.value);
+  if (sessionActive && !sessionComplete) {
+    const elapsedHours = Math.max(0, (Date.now() - sessionStartTs) / 3600000);
+    if (elapsedHours >= hours) {
+      this.value = String(hours);
+      updateLiveBac();
+      renderTimeline();
+      return;
+    }
+    const minimumDuration = Math.min(8, Math.floor(elapsedHours) + 1);
+    if (requestedHours < minimumDuration) {
+      requestedHours = minimumDuration;
+      this.value = String(minimumDuration);
+      showWarn(`Duration cannot end before the current session hour (${minimumDuration}h).`);
+    }
+  }
+  hours = requestedHours;
   document.getElementById('durationVal').textContent = hours == 1 ? '1 hour' : `${hours} hours`;
   if (sessionActive) {
     recalcFromNow();
@@ -903,6 +1185,7 @@ let fasted = false;
 function toggleFasted() {
   fasted = !fasted;
   const box = document.getElementById('fastedBox'), warn = document.getElementById('fastedWarning');
+  document.getElementById('fastedToggle').setAttribute('aria-pressed', String(fasted));
   box.style.background  = fasted ? 'var(--amber)' : 'transparent';
   box.style.borderColor = fasted ? 'var(--amber)' : 'var(--muted)';
   box.textContent       = fasted ? '✓' : '';
@@ -924,12 +1207,12 @@ document.addEventListener('visibilitychange', () => {
 
 // ── Theme system (shared with zone.html) ──────────────────────
 const THEMES = {
-  cosmos:    { name:'Cosmos',    dark:true,  '--space':'#08090d','--deep':'#0e1018','--surface':'#13151f','--border':'#1e2130','--text':'#e8e0cc','--muted':'#5a5570','--logo-a':'#7eb8ff','--logo-b':'#5a9aee','--logo-c':'#52e09c','--accent':'#7eb8ff','--accent2':'#5a9aee', },
-  navy:      { name:'Navy',      dark:true,  '--space':'#0d1117','--deep':'#010409','--surface':'#161b22','--border':'#21262d','--text':'#e6edf3','--muted':'#484f58','--logo-a':'#7eb8ff','--logo-b':'#5a9aee','--logo-c':'#52e09c','--accent':'#7eb8ff','--accent2':'#5a9aee', },
-  espresso:  { name:'Espresso',  dark:true,  '--space':'#120e0a','--deep':'#0a0705','--surface':'#1c1510','--border':'#2e2218','--text':'#e8ddd0','--muted':'#6a5040','--logo-a':'#7eb8ff','--logo-b':'#5a9aee','--logo-c':'#52e09c','--accent':'#7eb8ff','--accent2':'#5a9aee', },
-  parchment: { name:'Parchment', dark:false, '--space':'#f5f0e8','--deep':'#ede8de','--surface':'#ffffff','--border':'#e0d8cc','--text':'#2a2420','--muted':'#a09088','--logo-a':'#3a80d4','--logo-b':'#5a9aee','--logo-c':'#2a9a6a','--accent':'#3a80d4','--accent2':'#2a6ab0', },
-  honey:     { name:'Honey',     dark:false, '--space':'#fdf4e3','--deep':'#f8edd8','--surface':'#fff8ec','--border':'#f0dab0','--text':'#3a2808','--muted':'#c09050','--logo-a':'#3a80d4','--logo-b':'#5a9aee','--logo-c':'#2a9a6a','--accent':'#3a80d4','--accent2':'#2a6ab0', },
-  slate:     { name:'Slate',     dark:false, '--space':'#eef2f8','--deep':'#e4eaf4','--surface':'#ffffff','--border':'#d0dcee','--text':'#1a2840','--muted':'#8090b0','--logo-a':'#3a80d4','--logo-b':'#5a9aee','--logo-c':'#2a9a6a','--accent':'#3a80d4','--accent2':'#2a6ab0', },
+  cosmos:    { name:'Cosmos',    dark:true,  '--space':'#08090d','--deep':'#0e1018','--surface':'#13151f','--border':'#1e2130','--text':'#e8e0cc','--muted':'#aaa3bb','--logo-a':'#7eb8ff','--logo-b':'#5a9aee','--logo-c':'#52e09c','--accent':'#7eb8ff','--accent2':'#5a9aee', },
+  navy:      { name:'Navy',      dark:true,  '--space':'#0d1117','--deep':'#010409','--surface':'#161b22','--border':'#21262d','--text':'#e6edf3','--muted':'#aab3bd','--logo-a':'#7eb8ff','--logo-b':'#5a9aee','--logo-c':'#52e09c','--accent':'#7eb8ff','--accent2':'#5a9aee', },
+  espresso:  { name:'Espresso',  dark:true,  '--space':'#120e0a','--deep':'#0a0705','--surface':'#1c1510','--border':'#2e2218','--text':'#e8ddd0','--muted':'#b29a88','--logo-a':'#7eb8ff','--logo-b':'#5a9aee','--logo-c':'#52e09c','--accent':'#7eb8ff','--accent2':'#5a9aee', },
+  parchment: { name:'Parchment', dark:false, '--space':'#f5f0e8','--deep':'#ede8de','--surface':'#ffffff','--border':'#e0d8cc','--text':'#2a2420','--muted':'#6f625b','--logo-a':'#3a80d4','--logo-b':'#5a9aee','--logo-c':'#2a9a6a','--accent':'#3a80d4','--accent2':'#2a6ab0', },
+  honey:     { name:'Honey',     dark:false, '--space':'#fdf4e3','--deep':'#f8edd8','--surface':'#fff8ec','--border':'#f0dab0','--text':'#3a2808','--muted':'#735421','--logo-a':'#3a80d4','--logo-b':'#5a9aee','--logo-c':'#2a9a6a','--accent':'#3a80d4','--accent2':'#2a6ab0', },
+  slate:     { name:'Slate',     dark:false, '--space':'#eef2f8','--deep':'#e4eaf4','--surface':'#ffffff','--border':'#d0dcee','--text':'#1a2840','--muted':'#5d6c88','--logo-a':'#3a80d4','--logo-b':'#5a9aee','--logo-c':'#2a9a6a','--accent':'#3a80d4','--accent2':'#2a6ab0', },
 };
 const THEME_KEY = 'goldilocks_theme';
 
@@ -937,19 +1220,27 @@ function applyTheme(id) {
   const t = THEMES[id] || THEMES.cosmos;
   const root = document.documentElement;
   ['--space','--deep','--surface','--border','--text','--muted'].forEach(v => root.style.setProperty(v, t[v]));
+  const primaryAccent = t.dark ? t['--accent'] : '#245f9e';
+  const secondaryAccent = t.dark ? t['--accent2'] : '#325c98';
   const logoGrad = `linear-gradient(135deg,${t['--logo-a']} 0%,${t['--logo-b']} 50%,${t['--logo-c']} 100%)`;
   document.querySelectorAll('.logo').forEach(el => el.style.backgroundImage = logoGrad);
-  root.style.setProperty('--blue',  t['--accent']);
-  root.style.setProperty('--blue2', t['--accent2']);
+  root.style.setProperty('--blue',  primaryAccent);
+  root.style.setProperty('--blue2', secondaryAccent);
+  root.style.setProperty('--gold', t.dark ? '#f5c842' : '#765000');
+  root.style.setProperty('--gold2', t.dark ? '#e8a020' : '#654300');
+  root.style.setProperty('--amber', t.dark ? '#ff8c3a' : '#8a3f00');
+  root.style.setProperty('--danger', t.dark ? '#ff5a5a' : '#a12626');
   const bar = document.getElementById('liveBacBar');
   if (bar) bar.style.background = t['--space'] + 'f2';
   const style = document.getElementById('themeSliderStyle') || (() => {
     const s = document.createElement('style'); s.id = 'themeSliderStyle'; document.head.appendChild(s); return s;
   })();
-  style.textContent = `input[type="range"]::-webkit-slider-thumb { background: ${t['--accent']} !important; box-shadow: 0 0 10px ${t['--accent']}80 !important; }`;
+  style.textContent = `input[type="range"]::-webkit-slider-thumb { background: ${primaryAccent} !important; box-shadow: 0 0 10px ${primaryAccent}80 !important; }`;
   document.querySelectorAll('.theme-swatch').forEach(sw => {
-    sw.style.outline = sw.dataset.theme === id ? `2px solid ${t['--accent']}` : 'none';
-    sw.style.outlineOffset = '2px';
+    const selected = sw.dataset.theme === id;
+    sw.style.outline = '';
+    sw.style.boxShadow = selected ? `0 0 0 2px ${t['--space']}, 0 0 0 4px ${primaryAccent}` : 'none';
+    sw.setAttribute('aria-pressed', String(selected));
   });
   try { localStorage.setItem(THEME_KEY, id); } catch(e) {}
 }
@@ -957,10 +1248,20 @@ function applyTheme(id) {
 function renderThemePicker() {
   const el = document.getElementById('themePicker');
   if (!el) return;
-  el.innerHTML = Object.entries(THEMES).map(([id, t]) =>
-    `<div class="theme-swatch" data-theme="${id}" onclick="applyTheme('${id}')" title="${t.name}"
-      style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,${t['--logo-a']},${t['--logo-b']});border:2px solid ${t['--border']};cursor:pointer;flex-shrink:0;transition:transform 0.15s" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"></div>`
-  ).join('');
+  el.replaceChildren();
+  Object.entries(THEMES).forEach(([id, t]) => {
+    const swatch = document.createElement('button');
+    swatch.type = 'button';
+    swatch.className = 'theme-swatch';
+    swatch.dataset.theme = id;
+    swatch.title = t.name;
+    swatch.setAttribute('aria-label', `Use ${t.name} theme`);
+    swatch.setAttribute('aria-pressed', 'false');
+    swatch.style.background = `linear-gradient(135deg,${t['--logo-a']},${t['--logo-b']})`;
+    swatch.style.border = `2px solid ${t['--border']}`;
+    swatch.addEventListener('click', () => applyTheme(id));
+    el.appendChild(swatch);
+  });
 }
 
 function loadTheme() {
@@ -972,8 +1273,8 @@ function loadTheme() {
 // ── Init ──────────────────────────────────────────────────────
 (function init() {
   loadCalibratedProfiles();
-  loadTheme();
   renderThemePicker();
+  loadTheme();
   const restored = loadSavedSession();
   if (restored) {
     sessionActive = true;
@@ -982,7 +1283,12 @@ function loadTheme() {
     update();
     updateLiveBac();
     renderTimeline();
-    clockInterval = setInterval(() => { updateLiveBac(); renderTimeline(); }, 10000);
+    if (!sessionComplete) {
+      clockInterval = setInterval(() => { updateLiveBac(); renderTimeline(); }, 10000);
+    } else {
+      document.getElementById('planLabel').textContent = 'Session Complete';
+      document.getElementById('duration').disabled = true;
+    }
     const toast = document.createElement('div');
     toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(126,184,255,0.12);border:1px solid rgba(126,184,255,0.4);color:var(--blue);font-family:Space Mono,monospace;font-size:10px;letter-spacing:0.1em;padding:10px 18px;border-radius:8px;z-index:999;text-transform:uppercase;';
     toast.textContent = '⊹ Session restored';
