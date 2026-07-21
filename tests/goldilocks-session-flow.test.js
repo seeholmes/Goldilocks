@@ -24,6 +24,80 @@ test('finds the next and latest logged Pace entries', () => {
   assert.equal(flow.paceLastLoggedIndex([null, null]), -1);
 });
 
+test('keeps future Pace slots anchored after early logs and shifts only when needed', () => {
+  const startAt = 1_000_000;
+  const cadenceMs = 45 * 60_000;
+  const endAt = startAt + 270 * 60_000;
+  const schedule = Array.from({ length: 6 }, (_, index) => startAt + index * cadenceMs);
+
+  const afterTwoEarlyLogs = flow.paceReconcileSchedule(
+    schedule,
+    [startAt + 1_000, startAt + 2_000, null, null, null, null],
+    { cadenceMs, endAt }
+  );
+  assert.equal(afterTwoEarlyLogs.drinkSchedule[2], startAt + 90 * 60_000);
+  assert.equal(afterTwoEarlyLogs.drinkSchedule.length, 6);
+  assert.equal(afterTwoEarlyLogs.actualDrinkTimes.filter(value => value === null).length, 4);
+
+  let rapidSchedule = schedule.slice();
+  let rapidActuals = new Array(schedule.length).fill(null);
+  for (let index = 0; index < schedule.length; index += 1) {
+    rapidActuals[index] = startAt + index * 1_000;
+    const reconciled = flow.paceReconcileSchedule(rapidSchedule, rapidActuals, { cadenceMs, endAt });
+    rapidSchedule = reconciled.drinkSchedule;
+    rapidActuals = reconciled.actualDrinkTimes;
+    assert.equal(rapidActuals.filter(value => value === null).length, schedule.length - index - 1);
+    assert.ok(rapidSchedule.length <= schedule.length);
+    if (index + 1 < schedule.length) assert.ok(rapidSchedule[index + 1] >= schedule[index + 1]);
+  }
+
+  const afterLateSecondLog = flow.paceReconcileSchedule(
+    schedule,
+    [startAt, startAt + 100 * 60_000, null, null, null, null],
+    { cadenceMs, endAt }
+  );
+  assert.deepEqual(
+    afterLateSecondLog.drinkSchedule.slice(2).map(value => (value - startAt) / 60_000),
+    [145, 190, 235]
+  );
+  assert.equal(afterLateSecondLog.drinkSchedule.length, 5);
+
+  const recalculatedOverdue = flow.paceReconcileSchedule(
+    schedule,
+    [startAt, null, null, null, null, null],
+    { cadenceMs, endAt, fromAt: startAt + 100 * 60_000 }
+  );
+  assert.deepEqual(
+    recalculatedOverdue.drinkSchedule.slice(1).map(value => (value - startAt) / 60_000),
+    [100, 145, 190, 235]
+  );
+  assert.ok(recalculatedOverdue.drinkSchedule.length <= schedule.length);
+
+  const shortenedAfterRapidLogs = flow.paceReconcileSchedule(
+    schedule,
+    [startAt + 1_000, startAt + 2_000, startAt + 3_000, null, null, null],
+    { cadenceMs, endAt: startAt + 60 * 60_000 }
+  );
+  assert.deepEqual(
+    shortenedAfterRapidLogs.drinkSchedule.map(value => (value - startAt) / 60_000),
+    [0, 45, 60]
+  );
+  assert.deepEqual(
+    shortenedAfterRapidLogs.actualDrinkTimes,
+    [startAt + 1_000, startAt + 2_000, startAt + 3_000]
+  );
+
+  const undoActuals = afterLateSecondLog.actualDrinkTimes.slice();
+  undoActuals[1] = null;
+  while (undoActuals.length < schedule.length) undoActuals.push(null);
+  const restoredByUndo = flow.paceReconcileSchedule(
+    schedule,
+    undoActuals,
+    { cadenceMs, endAt }
+  );
+  assert.deepEqual(restoredByUndo.drinkSchedule, schedule);
+});
+
 test('describes upcoming, due, overdue, and missing deadlines', () => {
   const now = 1_000_000;
   assert.deepEqual(flow.describeDeadline(now + 45 * 60_000, now), {

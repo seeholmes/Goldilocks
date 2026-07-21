@@ -145,7 +145,7 @@ test('Zone and Pace load the shared Phase 2 session-flow assets', () => {
     );
     assert.match(
       html,
-      /<script\b[^>]*\bsrc="goldilocks-session-flow\.js"[^>]*><\/script>/i,
+      /<script\b[^>]*\bsrc="goldilocks-session-flow\.js(?:\?[^\"]+)?"[^>]*><\/script>/i,
       `${page} must load goldilocks-session-flow.js`
     );
   }
@@ -212,7 +212,7 @@ test('Zone and Pace provide distinct finish, discard, undo, edit, and reconcilia
     },
     'goldilocks-cruise.html': {
       functions: ['finishSession', 'discardSession', 'undoLatestDrink', 'editLoggedDrink', 'recalcFromNow'],
-      sharedCalls: ['paceLastLoggedIndex', 'validatePaceTimestamp', 'describeDeadline'],
+      sharedCalls: ['paceNextIndex', 'validatePaceTimestamp', 'describeDeadline'],
       confirmation: 'requestSessionAction',
       reset: 'resetSessionToPlanning',
     },
@@ -247,14 +247,32 @@ test('Zone and Pace provide distinct finish, discard, undo, edit, and reconcilia
   const paceRecalc = functionSource(read('goldilocks-cruise.html'), 'recalcFromNow');
   assert.match(
     paceRecalc,
-    /lastActualOffset\s*\+\s*planSpacing/,
-    'Pace replanning must preserve a full interval after the latest logged drink'
+    /GoldilocksSessionFlow\.paceReconcileSchedule\s*\(/,
+    'Pace must reconcile the active slot schedule without recreating it'
   );
   assert.match(
     paceRecalc,
-    /buildCruiseReplan\([\s\S]*nextDrinkNotBeforeHours\s*,\s*planSpacing\s*\)/,
-    'Pace must pass its next allowed drink time and cadence into the shared replanner'
+    /sessionCadenceHours\s*\*\s*3600000/,
+    'Pace must preserve its immutable session cadence'
   );
+  assert.match(
+    paceRecalc,
+    /paceReconcileSchedule\(\s*drinkSchedule\s*,\s*actualDrinkTimes\s*,/,
+    'normal Pace reconciliation must start from the current schedule'
+  );
+  assert.doesNotMatch(paceRecalc, /buildCruiseReplan\s*\(/, 'active Pace logs must not recreate drinks to chase the endpoint reference');
+  assert.doesNotMatch(paceRecalc, /planSpacing\s*=/, 'active Pace reconciliation must not rewrite the displayed cadence');
+
+  const paceUndo = functionSource(read('goldilocks-cruise.html'), 'undoLatestDrink');
+  assert.match(
+    paceUndo,
+    /drinkSchedule\s*=\s*change\.drinkSchedule\.slice\(\)/,
+    'Pace Undo must restore the exact schedule from before the latest log'
+  );
+  assert.match(paceUndo, /lastPaceLogChange\s*=\s*null/, 'Pace must provide one-step Undo without replaying older changes');
+
+  const paceOverdue = functionSource(read('goldilocks-cruise.html'), 'recalculateScheduleFromNow');
+  assert.match(paceOverdue, /recalcFromNow\(\{\s*fromAt:\s*Date\.now\(\)\s*\}\)/, 'only explicit overdue recalculation may advance the next slot to now');
 });
 
 test('planner BAC copy does not present a selected target as safe or nudge consumption', () => {
@@ -344,8 +362,8 @@ test('Pace branding is consistent while legacy compatibility remains', () => {
 
 test('Mission Control inspects resumable sessions without mutating them', () => {
   const html = read('index.html');
-  const coreIndex = html.indexOf('<script src="goldilocks-core.js"></script>');
-  const stateIndex = html.indexOf('<script src="goldilocks-session-state.js"></script>');
+  const coreIndex = html.search(/<script src="goldilocks-core\.js(?:\?[^\"]+)?"><\/script>/);
+  const stateIndex = html.search(/<script src="goldilocks-session-state\.js(?:\?[^\"]+)?"><\/script>/);
   assert.ok(coreIndex >= 0 && stateIndex > coreIndex, 'calculation core must load before session inspection');
   assert.match(html, /id="resumeSection"/);
   assert.match(html, /GoldilocksSessionState\.inspectStorage\s*\(/);

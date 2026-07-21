@@ -263,8 +263,12 @@
       return modeResult('pace', 'corrupt', 'invalid-completion');
     }
     if (session.planSpacing !== undefined
-        && (!Number.isFinite(session.planSpacing) || session.planSpacing < 0 || session.planSpacing > durationMinutes / 60 + 1e-6)) {
+        && (!Number.isFinite(session.planSpacing) || session.planSpacing < 0 || session.planSpacing > 8 + 1e-6)) {
       return modeResult('pace', 'corrupt', 'invalid-spacing');
+    }
+    if (session.sessionCadenceHours !== undefined
+        && (!Number.isFinite(session.sessionCadenceHours) || session.sessionCadenceHours < 0 || session.sessionCadenceHours > 8 + 1e-6)) {
+      return modeResult('pace', 'corrupt', 'invalid-cadence');
     }
     if (session.planOffsetHours !== undefined
         && (!Number.isFinite(session.planOffsetHours) || session.planOffsetHours < 0 || session.planOffsetHours > durationMinutes / 60 + 1e-6)) {
@@ -300,6 +304,47 @@
         return modeResult('pace', 'corrupt', 'invalid-log');
       }
       previousActual = actual;
+    }
+    if (session.lastPaceLogChange !== undefined && session.lastPaceLogChange !== null) {
+      const change = session.lastPaceLogChange;
+      if (!isRecord(change)
+          || !Number.isInteger(change.index) || change.index < 0
+          || !Number.isFinite(change.changedAt) || change.changedAt < session.sessionStartTs || change.changedAt > now + MINUTE_MS
+          || !Array.isArray(change.drinkSchedule) || !Array.isArray(change.actualDrinkTimes)
+          || change.drinkSchedule.length !== change.actualDrinkTimes.length
+          || change.drinkSchedule.length < session.drinkSchedule.length
+          || change.drinkSchedule.length > 48
+          || change.index >= change.drinkSchedule.length
+          || change.actualDrinkTimes[change.index] !== null
+          || !Number.isFinite(session.actualDrinkTimes[change.index])) {
+        return modeResult('pace', 'corrupt', 'invalid-undo');
+      }
+      let previousChangeSchedule = -Infinity;
+      let previousChangeActual = -Infinity;
+      let reachedUnloggedChange = false;
+      for (let index = 0; index < change.drinkSchedule.length; index += 1) {
+        const scheduled = change.drinkSchedule[index];
+        const actual = change.actualDrinkTimes[index];
+        if (!Number.isFinite(scheduled)
+            || scheduled < session.sessionStartTs
+            || scheduled > scheduledEndAt
+            || scheduled < previousChangeSchedule) {
+          return modeResult('pace', 'corrupt', 'invalid-undo-schedule');
+        }
+        previousChangeSchedule = scheduled;
+        if (actual === null) {
+          reachedUnloggedChange = true;
+        } else if (!Number.isFinite(actual)
+            || reachedUnloggedChange
+            || actual < session.sessionStartTs
+            || actual > scheduledEndAt
+            || actual > now + MINUTE_MS
+            || actual < previousChangeActual) {
+          return modeResult('pace', 'corrupt', 'invalid-undo-log');
+        } else {
+          previousChangeActual = actual;
+        }
+      }
     }
 
     const reconstructedPlan = new Array(bucketCount).fill(0);

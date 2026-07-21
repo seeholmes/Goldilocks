@@ -34,6 +34,72 @@
     return -1;
   }
 
+  function paceReconcileSchedule(drinkSchedule, actualDrinkTimes, options = {}) {
+    if (!Array.isArray(drinkSchedule)
+        || !Array.isArray(actualDrinkTimes)
+        || drinkSchedule.length !== actualDrinkTimes.length) {
+      throw new TypeError('Pace schedule and log must be matching arrays.');
+    }
+    const cadenceMs = Number(options.cadenceMs);
+    const endAt = Number(options.endAt);
+    const hasFromAt = options.fromAt !== undefined && options.fromAt !== null;
+    const fromAt = hasFromAt ? Number(options.fromAt) : null;
+    if (!Number.isFinite(cadenceMs) || cadenceMs < 0 || !Number.isFinite(endAt)
+        || (hasFromAt && !Number.isFinite(fromAt))) {
+      throw new RangeError('Pace reconciliation requires a valid cadence and session end.');
+    }
+
+    let previousSchedule = -Infinity;
+    let reachedUnlogged = false;
+    for (let index = 0; index < drinkSchedule.length; index += 1) {
+      const scheduled = drinkSchedule[index];
+      const actual = actualDrinkTimes[index];
+      if (!Number.isFinite(scheduled) || scheduled < previousSchedule) {
+        throw new RangeError('Pace targets must be finite and ordered.');
+      }
+      if (unresolved(actual)) {
+        reachedUnlogged = true;
+      } else if (!Number.isFinite(actual) || reachedUnlogged) {
+        throw new RangeError('Pace logs must be a finite completed prefix.');
+      }
+      previousSchedule = scheduled;
+    }
+
+    const nextIndex = paceNextIndex(actualDrinkTimes);
+    const completedCount = nextIndex < 0 ? drinkSchedule.length : nextIndex;
+    // A shortened session can end before an early-completed slot's original
+    // target. Keep the historical slot ordered, but inside the persisted
+    // session bounds; the UI displays its actual timestamp once completed.
+    const reconciledSchedule = drinkSchedule
+      .slice(0, completedCount)
+      .map(target => Math.min(target, endAt));
+    const reconciledActuals = actualDrinkTimes.slice(0, completedCount);
+    if (nextIndex < 0) {
+      return {
+        drinkSchedule: reconciledSchedule,
+        actualDrinkTimes: reconciledActuals,
+      };
+    }
+
+    let earliest = hasFromAt ? fromAt : -Infinity;
+    if (nextIndex > 0) {
+      earliest = Math.max(earliest, actualDrinkTimes[nextIndex - 1] + cadenceMs);
+    }
+
+    for (let index = nextIndex; index < drinkSchedule.length; index += 1) {
+      const target = Math.max(drinkSchedule[index], earliest);
+      if (target > endAt) break;
+      reconciledSchedule.push(target);
+      reconciledActuals.push(null);
+      earliest = target + cadenceMs;
+    }
+
+    return {
+      drinkSchedule: reconciledSchedule,
+      actualDrinkTimes: reconciledActuals,
+    };
+  }
+
   function formatMinutes(minutes) {
     const rounded = Math.max(0, Math.round(Math.abs(minutes)));
     const hours = Math.floor(rounded / 60);
@@ -93,6 +159,7 @@
     zoneUnresolvedHours,
     paceNextIndex,
     paceLastLoggedIndex,
+    paceReconcileSchedule,
     formatMinutes,
     describeDeadline,
     validatePaceTimestamp,

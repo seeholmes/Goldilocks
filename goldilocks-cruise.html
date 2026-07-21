@@ -357,7 +357,7 @@
       <div class="review-item"><div class="review-value" id="reviewStart">—</div><div class="review-label">Start</div></div>
       <div class="review-item"><div class="review-value" id="reviewEnd">—</div><div class="review-label">End</div></div>
       <div class="review-item"><div class="review-value" id="reviewDuration">—</div><div class="review-label">Duration</div></div>
-      <div class="review-item"><div class="review-value" id="summaryTotal">—</div><div class="review-label">Planned drinks</div></div>
+      <div class="review-item"><div class="review-value" id="summaryTotal">—</div><div class="review-label" id="summaryTotalLabel">Planned drinks</div></div>
       <div class="review-item"><div class="review-value" id="summarySpacing">—</div><div class="review-label">Spacing</div></div>
       <div class="review-item"><div class="review-value" id="summaryEnding">—</div><div class="review-label">Estimated BAC at end</div></div>
       <div class="review-item"><div class="review-value" id="summaryPeak">—</div><div class="review-label">Estimated peak BAC</div></div>
@@ -439,7 +439,7 @@
 
 <script src="goldilocks-presets.js"></script>
 <script src="goldilocks-core.js?v=20260721-pace-cadence"></script>
-<script src="goldilocks-session-flow.js"></script>
+<script src="goldilocks-session-flow.js?v=20260721-pace-slots"></script>
 <script>
 // ── Profiles ──────────────────────────────────────────────────
 const PROFILES = {
@@ -467,6 +467,7 @@ let sessionStartTs   = null;
 let plan             = [];   // hourly drink counts (for BAC simulation)
 let drinkSchedule    = [];   // per-drink timestamps (planned)
 let actualDrinkTimes = [];   // per-drink timestamps (actual), null if not yet logged
+let lastPaceLogChange = null;
 let ag               = 0;
 let profile          = PROFILES.seeholmes;
 let bacEnd           = 0.04;
@@ -474,6 +475,7 @@ let durationMinutes  = 240;
 let clockInterval    = null;
 let sessionComplete  = false;
 let planSpacing      = 0;
+let sessionCadenceHours = 0;
 let planOffsetHours  = 0;
 let plannedEndpoint  = 0;
 let planAchievable   = true;
@@ -485,6 +487,7 @@ let initialProjectedEnd  = 0;
 let initialPeakBac       = 0;
 let previewInterval      = null;
 let renderedLogSignature = null;
+let needsPaceScheduleMigration = false;
 
 // ── Profile helpers ───────────────────────────────────────────
 function getActiveProfile() {
@@ -802,6 +805,7 @@ function renderPreStartReview(result, previewStart, trace) {
   const peakElement = document.getElementById('summaryPeak');
   peakElement.textContent = peak.toFixed(3);
   peakElement.style.color = clrBac(peak);
+  document.getElementById('summaryTotalLabel').textContent = 'Planned drinks';
   document.getElementById('summaryTotal').textContent = result.n > 0 ? String(result.n) : '0';
   document.getElementById('summarySpacing').textContent = result.n > 1 ? fmtSpacing(result.spacing) : '—';
   document.getElementById('summaryEnding').textContent = result.endpoint.toFixed(3);
@@ -844,6 +848,7 @@ function editLoggedDrink(index, input) {
   }
   input.setCustomValidity('');
   setLogEditorError('');
+  lastPaceLogChange = null;
   actualDrinkTimes[index] = candidate;
   recalcFromNow();
   showWarn(`Drink ${index + 1} time updated — remaining schedule recalculated`);
@@ -923,7 +928,7 @@ function renderActiveSession() {
   document.getElementById('activeProjectedBac').textContent = projectedBac.toFixed(3);
   document.getElementById('activeLoggedCount').textContent = String(loggedCount);
   document.getElementById('logNowBtn').disabled = nextIndex < 0;
-  document.getElementById('undoLatestBtn').disabled = loggedCount === 0;
+  document.getElementById('undoLatestBtn').disabled = !lastPaceLogChange;
   document.getElementById('recalculateNowBtn').disabled = nextIndex < 0 || deadline.state !== 'overdue';
   refreshLogEditor();
 }
@@ -1077,7 +1082,13 @@ function update() {
   const projEnd  = sessionActive ? (trace.at(-1) ?? 0) : result.endpoint;
 
   const loggedTotal = actualDrinkTimes.filter(t => t !== null).length;
-  document.getElementById('summaryTotal').textContent   = sessionComplete ? loggedTotal : (total > 0 ? total : '0');
+  const remainingTotal = actualDrinkTimes.length - loggedTotal;
+  document.getElementById('summaryTotalLabel').textContent = sessionComplete
+    ? 'Drinks logged'
+    : (sessionActive ? 'Drinks remaining' : 'Planned drinks');
+  document.getElementById('summaryTotal').textContent = sessionComplete
+    ? loggedTotal
+    : (sessionActive ? remainingTotal : (total > 0 ? total : '0'));
   document.getElementById('summarySpacing').textContent = !sessionComplete && total > 1 ? fmtSpacing(result.spacing) : '—';
   document.getElementById('summaryEnding').textContent  = projEnd.toFixed(3);
   document.getElementById('summaryPeak').textContent = Math.max(0, ...trace).toFixed(3);
@@ -1115,50 +1126,56 @@ function update() {
 }
 
 // ── Recalc from current state ─────────────────────────────────
-// Called after logging a drink OR changing duration mid-session.
-// Re-derives how many drinks are still needed and rebuilds the schedule.
-function recalcFromNow() {
+// Rebuild the hourly BAC projection from logged times and remaining targets.
+function rebuildActivePacePlan() {
+  const bucketCount = getDurationBucketCount();
+  plan = new Array(bucketCount).fill(0);
+  drinkSchedule.forEach((scheduled, index) => {
+    const actual = actualDrinkTimes[index];
+    const timestamp = actual === null ? scheduled : actual;
+    const bucket = Math.max(
+      0,
+      Math.min(bucketCount - 1, Math.floor((timestamp - sessionStartTs) / 3600000))
+    );
+    plan[bucket]++;
+  });
+  const trace = simulateCruise(plan, ag, profile);
+  plannedEndpoint = trace.at(-1) ?? 0;
+  planAchievable = Math.abs(plannedEndpoint - bacEnd) <= GoldilocksCore.CRUISE_ENDPOINT_TOLERANCE;
+  planOffsetHours = drinkSchedule.length
+    ? Math.max(0, (drinkSchedule[0] - sessionStartTs) / 3600000)
+    : 0;
+}
+
+// Keep active slots anchored. Early logs never pull later targets forward;
+// late logs and explicit overdue recalculation may move them later or drop them.
+function recalcFromNow(options = {}) {
   if (!sessionActive || sessionComplete) return;
-  const now          = Date.now();
-  const durationHours = getDurationHours();
-  const elapsedHours = Math.max(0, Math.min(durationHours, (now - sessionStartTs) / 3600000));
-
-  // Collect actual logged times
-  const doneTimes = actualDrinkTimes.filter(t => t !== null).sort((a, b) => a - b);
-  const actualOffsets = doneTimes.map(timestamp => (timestamp - sessionStartTs) / 3600000);
-  const lastActualOffset = actualOffsets.at(-1);
-  const pacedNextOffset = Number.isFinite(lastActualOffset) && planSpacing > 0
-    ? lastActualOffset + planSpacing
-    : elapsedHours;
-  const nextDrinkNotBeforeHours = Math.min(
-    durationHours,
-    Math.max(elapsedHours, pacedNextOffset)
+  const reconciled = GoldilocksSessionFlow.paceReconcileSchedule(
+    drinkSchedule,
+    actualDrinkTimes,
+    {
+      cadenceMs: sessionCadenceHours * 3600000,
+      endAt: getSessionEndTs(),
+      fromAt: Number.isFinite(options.fromAt) ? options.fromAt : null,
+    }
   );
-  const result = GoldilocksCore.buildCruiseReplan(
-    ag,
-    profile,
-    durationHours,
-    bacEnd,
-    elapsedHours,
-    actualOffsets,
-    MAX_SLOTS,
-    nextDrinkNotBeforeHours,
-    planSpacing
-  );
-  const n_rem = result.n;
-  const futureTs = result.futureOffsets.map(offset => sessionStartTs + offset * 3600000);
-  planSpacing = result.spacing;
-  planOffsetHours = result.offsetHours;
+  drinkSchedule = reconciled.drinkSchedule;
+  actualDrinkTimes = reconciled.actualDrinkTimes;
+  rebuildActivePacePlan();
 
-  drinkSchedule    = [...doneTimes, ...futureTs];
-  actualDrinkTimes = [...doneTimes, ...new Array(n_rem).fill(null)];
-  plan = result.plan;
+  while (actualDrinkTimes.at(-1) === null
+      && plannedEndpoint > bacEnd + GoldilocksCore.CRUISE_ENDPOINT_TOLERANCE) {
+    drinkSchedule.pop();
+    actualDrinkTimes.pop();
+    rebuildActivePacePlan();
+  }
 
   // Refresh summary pills
-  const projEnd = result.endpoint;
-  plannedEndpoint = result.endpoint;
-  planAchievable = result.achievable;
-  document.getElementById('summaryTotal').textContent   = drinkSchedule.length;
+  const n_rem = actualDrinkTimes.filter(timestamp => timestamp === null).length;
+  const projEnd = plannedEndpoint;
+  document.getElementById('summaryTotalLabel').textContent = 'Drinks remaining';
+  document.getElementById('summaryTotal').textContent   = n_rem;
   document.getElementById('summarySpacing').textContent = planSpacing > 0 ? fmtSpacing(planSpacing) : '—';
   document.getElementById('summaryEnding').textContent  = projEnd.toFixed(3);
 
@@ -1187,8 +1204,14 @@ function logDrink(i) {
   const earlyMs   = scheduled - now;
   if (earlyMs > 5 * 60 * 1000) {
     const mins = Math.round(earlyMs / 60000);
-    showWarn(`Drink ${i + 1} logged ${mins}m early — remaining drinks adjusted`);
+    showWarn(`Drink ${i + 1} logged ${mins}m early — later targets will not move earlier`);
   }
+  lastPaceLogChange = {
+    index: i,
+    changedAt: now,
+    drinkSchedule: drinkSchedule.slice(),
+    actualDrinkTimes: actualDrinkTimes.slice(),
+  };
   actualDrinkTimes[i] = now;
   recalcFromNow();
 }
@@ -1199,19 +1222,21 @@ function logNextDrinkNow() {
 }
 
 function undoLatestDrink() {
-  if (!sessionActive || sessionComplete) return;
-  const latestIndex = GoldilocksSessionFlow.paceLastLoggedIndex(actualDrinkTimes);
-  if (latestIndex < 0) return;
-  actualDrinkTimes[latestIndex] = null;
+  if (!sessionActive || sessionComplete || !lastPaceLogChange) return;
+  const change = lastPaceLogChange;
+  lastPaceLogChange = null;
+  drinkSchedule = change.drinkSchedule.slice();
+  actualDrinkTimes = change.actualDrinkTimes.slice();
   recalcFromNow();
-  showWarn(`Drink ${latestIndex + 1} removed — remaining schedule recalculated`);
+  showWarn(`Drink ${change.index + 1} removed — prior schedule restored`);
 }
 
 function recalculateScheduleFromNow() {
   if (!sessionActive || sessionComplete) return;
   const nextIndex = GoldilocksSessionFlow.paceNextIndex(actualDrinkTimes);
   if (nextIndex < 0 || drinkSchedule[nextIndex] >= Date.now()) return;
-  recalcFromNow();
+  lastPaceLogChange = null;
+  recalcFromNow({ fromAt: Date.now() });
   showWarn('Overdue check-in cleared — remaining schedule recalculated from now');
 }
 
@@ -1239,6 +1264,7 @@ function completeSession(reason, finishTimestamp) {
   completionReason = reason === 'elapsed' ? 'elapsed' : 'manual';
   completionBac = getEstimatedBacAt(completedAt);
   sessionComplete = true;
+  lastPaceLogChange = null;
   clearInterval(clockInterval);
   const bucketCount = getDurationBucketCount();
   plan = new Array(bucketCount).fill(0);
@@ -1248,6 +1274,7 @@ function completeSession(reason, finishTimestamp) {
     plan[bucket]++;
   });
   const logged = getLoggedTimes().length;
+  document.getElementById('summaryTotalLabel').textContent = 'Drinks logged';
   document.getElementById('summaryTotal').textContent = String(logged);
   document.getElementById('summarySpacing').textContent = '—';
   document.getElementById('summaryEnding').textContent = completionBac.toFixed(3);
@@ -1290,9 +1317,9 @@ function updateLiveBac() {
 function saveSession() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      sessionStartTs, plan, drinkSchedule, actualDrinkTimes,
+      sessionStartTs, plan, drinkSchedule, actualDrinkTimes, lastPaceLogChange,
       durationMinutes, bacEnd, ag, sessionComplete,
-      planSpacing, planOffsetHours, plannedEndpoint, planAchievable,
+      planSpacing, sessionCadenceHours, planOffsetHours, plannedEndpoint, planAchievable,
       completedAt, completionReason, completionBac,
       initialPlannedDrinks, initialProjectedEnd, initialPeakBac,
       profileName: document.getElementById('profileSelect').value,
@@ -1340,7 +1367,11 @@ function isValidRestoredSession(s) {
     if (Date.now() > s.completedAt + 24 * 3600000) return false;
   } else if (Date.now() > sessionEndTs + 60 * 60000) return false;
   if (!Number.isFinite(s.bacEnd) || s.bacEnd < 0 || s.bacEnd > 0.2) return false;
-  if (s.planSpacing !== undefined && (!Number.isFinite(s.planSpacing) || s.planSpacing < 0 || s.planSpacing > durationHours + 1e-6)) return false;
+  const maximumCadenceHours = MAX_DURATION_MINUTES / 60;
+  if (s.planSpacing !== undefined
+      && (!Number.isFinite(s.planSpacing) || s.planSpacing < 0 || s.planSpacing > maximumCadenceHours + 1e-6)) return false;
+  if (s.sessionCadenceHours !== undefined
+      && (!Number.isFinite(s.sessionCadenceHours) || s.sessionCadenceHours < 0 || s.sessionCadenceHours > maximumCadenceHours + 1e-6)) return false;
   if (s.planOffsetHours !== undefined && (!Number.isFinite(s.planOffsetHours) || s.planOffsetHours < 0 || s.planOffsetHours > durationHours + 1e-6)) return false;
   if (s.plannedEndpoint !== undefined && (!Number.isFinite(s.plannedEndpoint) || s.plannedEndpoint < 0)) return false;
   if (s.planAchievable !== undefined && typeof s.planAchievable !== 'boolean') return false;
@@ -1376,6 +1407,33 @@ function isValidRestoredSession(s) {
         || actual > (s.sessionComplete === true ? s.completedAt : Date.now()) + 60000
         || actual < previousActual) return false;
     previousActual = actual;
+  }
+  if (s.lastPaceLogChange !== undefined && s.lastPaceLogChange !== null) {
+    const change = s.lastPaceLogChange;
+    if (!change || typeof change !== 'object' || Array.isArray(change)
+        || !Number.isInteger(change.index) || change.index < 0
+        || !Number.isFinite(change.changedAt) || change.changedAt < s.sessionStartTs || change.changedAt > Date.now() + 60000
+        || !Array.isArray(change.drinkSchedule) || !Array.isArray(change.actualDrinkTimes)
+        || change.drinkSchedule.length !== change.actualDrinkTimes.length
+        || change.drinkSchedule.length < s.drinkSchedule.length
+        || change.drinkSchedule.length > MAX_SESSION_DRINKS
+        || change.index >= change.drinkSchedule.length
+        || change.actualDrinkTimes[change.index] !== null
+        || !Number.isFinite(s.actualDrinkTimes[change.index])) return false;
+    let previousChangeSchedule = -Infinity;
+    let previousChangeActual = -Infinity;
+    let reachedUnloggedChange = false;
+    for (let index = 0; index < change.drinkSchedule.length; index += 1) {
+      const scheduled = change.drinkSchedule[index];
+      const actual = change.actualDrinkTimes[index];
+      if (!Number.isFinite(scheduled) || scheduled < s.sessionStartTs || scheduled > sessionEndTs || scheduled < previousChangeSchedule) return false;
+      previousChangeSchedule = scheduled;
+      if (actual === null) {
+        reachedUnloggedChange = true;
+      } else if (!Number.isFinite(actual) || reachedUnloggedChange
+          || actual < s.sessionStartTs || actual > sessionEndTs || actual > Date.now() + 60000 || actual < previousChangeActual) return false;
+      else previousChangeActual = actual;
+    }
   }
   const reconstructedPlan = new Array(bucketCount).fill(0);
   s.drinkSchedule.forEach((scheduled, index) => {
@@ -1435,6 +1493,15 @@ function loadSavedSession() {
     plan             = s.plan;
     drinkSchedule    = s.drinkSchedule;
     actualDrinkTimes = s.actualDrinkTimes;
+    lastPaceLogChange = s.lastPaceLogChange && typeof s.lastPaceLogChange === 'object'
+      ? {
+          index: s.lastPaceLogChange.index,
+          changedAt: s.lastPaceLogChange.changedAt,
+          drinkSchedule: s.lastPaceLogChange.drinkSchedule.slice(),
+          actualDrinkTimes: s.lastPaceLogChange.actualDrinkTimes.slice(),
+        }
+      : null;
+    needsPaceScheduleMigration = !Number.isFinite(s.sessionCadenceHours);
     durationMinutes  = s.durationMinutes;
     bacEnd           = s.bacEnd;
     ag               = s.ag;
@@ -1457,6 +1524,22 @@ function loadSavedSession() {
     initialPlannedDrinks = Number.isInteger(s.initialPlannedDrinks)
       ? s.initialPlannedDrinks
       : drinkSchedule.length;
+    if (!sessionComplete && needsPaceScheduleMigration) {
+      const legacyLoggedCount = actualDrinkTimes.filter(Number.isFinite).length;
+      const legacyMaximumCount = Math.max(
+        legacyLoggedCount,
+        Math.min(initialPlannedDrinks, drinkSchedule.length)
+      );
+      drinkSchedule = drinkSchedule.slice(0, legacyMaximumCount);
+      actualDrinkTimes = actualDrinkTimes.slice(0, legacyMaximumCount);
+    }
+    const derivedInitialCadence = initialPlannedDrinks > 1
+      ? getDurationHours(s.durationMinutes) / initialPlannedDrinks
+      : 0;
+    sessionCadenceHours = Number.isFinite(s.sessionCadenceHours)
+      ? s.sessionCadenceHours
+      : Math.max(planSpacing, derivedInitialCadence);
+    if (planSpacing <= 0 && sessionCadenceHours > 0) planSpacing = sessionCadenceHours;
     initialProjectedEnd = Number.isFinite(s.initialProjectedEnd)
       ? s.initialProjectedEnd
       : plannedEndpoint;
@@ -1494,6 +1577,7 @@ function startSession() {
   sessionActive  = true;
   sessionComplete = false;
   sessionStartTs = Date.now();
+  lastPaceLogChange = null;
   completedAt = null;
   completionReason = null;
   completionBac = null;
@@ -1501,6 +1585,7 @@ function startSession() {
   const result   = buildCruisePlan(ag, profile, getDurationHours(), bacEnd);
   plan           = result.plan;
   planSpacing    = result.spacing;
+  sessionCadenceHours = result.spacing;
   planOffsetHours = result.offsetHours;
   plannedEndpoint = result.endpoint;
   planAchievable = result.achievable;
@@ -1509,6 +1594,8 @@ function startSession() {
   initialPlannedDrinks = result.n;
   initialProjectedEnd = result.endpoint;
   initialPeakBac = Math.max(0, ...simulateCruise(plan, ag, profile));
+  document.getElementById('summaryTotalLabel').textContent = 'Drinks remaining';
+  document.getElementById('summaryTotal').textContent = String(result.n);
 
   activateSessionUI();
   saveSession();
@@ -1530,6 +1617,9 @@ function resetSessionToPlanning() {
   initialPlannedDrinks = 0;
   initialProjectedEnd = 0;
   initialPeakBac = 0;
+  sessionCadenceHours = 0;
+  lastPaceLogChange = null;
+  needsPaceScheduleMigration = false;
   CONFIG_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = false; });
   document.getElementById('duration').disabled = false;
   actualDrinkTimes = new Array(drinkSchedule.length).fill(null);
@@ -1623,6 +1713,7 @@ document.getElementById('duration').addEventListener('input', function() {
   durationMinutes = requestedMinutes;
   document.getElementById('durationVal').textContent = formatDuration(durationMinutes);
   if (sessionActive) {
+    lastPaceLogChange = null;
     recalcFromNow();
   } else {
     update();
@@ -1770,7 +1861,12 @@ function initTheme() {
   if (restored) {
     sessionActive = true;
     activateSessionUI();
-    checkHourTransitions();
+    if (!sessionComplete && needsPaceScheduleMigration) {
+      needsPaceScheduleMigration = false;
+      recalcFromNow();
+    } else {
+      checkHourTransitions();
+    }
     update();
     renderTimeline();
     if (!sessionComplete) {

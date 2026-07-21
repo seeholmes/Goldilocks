@@ -201,6 +201,26 @@ test('inspects Pace progress and normalizes legacy whole-hour duration in memory
   assert.equal(legacy.durationMinutes, undefined);
 });
 
+test('accepts immutable Pace cadence after an active duration reduction', () => {
+  const start = NOW - 30 * MINUTE;
+  const shortened = sessions.inspectPace(paceFixture({
+    sessionStartTs: start,
+    durationMinutes: 60,
+    plan: [2],
+    drinkSchedule: [start + 10 * MINUTE, start + 50 * MINUTE],
+    actualDrinkTimes: [start + 10 * MINUTE, null],
+    planSpacing: 2,
+    sessionCadenceHours: 2,
+    initialPlannedDrinks: 2,
+  }), NOW);
+  assert.equal(shortened.health, 'valid');
+  assert.equal(shortened.remainingDrinks, 1);
+
+  const invalidCadence = sessions.inspectPace(paceFixture({ sessionCadenceHours: 9 }), NOW);
+  assert.equal(invalidCadence.health, 'corrupt');
+  assert.equal(invalidCadence.reason, 'invalid-cadence');
+});
+
 test('rejects invalid persisted Pace preview estimates', () => {
   const result = sessions.inspectPace(paceFixture({ initialPeakBac: Number.NaN }), NOW);
   assert.equal(result.health, 'corrupt');
@@ -231,13 +251,20 @@ test('accepts early Pace completion and preserves the original planned count', (
   assert.equal(complete.nextAt, null);
 });
 
-test('a Pace undo remains valid and decrements logged progress', () => {
-  const undone = sessions.inspectPace(paceFixture({
-    actualDrinkTimes: [null, null, null],
-  }), NOW);
-  assert.equal(undone.health, 'valid');
-  assert.equal(undone.loggedDrinks, 0);
-  assert.equal(undone.remainingDrinks, 3);
+test('accepts a persisted one-step Pace log snapshot', () => {
+  const current = paceFixture();
+  const inspected = sessions.inspectPace({
+    ...current,
+    lastPaceLogChange: {
+      index: 0,
+      changedAt: current.actualDrinkTimes[0],
+      drinkSchedule: current.drinkSchedule.slice(),
+      actualDrinkTimes: [null, null, null],
+    },
+  }, NOW);
+  assert.equal(inspected.health, 'valid');
+  assert.equal(inspected.loggedDrinks, 1);
+  assert.equal(inspected.remainingDrinks, 2);
 });
 
 test('distinguishes an active Training protocol from a valid ready-to-finish curve', () => {
