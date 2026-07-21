@@ -166,9 +166,6 @@
 
   .window-note { font-size:10px; color:var(--muted); text-align:center; padding:12px 0 2px; border-top:1px solid var(--border); margin-top:10px; line-height:1.6; }
   .window-note em { font-style:normal; color:var(--gold); }
-  .copy-btn { width:100%; margin-top:14px; padding:13px; background:transparent; border:1px solid var(--gold2); border-radius:8px; color:var(--gold2); font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; }
-  .copy-btn:hover{background:rgba(245,200,66,0.07);box-shadow:var(--glow)}
-  .copy-btn.copied{background:rgba(245,200,66,0.12)}
   .disclaimer { color:var(--muted); font-size:9px; line-height:1.8; text-align:center; margin-top:24px; opacity:0.7; }
 </style>
 </head>
@@ -400,7 +397,6 @@
     <div class="sec" id="planLabel">Flight Plan</div>
     <div id="timeline"></div>
     <div class="window-note" id="windowNote"></div>
-    <button class="copy-btn" id="copyBtn">⊹ Transmit plan to clipboard</button>
   </div>
 
   <p class="disclaimer" id="disclaimerEl">⚠ For harm reduction only · Widmark estimates vary — food, hydration, meds and tolerance all affect real BAC · Never drive</p>
@@ -989,36 +985,6 @@ document.getElementById('duration').addEventListener('input', function() {
   if (el) { el.addEventListener('input', update); el.addEventListener('change', update); }
 });
 
-// ── Copy ──────────────────────────────────────────────────────
-document.getElementById('copyBtn').addEventListener('click', function() {
-  const start    = getStart();
-  const oz       = parseFloat(document.getElementById('drinkOz').value) || 12;
-  const abv      = parseFloat(document.getElementById('drinkAbv').value) || 5;
-  const trace    = simulate(plan, ag, profile);
-  const total    = plan.reduce((a,b) => a+b, 0);
-  const totalStd = (total * ag / STD_DRINK_G).toFixed(1);
-  const peak     = Math.max(...trace).toFixed(3);
-  const timeStr  = document.getElementById('startTime').value;
-  const profLine = profile.name === 'seeholmes'
-    ? '185 lbs | male | rise 0.02/std | metab 0.015/hr'
-    : `${(profile.weightKg / 0.453592).toFixed(0)} lbs | ${document.getElementById('sex')?.value} | Widmark r=${profile.r} | metab ${profile.metab}/hr`;
-  const sep = '- - - - - - - - - - - - - - -';
-  let lines = [`GOLDILOCKS ZONE — ${profile.name}`, `${timeStr} launch · ${hours}hr · Zone ${bacMin.toFixed(2)}–${bacMax.toFixed(2)}`, sep];
-  plan.forEach((drinks, h) => {
-    const bac  = trace[h];
-    const beer = drinks > 0 ? '🍺'.repeat(drinks) : '—';
-    const dLbl = drinks === 0 ? 'none' : `${drinks} drink${drinks>1?'s':''}`;
-    lines.push(`Hr ${h+1}  ${fmt(start,h)}-${fmt(start,h+1)}  ${dLbl}  BAC ${bac.toFixed(3)}  ${beer}`);
-  });
-  lines.push(sep);
-  lines.push(`Total: ${total} drinks | ${totalStd} std | Peak: ${peak}`);
-  lines.push(profLine);
-  const text = lines.join('\n');
-  const btn  = document.getElementById('copyBtn');
-  const ok   = () => { btn.textContent='✓ Transmitted'; btn.classList.add('copied'); setTimeout(()=>{btn.textContent='⊹ Transmit plan to clipboard';btn.classList.remove('copied')},3000); };
-  if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(text).then(ok).catch(()=>fallbackCopy(text,ok)); } else { fallbackCopy(text,ok); }
-});
-function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;top:0;left:0;opacity:0;pointer-events:none;';document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand('copy');cb();}catch(e){}document.body.removeChild(ta);}
 
 // ── Fasted / preset ───────────────────────────────────────────
 let fasted = false;

@@ -150,10 +150,7 @@
   .schedule-note { font-size:10px; color:var(--muted); text-align:center; padding:12px 0 2px; border-top:1px solid var(--border); margin-top:10px; line-height:1.6; }
   .schedule-note em { font-style:normal; color:var(--blue); }
   .warn-note { font-size:10px; color:var(--amber); text-align:center; padding:10px 12px; background:rgba(255,140,58,0.06); border:1px solid rgba(255,140,58,0.2); border-radius:7px; margin-top:6px; line-height:1.6; }
-  .copy-btn { width:100%; margin-top:14px; padding:13px; background:transparent; border:1px solid var(--blue2); border-radius:8px; color:var(--blue2); font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; }
-  .copy-btn:hover { background:rgba(126,184,255,0.07); box-shadow:var(--glow); }
-  .copy-btn.copied { background:rgba(126,184,255,0.12); }
-  .disclaimer { color:var(--muted); font-size:9px; line-height:1.8; text-align:center; margin-top:24px; opacity:0.7; }
+.disclaimer { color:var(--muted); font-size:9px; line-height:1.8; text-align:center; margin-top:24px; opacity:0.7; }
 </style>
 </head>
 <body>
@@ -322,7 +319,6 @@
     <div id="timeline"></div>
     <div id="scheduleNote" class="schedule-note"></div>
     <div id="warnNote" style="display:none" class="warn-note"></div>
-    <button class="copy-btn" id="copyBtn">⊹ Transmit plan to clipboard</button>
   </div>
 
   <p class="disclaimer" id="disclaimerEl">⚠ For harm reduction only · Widmark estimates vary — food, hydration, meds and tolerance all affect real BAC · Never drive</p>
@@ -732,10 +728,26 @@ function recalcFromNow() {
 }
 
 // ── Log drink ─────────────────────────────────────────────────
+let earlyWarnTimer = null;
 function logDrink(i) {
   if (!sessionActive || actualDrinkTimes[i] !== null) return;
-  actualDrinkTimes[i] = Date.now();
+  const now       = Date.now();
+  const scheduled = drinkSchedule[i];
+  const earlyMs   = scheduled - now;
+  if (earlyMs > 5 * 60 * 1000) {
+    const mins = Math.round(earlyMs / 60000);
+    showWarn(`Drink ${i + 1} logged ${mins}m early — remaining drinks adjusted`);
+  }
+  actualDrinkTimes[i] = now;
   recalcFromNow();
+}
+
+function showWarn(msg) {
+  const el = document.getElementById('warnNote');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(earlyWarnTimer);
+  earlyWarnTimer = setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
 
 // ── Live BAC ──────────────────────────────────────────────────
@@ -885,34 +897,6 @@ document.getElementById('duration').addEventListener('input', function() {
   if (el) { el.addEventListener('input', update); el.addEventListener('change', update); }
 });
 
-// ── Copy ──────────────────────────────────────────────────────
-document.getElementById('copyBtn').addEventListener('click', function() {
-  const trace    = simulate(plan, ag, profile);
-  const total    = drinkSchedule.length;
-  const totalStd = (total * ag / STD_DRINK_G).toFixed(1);
-  const projEnd  = trace[hours - 1].toFixed(3);
-  const profLine = profile.name === 'seeholmes'
-    ? '185 lbs | male | rise 0.02/std | metab 0.015/hr'
-    : `${(profile.weightKg / 0.453592).toFixed(0)} lbs | ${document.getElementById('sex')?.value} | Widmark r=${profile.r} | metab ${profile.metab}/hr`;
-  const sep   = '- - - - - - - - - - - - - - -';
-  const start = sessionActive ? fmtTs(sessionStartTs) : 'T+0';
-  let lines   = [`GOLDILOCKS CRUISE — ${profile.name}`, `Launch ${start} · ${hours}hr · Target ending BAC ${bacEnd.toFixed(2)}`, sep];
-  drinkSchedule.forEach((ts, i) => {
-    const actual  = actualDrinkTimes[i];
-    const dispTs  = actual || ts;
-    const timeStr = sessionActive ? fmtTs(dispTs) : fmtOffset(dispTs - sessionStartTs);
-    const status  = actual ? ' ✓' : '';
-    lines.push(`Drink ${i+1}  ${timeStr}${status}`);
-  });
-  lines.push(sep);
-  lines.push(`Total: ${total} drinks | ${totalStd} std | Projected ending BAC: ${projEnd}`);
-  lines.push(profLine);
-  const text = lines.join('\n');
-  const btn  = document.getElementById('copyBtn');
-  const ok   = () => { btn.textContent='✓ Transmitted'; btn.classList.add('copied'); setTimeout(()=>{btn.textContent='⊹ Transmit plan to clipboard';btn.classList.remove('copied')},3000); };
-  if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(text).then(ok).catch(()=>fallbackCopy(text,ok)); } else { fallbackCopy(text,ok); }
-});
-function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;top:0;left:0;opacity:0;pointer-events:none;';document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand('copy');cb();}catch(e){}document.body.removeChild(ta);}
 
 // ── Fasted toggle / preset ────────────────────────────────────
 let fasted = false;
