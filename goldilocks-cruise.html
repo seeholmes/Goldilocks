@@ -704,7 +704,7 @@ function recalcFromNow() {
 
   // Space n_rem drinks evenly starting from now
   const spacing  = n_rem > 0 ? T_rem / n_rem : 0;
-  const futureTs = Array.from({length: n_rem}, (_, j) => now + j * spacing * 3600000);
+  const futureTs = Array.from({length: n_rem}, (_, j) => now + (j + 1) * spacing * 3600000);
 
   drinkSchedule    = [...doneTimes, ...futureTs];
   actualDrinkTimes = [...doneTimes, ...new Array(n_rem).fill(null)];
