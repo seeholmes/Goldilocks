@@ -94,7 +94,7 @@ test('mode pages load the tested calculation core', () => {
     const html = read(page);
     assert.match(
       html,
-      /<script\s+src="goldilocks-core\.js"\s*><\/script>/i,
+      /<script\s+src="goldilocks-core\.js(?:\?[^\"]+)?"\s*><\/script>/i,
       `${page} must load goldilocks-core.js`
     );
     for (const method of requiredCalls[page]) {
