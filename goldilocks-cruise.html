@@ -425,6 +425,16 @@ function loadCalibratedProfiles() {
 }
 
 // ── Math ──────────────────────────────────────────────────────
+// Discrete hourly simulate — identical model to zone.html
+function simulate(sched, a, p) {
+  let bac = 0;
+  return sched.map(d => {
+    bac += d * bpd(a, p);
+    bac = Math.max(0, bac - p.metab);
+    return Math.round(bac * 1000) / 1000;
+  });
+}
+
 function getAlcGrams() {
   const oz  = parseFloat(document.getElementById('drinkOz').value)  || 12;
   const abv = parseFloat(document.getElementById('drinkAbv').value) || 5;
@@ -439,42 +449,24 @@ function bpd(a, p) {
   return (a / (p.weightKg * 1000 * p.r)) * 100;
 }
 
-// Continuous BAC trace: BAC at end of hour h (1-indexed) given exact drink times
-function traceContinuous(times, ag, p, hrs) {
-  const δ = bpd(ag, p);
-  const β = p.metab;
-  return Array.from({length: hrs}, (_, i) => {
-    const h   = i + 1;
-    const bac = times
-      .filter(t => t < h)
-      .reduce((acc, t) => acc + Math.max(0, δ - β * (h - t)), 0);
-    return Math.round(bac * 1000) / 1000;
-  });
-}
-
-// Build the cruise plan: find n evenly-spaced drinks that achieve bacEnd at time T
+// Build the cruise plan using the discrete hourly model (same as zone.html simulate).
+// Formula: n*δ − T*β = B_end  →  n = (B_end + T*β) / δ
 function buildCruisePlan(ag, p, T, B_end) {
   const δ = bpd(ag, p);
   const β = p.metab;
 
-  if (B_end <= 0) return { n: 0, times: [], plan: new Array(T).fill(0), achievable: true };
+  if (B_end <= 0) return { n: 0, plan: new Array(T).fill(0), spacing: 0, achievable: true };
 
-  // Analytical solution: n = (B_end + β*T/2) / (δ - β*T/2)
-  const denom = δ - β * T / 2;
-  if (denom <= 0) return { achievable: false };
+  const nRaw = (B_end + T * β) / δ;
+  const n    = Math.min(24, Math.max(1, Math.round(nRaw)));
 
-  const nRaw = (B_end + β * T / 2) / denom;
-  if (nRaw < 0.5) return { n: 0, times: [], plan: new Array(T).fill(0), achievable: true };
+  // Distribute n drinks evenly; extras go in earlier hours
+  const base  = Math.floor(n / T);
+  const extra = n % T;
+  const plan  = Array.from({length: T}, (_, i) => base + (i < extra ? 1 : 0));
 
-  const n = Math.min(20, Math.max(1, Math.round(nRaw)));
-  const spacing = T / n;
-  const times   = Array.from({length: n}, (_, i) => i * spacing);
-
-  // Bucket into hours for the timeline display
-  const hourPlan = new Array(T).fill(0);
-  times.forEach(t => { hourPlan[Math.min(Math.floor(t), T - 1)]++; });
-
-  return { n, spacing, times, plan: hourPlan, achievable: true };
+  const spacing = n > 1 ? T / n : 0;
+  return { n, plan, spacing, achievable: true };
 }
 
 function fmtSpacing(spacingHours) {
@@ -551,7 +543,8 @@ function getFracThroughHour() {
 // ── Render ────────────────────────────────────────────────────
 function renderTimeline() {
   const start    = getStart();
-  const trace    = traceContinuous(drinkTimes, ag, profile, hours);
+  const effectivePlan = plan.map((p, h) => actualDrinks[h] !== undefined ? actualDrinks[h] : p);
+  const trace    = simulate(effectivePlan, ag, profile);
   const maxBac   = Math.max(...trace, bacEnd * 1.3, 0.05);
   const curHour  = getCurrentHour();
   const tlEl     = document.getElementById('timeline');
@@ -654,14 +647,13 @@ function update() {
 
   warnEl.style.display = 'none';
   plan       = result.plan;
-  drinkTimes = result.times;
 
   if (!sessionActive) {
     actualDrinks = new Array(hours).fill(undefined);
   }
 
   const total = result.n;
-  const trace = traceContinuous(drinkTimes, ag, profile, hours);
+  const trace = simulate(plan, ag, profile);
   const projEnd = trace[hours - 1];
 
   document.getElementById('summaryTotal').textContent   = total > 0 ? total : '0';
@@ -812,8 +804,7 @@ function startSession() {
 
   const result = buildCruisePlan(ag, profile, hours, bacEnd);
   if (result && result.achievable) {
-    plan       = result.plan;
-    drinkTimes = result.times;
+    plan = result.plan;
   }
 
   activateSessionUI();
@@ -851,7 +842,7 @@ document.getElementById('copyBtn').addEventListener('click', function() {
   const start  = getStart();
   const oz     = parseFloat(document.getElementById('drinkOz').value) || 12;
   const abv    = parseFloat(document.getElementById('drinkAbv').value) || 5;
-  const trace  = traceContinuous(drinkTimes, ag, profile, hours);
+  const trace  = simulate(plan, ag, profile);
   const total  = plan.reduce((a,b) => a+b, 0);
   const totalStd = (total * ag / STD_DRINK_G).toFixed(1);
   const projEnd  = trace[hours - 1].toFixed(3);
