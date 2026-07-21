@@ -694,13 +694,28 @@ function recalcFromNow() {
 
   // Collect actual logged times
   const doneTimes = actualDrinkTimes.filter(t => t !== null);
+  const n_logged  = doneTimes.length;
 
-  // n_total uses the full session T — the formula n*δ − T*β = bacEnd is for
-  // the complete session regardless of when each drink falls.
-  const δ        = bpd(ag, profile);
-  const β        = profile.metab;
-  const n_total  = Math.max(0, Math.round((bacEnd + hours * β) / δ));
-  const n_rem    = Math.max(0, n_total - doneTimes.length);
+  const δ = bpd(ag, profile);
+  const β = profile.metab;
+
+  // Start with formula estimate, then verify with simulation.
+  // Trim one drink at a time until the projected ending BAC doesn't overshoot.
+  let n_rem = Math.max(0, Math.round((bacEnd + hours * β) / δ) - n_logged);
+
+  while (n_rem >= 0) {
+    const spacing_t  = n_rem > 0 ? T_rem / n_rem : 0;
+    const futureTs_t = Array.from({length: n_rem}, (_, j) => now + (j + 1) * spacing_t * 3600000);
+    const testPlan   = new Array(hours).fill(0);
+    [...doneTimes, ...futureTs_t].forEach(ts => {
+      const h = Math.max(0, Math.min(hours - 1, Math.floor((ts - sessionStartTs) / 3600000)));
+      testPlan[h]++;
+    });
+    const projEnd = simulate(testPlan, ag, profile)[hours - 1];
+    if (projEnd <= bacEnd + 0.002 || n_rem === 0) break;
+    n_rem--;
+  }
+  n_rem = Math.max(0, n_rem);
 
   // Space n_rem drinks evenly starting from now
   const spacing  = n_rem > 0 ? T_rem / n_rem : 0;
