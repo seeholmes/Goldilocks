@@ -551,7 +551,7 @@ test('manifest targets and declared PNG dimensions are valid', () => {
     assert.ok(fs.existsSync(path.join(root, startTarget)), `${manifestName} start_url must exist`);
     const declaredSizes = new Set();
     for (const icon of manifest.icons) {
-      const iconPath = icon.src.replace(/^\.\//, '');
+      const iconPath = icon.src.replace(/^\.\//, '').split(/[?#]/, 1)[0];
       const dimensions = pngDimensions(iconPath);
       const declared = icon.sizes.split(/\s+/);
       declared.forEach((size) => declaredSizes.add(size));
