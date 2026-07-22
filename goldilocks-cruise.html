@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#08090d">
 <title>Goldilocks — Pace</title>
 <link rel="icon" href="favicon-32.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260722-blue">
-<link rel="manifest" href="manifest.json?v=20260722-blue">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260722-astronaut">
+<link rel="manifest" href="manifest.json?v=20260722-astronaut">
 <link rel="stylesheet" href="goldilocks-icons.css">
 <link rel="stylesheet" href="goldilocks-session-flow.css">
 <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@200;400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -62,9 +62,6 @@
 
   /* Hero */
   .hero { text-align: center; padding: 48px 0 36px; position: relative; }
-  .orbit-ring { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-52%); width: 320px; height: 120px; opacity: 0.18; pointer-events: none; }
-  .star-icon { font-size: 26px; display: block; margin-bottom: 8px; filter: drop-shadow(0 0 12px rgba(126,184,255,0.9)); animation: pulse 4s ease-in-out infinite; }
-  @keyframes pulse { 0%,100%{filter:drop-shadow(0 0 12px rgba(126,184,255,0.8))} 50%{filter:drop-shadow(0 0 22px rgba(126,184,255,1))} }
   .logo { font-family:'Anybody',sans-serif; font-size:36px; font-weight:600; letter-spacing:-0.5px; background:linear-gradient(135deg,var(--logo-a,#7eb8ff) 0%,var(--logo-b,#5a9aee) 50%,var(--logo-c,#52e09c) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
   .logo-sub { font-family:'Anybody',sans-serif; font-size:13px; font-weight:200; color:var(--muted); letter-spacing:0.28em; text-transform:uppercase; margin-top:2px; }
   .tagline { color:var(--muted); margin-top:6px; font-size:10px; letter-spacing:0.18em; text-transform:uppercase; }
@@ -202,10 +199,10 @@
 
 <main class="container">
   <header class="hero">
-    <svg class="orbit-ring" viewBox="0 0 320 120" fill="none">
-      <ellipse cx="160" cy="60" rx="155" ry="52" stroke="url(#og)" stroke-width="1.5" stroke-dasharray="6 4"/>
-      <defs><linearGradient id="og" x1="0" y1="0" x2="320" y2="0"><stop offset="0%" stop-color="#7eb8ff"/><stop offset="50%" stop-color="#5a9aee"/><stop offset="100%" stop-color="#52e09c"/></linearGradient></defs>
-    </svg>
+    <div class="brand-lockup">
+      <img class="brand-mark" src="goldilocks-astronaut.png?v=20260722-astronaut" alt="">
+      <h1 class="logo" aria-label="Goldilocks"><span aria-hidden="true">Goldil<span class="brand-orbit-o">o</span>cks</span></h1>
+    </div>
     <span class="mode-glyph mode-glyph--pace" aria-hidden="true">
       <svg class="mode-glyph__svg" viewBox="0 0 44 44" focusable="false">
         <path class="glyph-line glyph-track" d="M7.5 28.5C12.5 12.5 31.5 12.5 36.5 28.5"/>
@@ -215,7 +212,6 @@
         <circle class="glyph-pace-node" style="--i:3" cx="35.5" cy="26.5" r="2"/>
       </svg>
     </span>
-    <h1 class="logo">Goldilocks</h1>
     <div class="logo-sub">Pace</div>
     <div class="tagline">plan your pace · <em>adjust as you go</em></div>
     <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-top:4px">v1.02</div>

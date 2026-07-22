@@ -10,6 +10,71 @@
   --training-rgb: 31, 107, 79;
 }
 
+.brand-lockup {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.brand-mark {
+  width: 92px;
+  height: 92px;
+  flex: 0 0 92px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.26));
+  transition: transform 220ms ease, filter 220ms ease;
+}
+
+.brand-lockup--mission .brand-mark {
+  width: 112px;
+  height: 112px;
+  flex-basis: 112px;
+}
+
+.brand-lockup .logo {
+  margin: 0;
+  font-size: clamp(32px, 8vw, 44px);
+  line-height: 0.96;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.brand-lockup:not(.brand-lockup--mission) .logo {
+  font-size: clamp(30px, 7vw, 36px);
+}
+
+.brand-orbit-o {
+  position: relative;
+  display: inline-block;
+  color: var(--gold, #f5c842);
+  -webkit-text-fill-color: var(--gold, #f5c842);
+}
+
+.brand-orbit-o::after {
+  content: "✦";
+  position: absolute;
+  top: -0.22em;
+  right: -0.12em;
+  font-size: 0.24em;
+  line-height: 1;
+  color: var(--gold, #f5c842);
+  -webkit-text-fill-color: var(--gold, #f5c842);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--gold, #f5c842) 62%, transparent);
+}
+
+.hero:is(:hover, :focus-within) .brand-mark {
+  transform: translateY(-2px) rotate(-1deg);
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.3));
+}
+
+:root:is([data-theme="parchment"], [data-theme="honey"], [data-theme="slate"]) .brand-mark {
+  filter: drop-shadow(0 7px 14px rgba(30, 40, 55, 0.16));
+}
+
 .mode-glyph {
   width: 44px;
   height: 44px;
@@ -118,11 +183,26 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .brand-mark,
   .mode-glyph,
   .mode-glyph * {
     animation: none !important;
     transition: none !important;
     transform: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-lockup { gap: 5px; }
+  .brand-mark {
+    width: 76px;
+    height: 76px;
+    flex-basis: 76px;
+  }
+  .brand-lockup--mission .brand-mark {
+    width: 86px;
+    height: 86px;
+    flex-basis: 86px;
   }
 }
 

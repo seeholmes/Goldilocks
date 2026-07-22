@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#08090d">
 <title>Goldilocks — Mission Control</title>
 <link rel="icon" href="favicon-32.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260722-blue">
-<link rel="manifest" href="manifest.json?v=20260722-blue">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260722-astronaut">
+<link rel="manifest" href="manifest.json?v=20260722-astronaut">
 <link rel="stylesheet" href="goldilocks-icons.css">
 <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@200;400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="goldilocks-theme.js"></script>
@@ -62,8 +62,6 @@
   .container { max-width:680px; margin:0 auto; padding:0 16px; position:relative; z-index:1; }
 
   .hero { text-align:center; padding:48px 0 34px; }
-  .star-icon { font-size:28px; display:block; margin-bottom:10px; filter:drop-shadow(0 0 14px rgba(245,200,66,0.8)); animation:pulse 4s ease-in-out infinite; }
-  @keyframes pulse { 0%,100%{filter:drop-shadow(0 0 14px rgba(245,200,66,0.8))} 50%{filter:drop-shadow(0 0 26px rgba(245,200,66,1))} }
   .logo {
     font-family:'Anybody',sans-serif;
     font-size:44px;
@@ -179,8 +177,10 @@
 <body>
 <div class="container">
   <header class="hero">
-    <span class="star-icon" aria-hidden="true">✦</span>
-    <h1 class="logo">Goldilocks</h1>
+    <div class="brand-lockup brand-lockup--mission">
+      <img class="brand-mark" src="goldilocks-astronaut.png?v=20260722-astronaut" alt="">
+      <h1 class="logo" aria-label="Goldilocks"><span aria-hidden="true">Goldil<span class="brand-orbit-o">o</span>cks</span></h1>
+    </div>
     <p class="tagline">mission control</p>
     <p class="version">v1.02</p>
     <div class="theme-control">

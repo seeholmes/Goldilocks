@@ -414,6 +414,22 @@ test('all pages use the shared theme catalog and animated icon system', () => {
   }
 });
 
+test('all pages use a transparent astronaut mark with a live theme-aware wordmark', () => {
+  for (const page of pages) {
+    const html = read(page);
+    assert.match(html, /class="brand-lockup(?:\s+brand-lockup--mission)?"/);
+    assert.match(html, /class="brand-mark"\s+src="goldilocks-astronaut\.png\?v=20260722-astronaut"\s+alt=""/);
+    assert.match(html, /<h1 class="logo" aria-label="Goldilocks">/);
+    assert.match(html, /Goldil<span class="brand-orbit-o">o<\/span>cks/);
+  }
+
+  const mark = fs.readFileSync(path.join(root, 'goldilocks-astronaut.png'));
+  assert.equal(mark.toString('ascii', 1, 4), 'PNG');
+  assert.equal(mark.readUInt32BE(16), 512);
+  assert.equal(mark.readUInt32BE(20), 512);
+  assert.equal(mark[25], 6, 'astronaut mark must remain an RGBA PNG');
+});
+
 test('Pace branding is consistent while legacy compatibility remains', () => {
   const html = read('goldilocks-cruise.html');
   assert.match(html, /<title>Goldilocks — Pace<\/title>/);

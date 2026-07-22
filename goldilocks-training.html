@@ -8,7 +8,7 @@
 <title>Goldilocks Calibration</title>
 <link rel="icon" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon-training.png">
-<link rel="manifest" href="manifest-training.json">
+<link rel="manifest" href="manifest-training.json?v=20260722-astronaut">
 <link rel="stylesheet" href="goldilocks-icons.css">
 <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@200;400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="goldilocks-theme.js"></script>
@@ -61,8 +61,6 @@
 
   /* Hero */
   .hero { text-align: center; padding: 48px 0 32px; position: relative; }
-  .beaker-icon { font-size: 28px; display: block; margin-bottom: 8px; filter: drop-shadow(0 0 14px rgba(82,224,156,0.7)); animation: pulse 4s ease-in-out infinite; }
-  @keyframes pulse { 0%,100%{filter:drop-shadow(0 0 14px rgba(82,224,156,0.7))} 50%{filter:drop-shadow(0 0 24px rgba(82,224,156,1))} }
   .logo { font-family:'Anybody',sans-serif; font-size:32px; font-weight:800; letter-spacing:-1px; background:linear-gradient(135deg,var(--logo-a,#52e09c) 0%,var(--logo-b,#7eb8ff) 60%,var(--logo-c,#52e09c) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
   .logo-sub { font-family:'Anybody',sans-serif; font-size:14px; font-weight:200; color:var(--muted); letter-spacing:0.3em; text-transform:uppercase; margin-top:2px; }
   .tagline { color:var(--muted); margin-top:8px; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; }
@@ -224,6 +222,10 @@
 
   <!-- Hero -->
   <header class="hero">
+    <div class="brand-lockup">
+      <img class="brand-mark" src="goldilocks-astronaut.png?v=20260722-astronaut" alt="">
+      <h1 class="logo" aria-label="Goldilocks"><span aria-hidden="true">Goldil<span class="brand-orbit-o">o</span>cks</span></h1>
+    </div>
     <span class="mode-glyph mode-glyph--training" aria-hidden="true">
       <svg class="mode-glyph__svg" viewBox="0 0 44 44" focusable="false">
         <path class="glyph-line" d="M18 7v9.5l-7.3 14.4A4 4 0 0 0 14.4 37h15.2a4 4 0 0 0 3.7-6.1L26 16.5V7"/>
@@ -235,7 +237,6 @@
         <circle class="glyph-bubble" style="--i:2" cx="27.5" cy="32.5" r="0.8"/>
       </svg>
     </span>
-    <h1 class="logo">Goldilocks</h1>
     <p class="logo-sub">Calibration</p>
     <div class="tagline">calibrate your curve · <em>own your data</em></div>
     <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-top:4px">v1.02</div>
