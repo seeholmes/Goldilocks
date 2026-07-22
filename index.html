@@ -264,13 +264,13 @@
             </svg>
           </span>
           <span class="mode-card-actions">
-            <span class="mode-status" data-mode-status="training" hidden>Protocol active</span>
+            <span class="mode-status" data-mode-status="training" hidden>Calibration active</span>
             <span class="mode-arrow" aria-hidden="true">→</span>
           </span>
         </div>
-        <h3 class="mode-name">Training</h3>
-        <div class="mode-sub">Calibrate with a breathalyzer</div>
-        <div class="mode-desc">Log three or more timed readings. Training derives personal elimination and BAC-rise estimates for both planners.</div>
+        <h3 class="mode-name">Calibration</h3>
+        <div class="mode-sub">Personalize your BAC model</div>
+        <div class="mode-desc">Log three or more timed breathalyzer readings to estimate your personal elimination and BAC-rise rates for both planners.</div>
         <div class="mode-state" id="trainingState">Check your calibration status</div>
         <div class="mode-chips">
           <span class="chip lit">Breathalyzer</span>
@@ -285,7 +285,7 @@
 </div>
 
 <script src="goldilocks-core.js"></script>
-<script src="goldilocks-session-state.js?v=20260721-zone-quarter-hour"></script>
+<script src="goldilocks-session-state.js?v=20260722-calibration"></script>
 <script>
 GoldilocksTheme.init({ mode:'mission', pickerId:'themePicker' });
 
@@ -406,7 +406,7 @@ function updateMissionControl() {
     if (card) card.classList.add('is-active');
     if (status) {
       status.textContent = entry.mode === 'training'
-        ? 'Protocol active'
+        ? 'Calibration active'
         : entry.state === 'complete'
           ? 'Summary ready'
           : entry.state === 'scheduled'

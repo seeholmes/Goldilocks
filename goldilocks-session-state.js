@@ -14,7 +14,7 @@
   const MODE_META = Object.freeze({
     zone: Object.freeze({ label: 'Zone', href: 'goldilocks-zone.html' }),
     pace: Object.freeze({ label: 'Pace', href: 'goldilocks-cruise.html' }),
-    training: Object.freeze({ label: 'Training', href: 'goldilocks-training.html' }),
+    training: Object.freeze({ label: 'Calibration', href: 'goldilocks-training.html' }),
   });
   const HOUR_MS = 60 * 60 * 1000;
   const MINUTE_MS = 60 * 1000;

@@ -8,7 +8,7 @@ Open the hosted app at [seeholmes.github.io/Goldilocks](https://seeholmes.github
 
 - **Zone** (`goldilocks-zone.html`) builds an hourly plan intended to stay within a selected BAC range and replans from logged drinks.
 - **Pace** (`goldilocks-cruise.html`) spaces drinks across a session toward a selected ending BAC, with session length selectable in 15-minute increments. The legacy filename is retained for bookmark compatibility.
-- **Training** (`goldilocks-training.html`) records timed breathalyzer readings and saves a calibrated profile after a validated regression.
+- **Calibration** (`goldilocks-training.html`) records timed breathalyzer readings and saves a calibrated profile after a validated regression.
 
 `index.html` is Mission Control and links to all three modes.
 
@@ -20,13 +20,13 @@ The only external runtime dependency is Google Fonts. User data stays in same-or
 
 | Key | Purpose |
 | --- | --- |
-| `goldilocks_profiles` | Profiles shared by Training, Zone, and Pace |
+| `goldilocks_profiles` | Profiles shared by Calibration, Zone, and Pace |
 | `goldilocks_theme` | Theme shared by all modes |
 | `goldilocks_drinks` | Custom drinks shared by Zone and Pace |
 | `goldilocks_v2_session` | Active Zone session |
 | `goldilocks_cruise_session` | Active Pace session (legacy key retained for compatibility) |
-| `goldilocks_training_session` | Active Training protocol |
-| `goldilocks_training_history` | Last 20 completed training sessions |
+| `goldilocks_training_session` | Active calibration |
+| `goldilocks_training_history` | Last 20 completed calibration sessions |
 
 Session records are validated and expire after their mode-specific recovery window. Zone keeps unresolved hourly logs distinct from an explicit zero, and both planners retain a finished-session summary before the record expires.
 

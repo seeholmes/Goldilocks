@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Calibrate a personal BAC model from timed breathalyzer readings.">
 <meta name="theme-color" content="#08090d">
-<title>Goldilocks Training</title>
+<title>Goldilocks Calibration</title>
 <link rel="icon" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon-training.png">
 <link rel="manifest" href="manifest-training.json">
@@ -236,7 +236,7 @@
       </svg>
     </span>
     <h1 class="logo">Goldilocks</h1>
-    <p class="logo-sub">Training Protocol</p>
+    <p class="logo-sub">Calibration</p>
     <div class="tagline">calibrate your curve · <em>own your data</em></div>
     <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-top:4px">v1.02</div>
     <a class="back-link" href="index.html">← Mission Control</a>
@@ -250,7 +250,7 @@
 
   <!-- ── SETUP PHASE ── -->
   <section id="phaseSetup" aria-labelledby="setupHeading">
-    <h2 id="setupHeading" class="sr-only" tabindex="-1">Set up a training protocol</h2>
+    <h2 id="setupHeading" class="sr-only" tabindex="-1">Set up a calibration</h2>
     <!-- Profile setup -->
     <div class="card blue-card">
       <div class="sec blue">Your Profile</div>
@@ -280,7 +280,7 @@
         <div><span style="font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Widmark r</span><div style="font-family:'Anybody',sans-serif;font-size:16px;color:var(--blue)" id="refR">0.68</div></div>
         <div><span style="font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Weight kg</span><div style="font-family:'Anybody',sans-serif;font-size:16px;color:var(--blue)" id="refKg">83.9</div></div>
         <div><span style="font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Widmark BAC/std</span><div style="font-family:'Anybody',sans-serif;font-size:16px;color:var(--blue)" id="refBpd">—</div></div>
-        <div style="flex:1;min-width:120px;font-size:9px;color:var(--muted);line-height:1.6">Reference only — training will derive your actual values</div>
+        <div style="flex:1;min-width:120px;font-size:9px;color:var(--muted);line-height:1.6">Reference only — calibration will derive your personal values</div>
       </div>
     </div>
 
@@ -313,7 +313,7 @@
 
     <!-- Protocol overview -->
     <div class="card green-card">
-      <div class="sec">Session Protocol</div>
+      <div class="sec">Calibration Steps</div>
       <div class="step-list">
         <div class="step active">
           <div class="step-num">1</div>
@@ -347,22 +347,22 @@
           <div class="step-num">5</div>
           <div class="step-body">
             <div class="step-title">Reading 3 — T+85 min</div>
-            <div class="step-desc">20 min after second. Protocol complete.</div>
+            <div class="step-desc">20 min after second. Calibration complete.</div>
           </div>
         </div>
       </div>
       <div style="margin-top:14px;font-size:9px;color:var(--muted);line-height:1.7;padding:10px 12px;background:var(--deep);border-radius:7px;">
-        Optional 4th reading at T+105 improves curve confidence. You can add it even after the protocol completes.
+        Optional 4th reading at T+105 improves curve confidence. You can add it even after the calibration completes.
       </div>
     </div>
 
-    <button class="primary-btn" type="button" onclick="startProtocol()">⊹ Begin Protocol — Start Timer</button>
+    <button class="primary-btn" type="button" onclick="startProtocol()">⊹ Start Calibration — Start Timer</button>
   </section>
 
   <!-- ── ACTIVE PHASE ── -->
   <section id="phaseActive" class="hidden" aria-labelledby="activeHeading">
-    <h2 id="activeHeading" class="sr-only" tabindex="-1">Active training protocol</h2>
-    <div class="phase-pill active">● Protocol Active</div>
+    <h2 id="activeHeading" class="sr-only" tabindex="-1">Active calibration</h2>
+    <div class="phase-pill active">● Calibration Active</div>
 
     <!-- Timer -->
     <div class="timer-block" id="timerBlock">
@@ -410,14 +410,14 @@
       <div id="liveStats" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:10px;color:var(--muted)"></div>
     </div>
 
-    <button class="secondary-btn" type="button" onclick="finishEarly()" id="finishEarlyBtn" disabled>✓ Finish Protocol</button>
+    <button class="secondary-btn" type="button" onclick="finishEarly()" id="finishEarlyBtn" disabled>✓ Finish Calibration</button>
     <button class="danger-btn" type="button" onclick="cancelProtocol()">✕ Cancel &amp; Discard</button>
   </section>
 
   <!-- ── RESULTS PHASE ── -->
   <section id="phaseResults" class="hidden" aria-labelledby="resultsHeading">
-    <h2 id="resultsHeading" class="sr-only" tabindex="-1">Training protocol results</h2>
-    <div class="phase-pill complete">✦ Protocol Complete</div>
+    <h2 id="resultsHeading" class="sr-only" tabindex="-1">Calibration results</h2>
+    <div class="phase-pill complete">✦ Calibration Complete</div>
 
     <!-- Key results -->
     <div class="result-grid">
@@ -489,11 +489,11 @@
       <div id="historyList"></div>
     </div>
 
-    <button class="secondary-btn" type="button" onclick="resetToSetup()">⊹ Run Another Session</button>
+    <button class="secondary-btn" type="button" onclick="resetToSetup()">⊹ Run Another Calibration</button>
   </section>
   </main>
 
-  <footer class="disclaimer">⚗️ Training mode · For harm reduction only · Never drive after drinking<br>Elimination rate varies by individual — more sessions = higher confidence</footer>
+  <footer class="disclaimer">⚗️ Calibration · For harm reduction only · Never drive after drinking<br>Elimination rate varies by individual — more sessions = higher confidence</footer>
 </div>
 
 <script src="goldilocks-core.js"></script>
@@ -692,16 +692,16 @@ function updateActiveStep() {
     clearInterval(timerInterval);
     timerInterval = null;
     logBtn.disabled = true;
-    document.getElementById('activeStepText').textContent = 'Protocol window expired';
+    document.getElementById('activeStepText').textContent = 'Calibration window expired';
     document.getElementById('activeStepSub').textContent = readings.length >= 3
       ? 'No further readings can be logged after T+130. Finish to use the valid readings already recorded.'
-      : 'No further readings can be logged after T+130. Cancel and begin a new protocol.';
+      : 'No further readings can be logged after T+130. Cancel and begin a new calibration.';
     return;
   }
   if (currentStep >= READING_TIMES.length) {
     logBtn.disabled = true;
     document.getElementById('activeStepText').textContent = 'All scheduled readings logged';
-    document.getElementById('activeStepSub').textContent = 'Finish the protocol to review and save this calibration.';
+    document.getElementById('activeStepSub').textContent = 'Finish the calibration to review and save it.';
     return;
   }
   const targetTime = getReadingReadyTime();
@@ -747,7 +747,7 @@ function logReading() {
   const now = Date.now();
   if ((now - t0) / 60000 > SESSION_MAX_MIN) {
     document.getElementById('logBtn').disabled = true;
-    showToast('Protocol expired', 'No readings can be logged after T+130. Start a new protocol.', 'green');
+    showToast('Calibration expired', 'No readings can be logged after T+130. Start a new calibration.', 'green');
     return;
   }
   const targetTime = getReadingReadyTime();
@@ -769,7 +769,7 @@ function logReading() {
 
   // If 3+ readings logged, enable finish
   if (readings.length >= 3) {
-    document.getElementById('finishEarlyBtn').textContent = '✓ Finish Protocol';
+    document.getElementById('finishEarlyBtn').textContent = '✓ Finish Calibration';
     document.getElementById('finishEarlyBtn').disabled = false;
   }
 
@@ -944,7 +944,7 @@ function finishProtocol() {
   const results = calcResults();
   if (!results || !isPlausibleCalibration(results, !fasted)) {
     const reason = lastCalculationError || 'The calculated rate is outside plausible limits.';
-    alert(`This protocol cannot be completed: ${reason} Readings must form a declining, valid curve.`);
+    alert(`This calibration cannot be completed: ${reason} Readings must form a declining, valid curve.`);
     return;
   }
 
@@ -1003,7 +1003,7 @@ function finishProtocol() {
   const rl = document.createElement('div');
   rl.className = 'readings-list';
   rl.setAttribute('role', 'table');
-  rl.setAttribute('aria-label', 'Protocol readings and fitted values');
+  rl.setAttribute('aria-label', 'Calibration readings and fitted values');
   const header = document.createElement('div');
   header.className = 'reading-row header';
   header.setAttribute('role', 'row');
@@ -1044,7 +1044,7 @@ function cancelProtocol() {
   const readingDetail = readings.length
     ? ` and ${readings.length} logged reading${readings.length === 1 ? '' : 's'}`
     : '';
-  if (protocolActive && !confirm(`Discard this active protocol${readingDetail}? This cannot be undone.`)) return;
+  if (protocolActive && !confirm(`Discard this active calibration${readingDetail}? This cannot be undone.`)) return;
   clearInterval(timerInterval);
   protocolActive = false;
   readings = [];
@@ -1068,7 +1068,7 @@ function saveProfile() {
   }
   if (savedProtocolId === completedProtocolId || readHistory().some(item => item.sessionId === completedProtocolId)) {
     markProtocolSaved();
-    showToast('Already saved', 'This completed protocol has already been added to a profile.');
+    showToast('Already saved', 'This completed calibration has already been added to a profile.');
     return;
   }
 
@@ -1086,7 +1086,7 @@ function saveProfile() {
   const existing = isRecord(profiles[name]) ? profiles[name] : null;
   if (existing?.lastTrainingId === completedProtocolId) {
     markProtocolSaved();
-    showToast('Already saved', `This protocol is already included in profile "${name}".`);
+    showToast('Already saved', `This calibration is already included in profile "${name}".`);
     return;
   }
 
@@ -1453,7 +1453,7 @@ function initTheme() {
     renderReadings();
     if (completedProtocolId) {
       finishProtocol();
-      showToast('⚗️ Results restored', savedProtocolId ? 'This protocol was already saved.' : 'Save this validated calibration when ready.', 'green');
+      showToast('⚗️ Results restored', savedProtocolId ? 'This calibration was already saved.' : 'Save this validated calibration when ready.', 'green');
     } else {
       document.getElementById('phaseActive').classList.remove('hidden');
       protocolActive = true;
@@ -1463,7 +1463,7 @@ function initTheme() {
       }
       tickTimer();
       timerInterval = setInterval(tickTimer, 1000);
-      showToast('⚗️ Protocol restored', 'Timing and logged readings were validated.', 'green');
+      showToast('⚗️ Calibration restored', 'Timing and logged readings were validated.', 'green');
     }
   }
 })();

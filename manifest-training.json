@@ -1,7 +1,7 @@
 {
-  "name": "Goldilocks Training",
-  "short_name": "GL Training",
-  "description": "Calibrate your BAC curve with the Goldilocks Training Protocol",
+  "name": "Goldilocks Calibration",
+  "short_name": "GL Calibration",
+  "description": "Personalize your BAC model with timed breathalyzer readings",
   "id": "./goldilocks-training.html",
   "start_url": "./goldilocks-training.html",
   "scope": "./",

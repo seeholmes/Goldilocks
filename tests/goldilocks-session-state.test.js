@@ -351,7 +351,7 @@ test('accepts a persisted one-step Pace log snapshot', () => {
   assert.equal(inspected.remainingDrinks, 2);
 });
 
-test('distinguishes an active Training protocol from a valid ready-to-finish curve', () => {
+test('distinguishes an active Calibration session from a valid ready-to-finish curve', () => {
   const active = sessions.inspectTraining(trainingFixture(), NOW, core);
   assert.equal(active.health, 'valid');
   assert.equal(active.state, 'active-waiting');

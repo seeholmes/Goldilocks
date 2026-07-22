@@ -430,6 +430,25 @@ test('Pace branding is consistent while legacy compatibility remains', () => {
   assert.doesNotMatch(landing, /Cruise Mode|coast smoothly/);
 });
 
+test('Calibration branding is consistent while legacy compatibility remains', () => {
+  const html = read('goldilocks-training.html');
+  assert.match(html, /<title>Goldilocks Calibration<\/title>/);
+  assert.match(html, /<p class="logo-sub">Calibration<\/p>/);
+  assert.match(html, />⊹ Start Calibration — Start Timer<\/button>/);
+  assert.match(html, />Calibration Steps<\/div>/);
+  assert.doesNotMatch(html, />Training(?: Mode| Protocol)?</);
+  assert.match(html, /goldilocks_training_session/);
+
+  const landing = read('index.html');
+  assert.match(landing, /<h3 class="mode-name">Calibration<\/h3>/);
+  assert.match(landing, /Personalize your BAC model/);
+  assert.match(landing, /href="goldilocks-training\.html"/);
+  assert.doesNotMatch(landing, /<h3 class="mode-name">Training<\/h3>/);
+
+  const state = read('goldilocks-session-state.js');
+  assert.match(state, /label: 'Calibration'/);
+});
+
 test('Mission Control inspects resumable sessions without mutating them', () => {
   const html = read('index.html');
   const coreIndex = html.search(/<script src="goldilocks-core\.js(?:\?[^\"]+)?"><\/script>/);
@@ -443,7 +462,7 @@ test('Mission Control inspects resumable sessions without mutating them', () => 
   assert.doesNotMatch(html, /localStorage\.(?:removeItem|clear)\s*\(/);
 });
 
-test('Training saves profiles for and hands off to both planners', () => {
+test('Calibration saves profiles for and hands off to both planners', () => {
   const html = read('goldilocks-training.html');
   assert.doesNotMatch(html, /Save Profile to Goldilocks Zone|Goldilocks Zone dropdown|open Goldilocks Zone/);
   assert.match(html, /Save Profile to Goldilocks/);
@@ -453,13 +472,13 @@ test('Training saves profiles for and hands off to both planners', () => {
   assert.match(html, /id="profileHandoff"/);
 });
 
-test('Training explains fasted calibration behavior without implying a safer metabolism', () => {
+test('Calibration explains fasted behavior without implying a safer metabolism', () => {
   const html = read('goldilocks-training.html');
   const fastedInput = openingTagWithId(html, 'fastedInput');
   assert.match(fastedInput, /\baria-describedby="fastedTrainingHelp"/i);
 
   const helpStart = html.indexOf('id="fastedTrainingHelp"');
-  assert.ok(helpStart >= 0, 'Training must expose #fastedTrainingHelp');
+  assert.ok(helpStart >= 0, 'Calibration must expose #fastedTrainingHelp');
   const help = html.slice(helpStart, helpStart + 650);
   assert.match(help, /elimination rate is kept/i);
   assert.match(help, /rise rate is excluded from the profile average/i);
@@ -470,14 +489,14 @@ test('Training explains fasted calibration behavior without implying a safer met
   assert.doesNotMatch(html, /\bmetabColor\b/, 'metabolism color must not classify a rate as good or safe');
 });
 
-test('Training confirms destructive protocol resets', () => {
+test('Calibration confirms destructive session resets', () => {
   const html = read('goldilocks-training.html');
   const cancel = functionSource(html, 'cancelProtocol');
   const reset = functionSource(html, 'resetToSetup');
-  assert.ok(cancel, 'Training must define cancelProtocol()');
+  assert.ok(cancel, 'Calibration must define cancelProtocol()');
   assert.match(cancel, /\bprotocolActive\b/);
   assert.match(cancel, /\bconfirm\s*\(/, 'canceling an active protocol must require confirmation');
-  assert.ok(reset, 'Training must define resetToSetup()');
+  assert.ok(reset, 'Calibration must define resetToSetup()');
   assert.match(reset, /completedProtocolId/);
   assert.match(reset, /savedProtocolId/);
   assert.match(reset, /\bconfirm\s*\(/, 'discarding unsaved completed results must require confirmation');
