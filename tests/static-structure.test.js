@@ -80,7 +80,7 @@ test('documents have unique IDs and valid local references', () => {
 test('mode pages load the tested calculation core', () => {
   const requiredCalls = {
     'goldilocks-zone.html': [
-      'bacPerDrink', 'simulate', 'estimateLiveBac', 'buildZoneSchedule', 'widmarkRisePerStd',
+      'bacPerDrink', 'simulateDuration', 'estimateLiveBac', 'buildZoneSchedule', 'widmarkRisePerStd',
     ],
     'goldilocks-cruise.html': [
       'bacPerDrink', 'simulateDuration', 'estimateLiveBac',
@@ -133,6 +133,76 @@ test('Pace exposes 15-minute session-length planning', () => {
   assert.match(html, /normalizeRestoredSession\s*\(/);
   assert.match(html, /s\.hours\s*\*\s*60/);
   assert.match(html, /s\.plan\.length\s*!==\s*bucketCount/);
+});
+
+test('Zone exposes 15-minute session-length planning and migrates whole-hour sessions', () => {
+  const html = read('goldilocks-zone.html');
+  const durationInput = openingTagWithId(html, 'duration');
+  assert.match(durationInput, /\bmin="60"/i);
+  assert.match(durationInput, /\bmax="480"/i);
+  assert.match(durationInput, /\bstep="15"/i);
+  assert.match(html, /durationMinutes/);
+  assert.match(html, /getDurationBucketCount\s*\(/);
+  assert.match(html, /formatDuration\s*\(/);
+
+  const normalize = functionSource(html, 'normalizeRestoredSession');
+  assert.ok(normalize, 'Zone must normalize legacy whole-hour saved sessions');
+  assert.match(normalize, /s\.hours\s*\*\s*60/);
+
+  const restoredValidation = functionSource(html, 'isValidRestoredSession');
+  assert.match(restoredValidation, /bucketCount/);
+  assert.match(restoredValidation, /s\.plan\.length\s*!==\s*bucketCount/);
+
+  const inspectZone = functionSource(read('goldilocks-session-state.js'), 'inspectZone');
+  assert.match(inspectZone, /durationMinutes/);
+  assert.match(inspectZone, /session\.hours\s*\*\s*60/);
+  assert.match(inspectZone, /bucketCount/);
+});
+
+test('Zone starts when Start is clicked and exposes no planned start-time control', () => {
+  const html = read('goldilocks-zone.html');
+  assert.equal(openingTagWithId(html, 'startTime'), '', 'Zone must not render a planned start-time field');
+  assert.doesNotMatch(html, /\bfor="startTime"/i, 'Zone must not retain a label for a removed start-time field');
+  assert.doesNotMatch(
+    html,
+    /(?:getElementById\(\s*['"]startTime['"]|querySelector(?:All)?\(\s*['"]#startTime['"])/,
+    'Zone must not read a removed start-time field from the DOM'
+  );
+
+  const startSession = functionSource(html, 'startSession');
+  assert.match(startSession, /sessionStartTs\s*=/);
+  assert.match(startSession, /Date\.now\(\)/, 'Zone must anchor the session to the Start click');
+  assert.doesNotMatch(startSession, /configuredStart|getStart\(\)\.getTime\(\)/);
+  assert.match(html, /Timing starts immediately when you (?:tap|click) Start/i);
+  assert.match(html, /times? (?:below )?(?:are|is) a live preview/i);
+});
+
+test('Zone models and clamps a partial final hourly bucket', () => {
+  const html = read('goldilocks-zone.html');
+  const simulate = functionSource(html, 'simulate');
+  assert.match(simulate, /GoldilocksCore\.simulateDuration\s*\(/);
+  assert.match(simulate, /getDurationHours\s*\(/);
+
+  const timeline = functionSource(html, 'renderTimeline');
+  assert.match(
+    timeline,
+    /Math\.min\(\s*(?:h\s*\+\s*1|getDurationHours\(\))\s*,\s*(?:getDurationHours\(\)|h\s*\+\s*1)\s*\)/,
+    'Zone must clamp the final timeline block to the exact fractional session end'
+  );
+  assert.match(
+    timeline,
+    /fmt\(\s*start\s*,\s*(?:Math\.min\(|(?:bucket|period|block)End\w*)/,
+    'Zone must render the clamped final timeline end instead of a full extra hour'
+  );
+
+  const refreshPreview = functionSource(html, 'refreshPlanningPreview');
+  assert.match(refreshPreview, /plan\.length\s*!==\s*getDurationBucketCount\(\)/);
+
+  const unresolved = functionSource(html, 'getUnresolvedElapsedHours');
+  assert.match(unresolved, /elapsedMs\s*%\s*3600000\s*===\s*0/);
+
+  const requestFinish = functionSource(html, 'requestFinishSession');
+  assert.match(requestFinish, /Confirm \$\{getPeriodLabel\(unresolvedHours\[0\]\)\}/);
 });
 
 test('Zone and Pace load the shared Phase 2 session-flow assets', () => {
@@ -367,6 +437,8 @@ test('Mission Control inspects resumable sessions without mutating them', () => 
   assert.ok(coreIndex >= 0 && stateIndex > coreIndex, 'calculation core must load before session inspection');
   assert.match(html, /id="resumeSection"/);
   assert.match(html, /GoldilocksSessionState\.inspectStorage\s*\(/);
+  assert.match(html, /entry\.state\s*===\s*['"]scheduled['"]/);
+  assert.match(html, /Session scheduled/);
   assert.match(html, /addEventListener\('pageshow'/);
   assert.doesNotMatch(html, /localStorage\.(?:removeItem|clear)\s*\(/);
 });

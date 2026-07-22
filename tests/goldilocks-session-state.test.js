@@ -24,10 +24,10 @@ const profile = Object.freeze({
 function zoneFixture(overrides = {}) {
   return {
     sessionStartTs: NOW - HOUR,
+    durationMinutes: 240,
     actualDrinks: [2, null, null, null],
     plan: [3, 1, 1, 0],
     replanFlags: [false, false, false, false],
-    hours: 4,
     bacMin: 0.04,
     bacMax: 0.08,
     ag: core.STD_DRINK_G,
@@ -35,7 +35,6 @@ function zoneFixture(overrides = {}) {
     profileName: profile.name,
     drinkOz: '12',
     drinkAbv: '5',
-    startTime: '19:00',
     weight: '185',
     units: 'imperial',
     sex: 'male',
@@ -117,18 +116,15 @@ test('publishes the session inspector as a browser global', () => {
   assert.equal(typeof browser.GoldilocksSessionState.inspectStorage, 'function');
 });
 
-test('inspects scheduled, active, completed, and expired Zone sessions', () => {
-  const scheduled = sessions.inspectZone(zoneFixture({
-    sessionStartTs: NOW + HOUR,
-    actualDrinks: [null, null, null, null],
-    startTime: '21:00',
-  }), NOW);
-  assert.equal(scheduled.health, 'valid');
-  assert.equal(scheduled.state, 'scheduled');
-
-  const active = sessions.inspectZone(zoneFixture(), NOW);
+test('inspects canonical active, completed, and expired Zone sessions without a planned start field', () => {
+  const fixture = zoneFixture();
+  assert.equal(Object.hasOwn(fixture, 'startTime'), false);
+  const active = sessions.inspectZone(fixture, NOW);
+  assert.equal(active.health, 'valid');
   assert.equal(active.state, 'active');
   assert.equal(active.currentStep, 2);
+  assert.equal(active.totalSteps, 4);
+  assert.equal(active.durationMinutes, 240);
   assert.equal(active.loggedDrinks, 2);
   assert.equal(active.needsReconciliation, false);
 
@@ -137,7 +133,6 @@ test('inspects scheduled, active, completed, and expired Zone sessions', () => {
     sessionStartTs: completeStart,
     actualDrinks: [2, 1, 1, 0],
     sessionComplete: true,
-    startTime: '16:00',
   }), NOW);
   assert.equal(complete.state, 'complete');
 
@@ -149,7 +144,6 @@ test('reports unresolved Zone periods without confusing an explicit zero', () =>
   const unresolved = sessions.inspectZone(zoneFixture({
     sessionStartTs: NOW - 2 * HOUR,
     actualDrinks: [2, null, null, null],
-    startTime: '18:00',
   }), NOW);
   assert.equal(unresolved.health, 'valid');
   assert.equal(unresolved.unresolvedPeriods, 1);
@@ -158,7 +152,6 @@ test('reports unresolved Zone periods without confusing an explicit zero', () =>
   const resolved = sessions.inspectZone(zoneFixture({
     sessionStartTs: NOW - 2 * HOUR,
     actualDrinks: [2, 0, null, null],
-    startTime: '18:00',
   }), NOW);
   assert.equal(resolved.unresolvedPeriods, 0);
   assert.equal(resolved.needsReconciliation, false);
@@ -181,6 +174,97 @@ test('accepts an early completed Zone session only when elapsed hours are reconc
   }), NOW);
   assert.equal(invalid.health, 'corrupt');
   assert.equal(invalid.reason, 'invalid-completion-progress');
+});
+
+test('inspects a canonical 75-minute Zone session across its partial final bucket', () => {
+  const start = NOW - 70 * MINUTE;
+  const active = sessions.inspectZone(zoneFixture({
+    sessionStartTs: start,
+    durationMinutes: 75,
+    actualDrinks: [2, null],
+    plan: [3, 1],
+    replanFlags: [false, false],
+  }), NOW);
+  assert.equal(active.health, 'valid');
+  assert.equal(active.state, 'active');
+  assert.equal(active.durationMinutes, 75);
+  assert.equal(active.currentStep, 2);
+  assert.equal(active.totalSteps, 2);
+  assert.equal(active.scheduledEndAt, start + 75 * MINUTE);
+  assert.equal(active.needsReconciliation, false);
+
+  const endedStart = NOW - 75 * MINUTE;
+  const needsFinalize = sessions.inspectZone(zoneFixture({
+    sessionStartTs: endedStart,
+    durationMinutes: 75,
+    actualDrinks: [2, null],
+    plan: [3, 1],
+    replanFlags: [false, false],
+  }), NOW);
+  assert.equal(needsFinalize.health, 'valid');
+  assert.equal(needsFinalize.state, 'needs-finalize');
+  assert.equal(needsFinalize.currentStep, null);
+  assert.equal(needsFinalize.totalSteps, 2);
+  assert.equal(needsFinalize.unresolvedPeriods, 1);
+  assert.equal(needsFinalize.needsReconciliation, true);
+});
+
+test('normalizes legacy Zone hours without mutating the stored object', () => {
+  const legacy = zoneFixture({
+    sessionStartTs: NOW - HOUR,
+    startTime: '19:00',
+  });
+  delete legacy.durationMinutes;
+  legacy.hours = 4;
+
+  const inspected = sessions.inspectZone(legacy, NOW);
+  assert.equal(inspected.health, 'valid');
+  assert.equal(inspected.durationMinutes, 240);
+  assert.equal(inspected.totalSteps, 4);
+  assert.equal(legacy.durationMinutes, undefined);
+  assert.equal(legacy.hours, 4);
+});
+
+test('keeps a legacy scheduled Zone session resumable', () => {
+  const legacy = zoneFixture({
+    sessionStartTs: NOW + HOUR,
+    actualDrinks: [null, null, null, null],
+    startTime: '21:00',
+  });
+  delete legacy.durationMinutes;
+  legacy.hours = 4;
+
+  const scheduled = sessions.inspectZone(legacy, NOW);
+  assert.equal(scheduled.health, 'valid');
+  assert.equal(scheduled.state, 'scheduled');
+  assert.equal(scheduled.durationMinutes, 240);
+  assert.equal(scheduled.startAt, NOW + HOUR);
+});
+
+test('rejects invalid Zone duration increments and duration bucket shapes', () => {
+  for (const durationMinutes of [45, 70, 495]) {
+    const result = sessions.inspectZone(zoneFixture({ durationMinutes }), NOW);
+    assert.equal(result.health, 'corrupt', `${durationMinutes} minutes must be invalid`);
+    assert.equal(result.reason, 'invalid-session');
+  }
+
+  const partialSession = {
+    durationMinutes: 75,
+    actualDrinks: [2, null],
+    plan: [3, 1],
+    replanFlags: [false, false],
+  };
+  const mismatches = [
+    { ...partialSession, plan: [3] },
+    { ...partialSession, actualDrinks: [2] },
+    { ...partialSession, replanFlags: [false] },
+    { ...partialSession, initialPlan: [3] },
+  ];
+  for (const overrides of mismatches) {
+    const result = sessions.inspectZone(zoneFixture(overrides), NOW);
+    assert.equal(result.health, 'corrupt');
+    assert.equal(result.reason, 'invalid-session');
+  }
 });
 
 test('inspects Pace progress and normalizes legacy whole-hour duration in memory', () => {

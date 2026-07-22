@@ -162,6 +162,57 @@ test('builds the established hourly zone schedule', () => {
   );
 });
 
+test('builds Zone schedules with proportional metabolism in a partial final hour', () => {
+  const quarterHourSchedule = core.buildZoneSchedule(
+    core.STD_DRINK_G,
+    calibratedProfile,
+    0.04,
+    0.08,
+    1.25
+  );
+  assert.deepEqual(quarterHourSchedule, [3, 0]);
+  assert.deepEqual(
+    core.simulateDuration(
+      quarterHourSchedule,
+      core.STD_DRINK_G,
+      calibratedProfile,
+      1.25
+    ),
+    [0.045, 0.041]
+  );
+
+  const halfHourSchedule = core.buildZoneSchedule(
+    core.STD_DRINK_G,
+    calibratedProfile,
+    0.04,
+    0.08,
+    1.5
+  );
+  assert.deepEqual(halfHourSchedule, [3, 1]);
+  assert.deepEqual(
+    core.simulateDuration(
+      halfHourSchedule,
+      core.STD_DRINK_G,
+      calibratedProfile,
+      1.5
+    ),
+    [0.045, 0.058]
+  );
+});
+
+test('rejects an invalid Zone duration', () => {
+  assert.throws(
+    () => core.buildZoneSchedule(
+      core.STD_DRINK_G,
+      calibratedProfile,
+      0.04,
+      0.08,
+      0
+    ),
+    RangeError
+  );
+});
+
 test('uses the remaining window when rebuilding a zone schedule mid-session', () => {
   const schedule = core.buildZoneSchedule(
     core.STD_DRINK_G,

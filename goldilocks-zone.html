@@ -383,17 +383,12 @@
 
   <!-- Session settings -->
   <section class="card" aria-label="Session settings">
-    <div class="row2">
-      <div>
-        <label class="sec" for="duration">Session Duration</label>
-        <input type="range" id="duration" min="1" max="8" step="1" value="4" aria-describedby="durationVal">
-        <div class="slider-labels"><span>1h</span><span>4h</span><span>8h</span></div>
-        <div style="font-family:'Anybody',sans-serif;font-size:24px;font-weight:400;color:var(--gold);margin-top:8px" id="durationVal">4 hours</div>
-      </div>
-      <div>
-        <label class="sec" for="startTime">Start Time</label>
-        <div class="input-wrap"><input type="time" id="startTime" value="20:00"></div>
-      </div>
+    <div>
+      <label class="sec" for="duration">Session Duration</label>
+      <input type="range" id="duration" min="60" max="480" step="15" value="240" aria-describedby="durationVal durationResolution">
+      <div class="slider-labels"><span>1h</span><span>4h 30m</span><span>8h</span></div>
+      <div style="font-family:'Anybody',sans-serif;font-size:24px;font-weight:400;color:var(--gold);margin-top:8px" id="durationVal">4h</div>
+      <div id="durationResolution" style="font-size:9px;color:var(--muted);margin-top:5px">15-minute increments</div>
     </div>
   </section>
   </div>
@@ -401,7 +396,7 @@
   <section id="preStartReview" class="preflight-review" aria-labelledby="preStartReviewHeading">
     <div class="session-kicker">Before you start</div>
     <h2 class="session-heading" id="preStartReviewHeading" tabindex="-1">Review the session plan</h2>
-    <p class="session-detail">Confirm the timing and estimates before starting. The hourly plan remains adjustable as you log what actually happened.</p>
+    <p class="session-detail">Timing starts immediately when you tap Start. Times below are a live preview, and the hourly plan remains adjustable as you log what actually happened.</p>
     <div class="review-grid">
       <div class="review-item"><div class="review-value" id="reviewStart">—</div><div class="review-label">Start</div></div>
       <div class="review-item"><div class="review-value" id="reviewEnd">—</div><div class="review-label">End</div></div>
@@ -433,8 +428,8 @@
       <button type="button" class="session-action-btn" id="undoLogBtn" onclick="undoLastLog()" disabled>Undo last change</button>
     </div>
     <div id="reconcilePanel" class="reconcile-panel" aria-labelledby="reconcileHeading" hidden>
-      <div class="log-editor-title" id="reconcileHeading">Hourly log</div>
-      <p class="reconcile-summary" id="reconcileSummary">Choose an explicit count for each elapsed hour. Zero means you confirmed no drinks.</p>
+      <div class="log-editor-title" id="reconcileHeading">Period log</div>
+      <p class="reconcile-summary" id="reconcileSummary">Choose an explicit count for each elapsed period. Zero means you confirmed no drinks.</p>
       <div id="reconcileRows"></div>
     </div>
     <div class="session-actions">
@@ -518,7 +513,7 @@
 <dialog class="session-dialog" id="finishSessionDialog" aria-labelledby="finishDialogTitle">
   <form method="dialog" class="session-dialog-body">
     <h2 class="session-dialog-title" id="finishDialogTitle">Finish this session?</h2>
-    <p class="session-dialog-copy" id="finishDialogCopy">Your confirmed hourly log will be preserved and a completion summary will be shown.</p>
+    <p class="session-dialog-copy" id="finishDialogCopy">Your confirmed period log will be preserved and a completion summary will be shown.</p>
     <div class="session-actions">
       <button class="session-action-btn" value="cancel">Keep session open</button>
       <button class="session-action-btn finish" value="confirm" onclick="finishSession()">Finish session</button>
@@ -529,7 +524,7 @@
 <dialog class="session-dialog" id="discardSessionDialog" aria-labelledby="discardDialogTitle">
   <form method="dialog" class="session-dialog-body">
     <h2 class="session-dialog-title" id="discardDialogTitle">Discard this session?</h2>
-    <p class="session-dialog-copy">This permanently removes the active session and its hourly log from this browser.</p>
+    <p class="session-dialog-copy">This permanently removes the active session and its period log from this browser.</p>
     <div class="session-actions">
       <button class="session-action-btn" value="cancel">Keep session</button>
       <button class="session-action-btn danger" value="confirm" onclick="discardSession()">Discard permanently</button>
@@ -538,7 +533,7 @@
 </dialog>
 
 <script src="goldilocks-presets.js"></script>
-<script src="goldilocks-core.js"></script>
+<script src="goldilocks-core.js?v=20260721-zone-duration"></script>
 <script src="goldilocks-session-flow.js"></script>
 <script>
 // ── Profiles ──────────────────────────────────────────────────
@@ -566,6 +561,9 @@ const STD_DRINK_G = GoldilocksCore.STD_DRINK_G;
 const MAX_SLOTS   = 6;
 const BAC_DISPLAY_SCALE = 0.2;
 const STORAGE_KEY = 'goldilocks_v2_session';
+const MIN_DURATION_MINUTES = 60;
+const MAX_DURATION_MINUTES = 480;
+const DURATION_STEP_MINUTES = 15;
 
 // ── State ─────────────────────────────────────────────────────
 let sessionActive  = false;
@@ -576,8 +574,10 @@ let ag             = 0;
 let profile        = PROFILES.seeholmes;
 let bacMin         = 0.04;
 let bacMax         = 0.08;
+let durationMinutes = 240;
 let hours          = 4;
 let clockInterval  = null;
+let previewInterval = null;
 let replanFlags    = [];
 let sessionComplete = false;
 let completedAt    = null;
@@ -720,6 +720,37 @@ function updateWidmarkChip(p, a) {
 }
 
 // ── Math ──────────────────────────────────────────────────────
+function isValidDurationMinutes(value) {
+  return Number.isInteger(value)
+    && value >= MIN_DURATION_MINUTES
+    && value <= MAX_DURATION_MINUTES
+    && value % DURATION_STEP_MINUTES === 0;
+}
+
+function getDurationHours(minutes = durationMinutes) {
+  return minutes / 60;
+}
+
+function getDurationBucketCount(minutes = durationMinutes) {
+  return Math.ceil(getDurationHours(minutes));
+}
+
+function getBucketDurationHours(bucket, minutes = durationMinutes) {
+  return Math.max(0, Math.min(1, getDurationHours(minutes) - bucket));
+}
+
+function formatDuration(minutes) {
+  const wholeHours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (!remainingMinutes) return `${wholeHours}h`;
+  return `${wholeHours}h ${remainingMinutes}m`;
+}
+
+function getPeriodLabel(period) {
+  const periodMinutes = Math.round(getBucketDurationHours(period) * 60);
+  return periodMinutes === 60 ? `Hour ${period + 1}` : `Final ${periodMinutes}m`;
+}
+
 function getAlcGrams() {
   const oz  = parseFloat(document.getElementById('drinkOz').value);
   const abv = parseFloat(document.getElementById('drinkAbv').value);
@@ -732,8 +763,8 @@ function bpd(a, p) {
   return GoldilocksCore.bacPerDrink(a, p);
 }
 
-function simulate(sched, a, p) {
-  return GoldilocksCore.simulate(sched, a, p);
+function simulate(sched, a, p, minutes = durationMinutes) {
+  return GoldilocksCore.simulateDuration(sched, a, p, getDurationHours(minutes));
 }
 
 function buildSchedule(a, p, lo, hi, hrs, startBac = 0) {
@@ -744,7 +775,7 @@ function estimateLiveBac(completedSched, curDrinks, frac) {
   return GoldilocksCore.estimateLiveBac(completedSched, curDrinks, frac, ag, profile);
 }
 
-const VALIDATED_IDS = ['drinkOz','drinkAbv','bacMin','bacMax','duration','startTime','weight'];
+const VALIDATED_IDS = ['drinkOz','drinkAbv','bacMin','bacMax','duration','weight'];
 
 function setConfigError(message, invalidId = null, focusInvalid = false) {
   const error = document.getElementById('configError');
@@ -771,18 +802,17 @@ function validateConfig(focusInvalid = false) {
   else if (!Number.isFinite(values.lo) || values.lo < 0.01 || values.lo > 0.15) problem = ['Floor BAC must be between 0.01 and 0.15.', 'bacMin'];
   else if (!Number.isFinite(values.hi) || values.hi < 0.01 || values.hi > 0.25) problem = ['Ceiling BAC must be between 0.01 and 0.25.', 'bacMax'];
   else if (values.lo >= values.hi) problem = ['Ceiling BAC must be greater than floor BAC.', 'bacMax'];
-  else if (!Number.isInteger(values.duration) || values.duration < 1 || values.duration > 8) problem = ['Mission duration must be between 1 and 8 hours.', 'duration'];
-  else if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(document.getElementById('startTime').value)) problem = ['Enter a valid launch time.', 'startTime'];
-  else if (getStart().getTime() + (values.duration + 1) * 3600000 <= Date.now()) problem = ['This session window has expired. Choose a later start time.', 'startTime'];
+  else if (!isValidDurationMinutes(values.duration)) problem = ['Mission duration must be between 1 and 8 hours in 15-minute increments.', 'duration'];
   else if (!isValidProfile(getActiveProfile())) problem = ['Enter a valid body weight and profile.', document.getElementById('profileSelect').value === 'custom' ? 'weight' : null];
   else {
     const alcoholGrams = values.oz * (values.abv / 100) * 29.5735 * 0.789;
     const activeProfile = getActiveProfile();
-    const candidate = GoldilocksCore.buildZoneSchedule(alcoholGrams, activeProfile, values.lo, values.hi, values.duration);
+    const durationHours = getDurationHours(values.duration);
+    const candidate = GoldilocksCore.buildZoneSchedule(alcoholGrams, activeProfile, values.lo, values.hi, durationHours);
     if (candidate.some(drinks => drinks > MAX_SLOTS)) {
       problem = [`This plan exceeds the supported limit of ${MAX_SLOTS} drinks in an hour. Lower the selected BAC range.`, 'bacMax'];
     } else {
-      const trace = GoldilocksCore.simulate(candidate, alcoholGrams, activeProfile);
+      const trace = GoldilocksCore.simulateDuration(candidate, alcoholGrams, activeProfile, durationHours);
       if (!trace.some(bac => bac >= values.lo && bac <= values.hi)) {
         problem = ['This drink cannot land inside that BAC range. Choose a smaller or lower-ABV drink, or adjust the selected range.', 'drinkAbv'];
       }
@@ -821,39 +851,54 @@ function fmtDateTime(value) {
 
 function getStart() {
   if (sessionActive && Number.isFinite(sessionStartTs)) return new Date(sessionStartTs);
-  const [h,m] = document.getElementById('startTime').value.split(':').map(Number);
-  const d = new Date(); d.setHours(h,m,0,0); return d;
+  return new Date();
 }
 
-function getCurrentHour() {
+function getCurrentHour(at = null) {
   if (!sessionActive || !sessionStartTs) return -1;
-  const referenceAt = sessionComplete && Number.isFinite(completedAt) ? completedAt : Date.now();
+  const referenceAt = Number.isFinite(at)
+    ? at
+    : sessionComplete && Number.isFinite(completedAt) ? completedAt : Date.now();
   const elapsed = (referenceAt - sessionStartTs) / 3600000;
   if (elapsed < 0) return -1;
-  return Math.min(Math.floor(elapsed), hours - 1);
+  return Math.min(Math.floor(elapsed), getDurationBucketCount() - 1);
 }
+
 function getFracThroughHour() {
   if (!sessionActive) return 0;
   const referenceAt = sessionComplete && Number.isFinite(completedAt) ? completedAt : Date.now();
-  const e = (referenceAt - sessionStartTs) / 3600000;
-  if (e <= 0) return 0;
-  if (e >= hours) return 1;
-  return Math.max(0, Math.min(1, e - Math.floor(e)));
+  const elapsed = Math.max(0, Math.min(getDurationHours(), (referenceAt - sessionStartTs) / 3600000));
+  const currentHour = getCurrentHour(referenceAt);
+  if (currentHour < 0) return 0;
+  return Math.max(0, Math.min(getBucketDurationHours(currentHour), elapsed - currentHour));
+}
+
+function getCurrentPeriodProgress() {
+  const currentHour = getCurrentHour();
+  if (currentHour < 0) return 0;
+  const bucketHours = getBucketDurationHours(currentHour);
+  return bucketHours > 0 ? getFracThroughHour() / bucketHours : 0;
 }
 
 function getScheduledEndTs() {
-  return Number.isFinite(sessionStartTs) ? sessionStartTs + hours * 3600000 : null;
+  return Number.isFinite(sessionStartTs) ? sessionStartTs + durationMinutes * 60000 : null;
 }
 
 function getElapsedThroughHour(at = Date.now()) {
   if (!sessionActive || !Number.isFinite(sessionStartTs) || at < sessionStartTs) return -1;
-  const elapsedHours = (at - sessionStartTs) / 3600000;
-  return Math.min(hours - 1, Math.floor(Math.max(0, elapsedHours - Number.EPSILON)));
+  if (at >= getScheduledEndTs()) return getDurationBucketCount() - 1;
+  return Math.min(getDurationBucketCount() - 1, Math.floor((at - sessionStartTs) / 3600000));
 }
 
-function getUnresolvedElapsedHours(at = Date.now(), includeCurrent = false) {
+function getUnresolvedElapsedHours(at, includeCurrent = false) {
+  if (!Number.isFinite(at)) at = Date.now();
   let throughHour = getElapsedThroughHour(at);
-  if (!includeCurrent && throughHour >= 0 && at < getScheduledEndTs()) throughHour -= 1;
+  if (!includeCurrent && throughHour >= 0 && at < getScheduledEndTs()) {
+    throughHour -= 1;
+  } else if (includeCurrent && throughHour > 0 && at < getScheduledEndTs()) {
+    const elapsedMs = at - sessionStartTs;
+    if (elapsedMs > 0 && elapsedMs % 3600000 === 0) throughHour -= 1;
+  }
   return GoldilocksSessionFlow.zoneUnresolvedHours(actualDrinks, throughHour);
 }
 
@@ -870,8 +915,8 @@ function simulateActual(upToHour) {
 
 function replanFromHour(h) {
   const completedBac = simulateActual(h);
-  const newPlan = buildSchedule(ag, profile, bacMin, bacMax, hours - h, completedBac);
-  for (let i = h; i < hours; i++) { plan[i] = newPlan[i - h]; replanFlags[i] = true; }
+  const newPlan = buildSchedule(ag, profile, bacMin, bacMax, getDurationHours() - h, completedBac);
+  for (let i = h; i < getDurationBucketCount(); i++) { plan[i] = newPlan[i - h]; replanFlags[i] = true; }
 }
 
 function getEffectivePlan() {
@@ -887,7 +932,7 @@ function getEffectivePlan() {
 function updatePlanSummary(effectivePlan, trace, provisional = false) {
   if (provisional) {
     document.getElementById('summaryTotal').textContent = '—';
-    document.getElementById('summaryStd').textContent = 'Review hourly log';
+    document.getElementById('summaryStd').textContent = 'Review period log';
     document.getElementById('summaryWindow').textContent = '—';
     document.getElementById('summaryPeak').textContent = '—';
     return;
@@ -897,7 +942,7 @@ function updatePlanSummary(effectivePlan, trace, provisional = false) {
   const peak = Math.max(...trace);
   document.getElementById('summaryTotal').textContent = total;
   document.getElementById('summaryStd').textContent = `${(total * ag / STD_DRINK_G).toFixed(1)} std drinks`;
-  document.getElementById('summaryWindow').textContent = firstIn >= 0 ? `Hr ${firstIn + 1}` : '—';
+  document.getElementById('summaryWindow').textContent = firstIn >= 0 ? getPeriodLabel(firstIn) : '—';
   const peakEl = document.getElementById('summaryPeak');
   peakEl.textContent = peak.toFixed(3);
   peakEl.style.color = clr(peak);
@@ -912,21 +957,27 @@ function clearPreStartReview() {
 function renderPreStartReview() {
   if (sessionActive || !plan.length) return;
   const start = getStart();
-  const end = new Date(start.getTime() + hours * 3600000);
+  const end = new Date(start.getTime() + durationMinutes * 60000);
   const trace = simulate(plan, ag, profile);
   const total = plan.reduce((sum, count) => sum + count, 0);
   const ending = trace.length ? trace[trace.length - 1] : 0;
   const peak = trace.length ? Math.max(...trace) : 0;
-  const averageMinutes = total > 0 ? Math.round(hours * 60 / total) : null;
+  const averageMinutes = total > 0 ? Math.round(durationMinutes / total) : null;
   document.getElementById('reviewStart').textContent = fmtDateTime(start);
   document.getElementById('reviewEnd').textContent = fmtDateTime(end);
-  document.getElementById('reviewDuration').textContent = `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+  document.getElementById('reviewDuration').textContent = formatDuration(durationMinutes);
   document.getElementById('reviewPlanned').textContent = String(total);
   document.getElementById('reviewEndingBac').textContent = ending.toFixed(3);
   document.getElementById('reviewPeak').textContent = peak.toFixed(3);
   document.getElementById('reviewPace').textContent = averageMinutes === null
     ? 'No drinks are currently planned.'
     : `Average planned pace: about one drink every ${averageMinutes} minutes. See the hourly plan for the actual distribution.`;
+}
+
+function refreshPlanningPreview() {
+  if (sessionActive || plan.length !== getDurationBucketCount()) return;
+  renderTimeline();
+  renderPreStartReview();
 }
 
 // ── Render ────────────────────────────────────────────────────
@@ -944,6 +995,8 @@ function renderTimeline() {
 
   plan.forEach((planned, h) => {
     const projBac  = trace[h];
+    const periodLabel = getPeriodLabel(h);
+    const bucketEnd = Math.min(h + 1, getDurationHours());
     const bacAvailable = h < firstUnresolvedHour;
     const pct      = bacAvailable ? Math.min(100, (projBac / maxBac) * 100) : 0;
     const sessionElapsed = sessionActive && Date.now() >= getScheduledEndTs();
@@ -959,7 +1012,7 @@ function renderTimeline() {
     const repFlag    = replanFlags[h] ? `<span class="replan-badge">replanned</span>` : '';
     block.innerHTML = `
       <div class="hour-top">
-        <div><div class="hour-label">Hour ${h+1} ${repFlag}</div><div class="hour-time">${fmt(start,h)} – ${fmt(start,h+1)}</div></div>
+        <div><div class="hour-label">${periodLabel} ${repFlag}</div><div class="hour-time">${fmt(start,h)} – ${fmt(start,bucketEnd)}</div></div>
         <div class="hour-bar-wrap"><div class="hour-bar-fill" style="width:${pct}%;background:${barBg(projBac)}"></div></div>
         <div class="hour-bac-val" style="color:${bacAvailable ? clr(projBac) : 'var(--muted)'}">${bacAvailable ? projBac.toFixed(3) : '—'}</div>
       </div>`;
@@ -970,7 +1023,7 @@ function renderTimeline() {
       const slot = document.createElement(canEdit ? 'button' : 'div');
       if (canEdit) {
         slot.type = 'button';
-        slot.setAttribute('aria-label', `Set Hour ${h + 1} drinks to ${s + 1}`);
+        slot.setAttribute('aria-label', `Set ${periodLabel} drinks to ${s + 1}`);
       }
       const isConsumed = actual !== null && s < actual;
       const isPlanned  = s < planned;
@@ -989,7 +1042,7 @@ function renderTimeline() {
       clearButton.type = 'button';
       clearButton.className = 'clear-hour-btn';
       clearButton.textContent = 'Set 0';
-      clearButton.setAttribute('aria-label', `Set Hour ${h + 1} drinks to zero`);
+      clearButton.setAttribute('aria-label', `Set ${periodLabel} drinks to zero`);
       clearButton.disabled = actual === 0;
       clearButton.addEventListener('click', () => setHourLog(h, 0));
       slotsDiv.appendChild(clearButton);
@@ -1012,13 +1065,14 @@ function renderTimeline() {
     block.appendChild(slotsDiv);
 
     if (isCurrent) {
-      const frac = getFracThroughHour();
+      const elapsedInPeriod = getFracThroughHour();
+      const progress = getCurrentPeriodProgress();
       const prog = document.createElement('div');
       prog.className = 'current-indicator';
       prog.innerHTML = `
-        <span style="color:var(--gold2);font-size:9px;white-space:nowrap">Hour in progress</span>
-        <div class="time-ring"><div class="time-ring-fill" id="timeRingFill" style="width:${frac*100}%"></div></div>
-        <span style="color:var(--muted);font-size:9px;white-space:nowrap">${Math.round(frac*60)}m</span>`;
+        <span style="color:var(--gold2);font-size:9px;white-space:nowrap">${periodLabel} in progress</span>
+        <div class="time-ring"><div class="time-ring-fill" id="timeRingFill" style="width:${progress*100}%"></div></div>
+        <span style="color:var(--muted);font-size:9px;white-space:nowrap">${Math.round(elapsedInPeriod*60)}m</span>`;
       block.appendChild(prog);
     }
     tlEl.appendChild(block);
@@ -1055,9 +1109,9 @@ function renderTimeline() {
 
   const firstIn = trace.findIndex(b => b >= bacMin && b <= bacMax);
   document.getElementById('windowNote').innerHTML = unresolvedHours.length
-    ? 'Reconcile earlier hours to calculate the remaining BAC projection.'
+    ? 'Reconcile earlier periods to calculate the remaining BAC projection.'
     : firstIn >= 0
-      ? `The model first matches the selected planning range <em>${bacMin.toFixed(2)}–${bacMax.toFixed(2)}</em> at the end of Hour ${firstIn+1}. This is not a safety threshold.`
+      ? `The model first matches the selected planning range <em>${bacMin.toFixed(2)}–${bacMax.toFixed(2)}</em> at the end of ${getPeriodLabel(firstIn)}. This is not a safety threshold.`
       : `The projected plan does not match the selected planning range. This range is not a safety threshold.`;
 }
 
@@ -1080,14 +1134,15 @@ function update() {
   profile = getActiveProfile();
   bacMin  = parseFloat(document.getElementById('bacMin').value);
   bacMax  = parseFloat(document.getElementById('bacMax').value);
-  hours   = Number(document.getElementById('duration').value);
+  durationMinutes = Number(document.getElementById('duration').value);
+  hours   = getDurationHours();
 
   updateWidmarkChip(profile, ag);
 
   if (!sessionActive) {
     plan = buildSchedule(ag, profile, bacMin, bacMax, hours);
-    actualDrinks = new Array(hours).fill(undefined);
-    replanFlags  = new Array(hours).fill(false);
+    actualDrinks = new Array(getDurationBucketCount()).fill(undefined);
+    replanFlags  = new Array(getDurationBucketCount()).fill(false);
   }
 
   // Update disclaimer
@@ -1109,7 +1164,7 @@ function replanAfterLogChange(hour) {
   if (currentHour < 0) return;
   let fromHour = Math.max(hour + 1, currentHour);
   if (actualDrinks[currentHour] !== undefined) fromHour = Math.max(fromHour, currentHour + 1);
-  if (fromHour < hours) replanFromHour(fromHour);
+  if (fromHour < getDurationBucketCount()) replanFromHour(fromHour);
 }
 
 function setHourLog(hour, count, options = {}) {
@@ -1167,9 +1222,9 @@ function undoLastLog() {
 
 function estimateSessionBac(at = Date.now()) {
   if (!sessionActive || !Number.isFinite(sessionStartTs) || at <= sessionStartTs) return 0;
-  const elapsed = Math.max(0, Math.min(hours, (at - sessionStartTs) / 3600000));
-  const currentHour = Math.min(hours - 1, Math.floor(elapsed));
-  const fraction = elapsed >= hours ? 1 : elapsed - Math.floor(elapsed);
+  const elapsed = Math.max(0, Math.min(getDurationHours(), (at - sessionStartTs) / 3600000));
+  const currentHour = Math.min(getDurationBucketCount() - 1, Math.floor(elapsed));
+  const fraction = Math.max(0, Math.min(getBucketDurationHours(currentHour), elapsed - currentHour));
   const completed = [];
   for (let hour = 0; hour < currentHour; hour++) completed.push(actualDrinks[hour] ?? 0);
   return estimateLiveBac(completed, actualDrinks[currentHour] ?? 0, fraction);
@@ -1185,8 +1240,8 @@ function renderReconcileEditor() {
   const signature = `${throughHour}|${actualDrinks.slice(0, throughHour + 1).map(value => value === undefined ? 'u' : value).join(',')}`;
   const unresolvedHours = getUnresolvedElapsedHours();
   document.getElementById('reconcileSummary').textContent = unresolvedHours.length
-    ? `${unresolvedHours.length} elapsed ${unresolvedHours.length === 1 ? 'hour needs' : 'hours need'} review. Choose zero only when you confirm no drinks.`
-    : 'Every completed hour is reconciled. You can update the current hour or correct any earlier count.';
+    ? `${unresolvedHours.length} elapsed ${unresolvedHours.length === 1 ? 'period needs' : 'periods need'} review. Choose zero only when you confirm no drinks.`
+    : 'Every completed period is reconciled. You can update the current period or correct any earlier count.';
   if (signature === reconcileSignature) return;
   reconcileSignature = signature;
   rows.replaceChildren();
@@ -1199,11 +1254,13 @@ function renderReconcileEditor() {
     const label = document.createElement('label');
     label.className = 'log-row-label';
     label.htmlFor = `hourLog${hour}`;
-    label.textContent = `Hour ${hour + 1} · ${fmt(new Date(sessionStartTs), hour)}–${fmt(new Date(sessionStartTs), hour + 1)}${needsReview ? ' · needs review' : unconfirmed ? ' · current' : ''}`;
+    const periodLabel = getPeriodLabel(hour);
+    const bucketEnd = Math.min(hour + 1, getDurationHours());
+    label.textContent = `${periodLabel} · ${fmt(new Date(sessionStartTs), hour)}–${fmt(new Date(sessionStartTs), bucketEnd)}${needsReview ? ' · needs review' : unconfirmed ? ' · current' : ''}`;
     const select = document.createElement('select');
     select.className = 'log-control';
     select.id = `hourLog${hour}`;
-    select.setAttribute('aria-label', `Drinks confirmed during Hour ${hour + 1}`);
+    select.setAttribute('aria-label', `Drinks confirmed during ${periodLabel}`);
     const placeholder = document.createElement('option');
     placeholder.value = '';
     placeholder.textContent = needsReview ? 'Choose 0–6' : 'Not confirmed yet';
@@ -1243,21 +1300,22 @@ function renderActiveSessionPanel() {
     setText(detail, `Starts ${fmtDateTime(sessionStartTs)}. Logging becomes available at the start time.`);
   } else if (unresolvedHours.length) {
     const oldest = unresolvedHours[0];
-    setText(title, `Review Hour ${oldest + 1}`);
-    setText(timer, `${unresolvedHours.length} ${unresolvedHours.length === 1 ? 'hour' : 'hours'} unresolved`);
-    setText(detail, `Confirm a count from zero to ${MAX_SLOTS}. The ending projection is unavailable until every completed hour is reviewed.`);
+    setText(title, `Review ${getPeriodLabel(oldest)}`);
+    setText(timer, `${unresolvedHours.length} ${unresolvedHours.length === 1 ? 'period' : 'periods'} unresolved`);
+    setText(detail, `Confirm a count from zero to ${MAX_SLOTS}. The ending projection is unavailable until every completed period is reviewed.`);
   } else if (now >= scheduledEnd) {
     setText(title, 'Ready to finish');
     setText(timer, 'Session time elapsed');
-    setText(detail, 'Every elapsed hour is reconciled. Review the log, then finish to preserve the summary.');
+    setText(detail, 'Every elapsed period is reconciled. Review the log, then finish to preserve the summary.');
   } else {
-    const nextBoundary = sessionStartTs + (throughHour + 1) * 3600000;
+    const nextBoundary = Math.min(getScheduledEndTs(), sessionStartTs + (throughHour + 1) * 3600000);
     const deadline = GoldilocksSessionFlow.describeDeadline(nextBoundary, now);
     const confirmed = actualDrinks[throughHour] ?? 0;
     const currentConfirmed = actualDrinks[throughHour] !== undefined;
-    setText(title, currentConfirmed ? `Hour ${throughHour + 1} log updated` : `Hour ${throughHour + 1} in progress`);
+    const periodLabel = getPeriodLabel(throughHour);
+    setText(title, currentConfirmed ? `${periodLabel} log updated` : `${periodLabel} in progress`);
     setText(timer, `Next check-in ${deadline.label}`);
-    setText(detail, `${confirmed} ${confirmed === 1 ? 'drink' : 'drinks'} logged so far · ${plan[throughHour]} planned for this hour.`);
+    setText(detail, `${confirmed} ${confirmed === 1 ? 'drink' : 'drinks'} logged so far · ${plan[throughHour]} planned for this period.`);
   }
 
   const liveBac = estimateSessionBac(now);
@@ -1272,7 +1330,7 @@ function renderActiveSessionPanel() {
   const hasEarlierGap = throughHour >= 0 && unresolvedHours.some(hour => hour < throughHour);
   const currentCount = throughHour >= 0 ? (actualDrinks[throughHour] ?? 0) : MAX_SLOTS;
   logButton.disabled = throughHour < 0 || hasEarlierGap || currentCount >= MAX_SLOTS;
-  logButton.textContent = hasEarlierGap ? 'Review earlier hour first' : currentCount >= MAX_SLOTS ? 'Hourly limit reached' : 'Log one drink';
+  logButton.textContent = hasEarlierGap ? 'Review earlier period first' : currentCount >= MAX_SLOTS ? 'Period limit reached' : 'Log one drink';
   document.getElementById('undoLogBtn').disabled = !lastLogChange;
   document.getElementById('finishSessionBtn').disabled = throughHour < 0;
   renderReconcileEditor();
@@ -1287,7 +1345,7 @@ function updateLiveBac() {
     clockInterval = null;
   }
   const curHour = getCurrentHour();
-  const frac    = getFracThroughHour();
+  const periodProgress = getCurrentPeriodProgress();
 
   checkHourTransitions();
 
@@ -1299,9 +1357,9 @@ function updateLiveBac() {
   const liveStatus = sessionComplete
     ? 'Session complete · final estimate'
     : hasUnresolved
-      ? 'Complete the hourly log to calculate an estimate'
+      ? 'Complete the period log to calculate an estimate'
     : elapsedHours >= hours
-      ? 'Session time elapsed · reconcile the hourly log'
+      ? 'Session time elapsed · reconcile the period log'
       : statusText(liveBac);
   const liveStatusElement = document.getElementById('liveBacStatus');
   if (liveStatusElement.textContent !== liveStatus) liveStatusElement.textContent = liveStatus;
@@ -1312,7 +1370,7 @@ function updateLiveBac() {
   document.getElementById('liveBacFill').style.background = hasUnresolved ? 'var(--border)' : barBg(liveBac);
 
   const rf = document.getElementById('timeRingFill');
-  if (rf) rf.style.width = (frac * 100) + '%';
+  if (rf) rf.style.width = (periodProgress * 100) + '%';
 
   // Update orbit arcs live
   const circ = 2 * Math.PI * 78;
@@ -1333,12 +1391,12 @@ function updateLiveBac() {
   let hh = now.getHours(), mm = now.getMinutes();
   const ap = hh >= 12 ? 'pm' : 'am'; hh = hh % 12 || 12;
   document.getElementById('liveClockEl').textContent = `${hh}:${mm.toString().padStart(2,'0')} ${ap}`;
-  document.getElementById('liveHourLbl').textContent = sessionComplete ? 'Session complete' : `Hour ${curHour + 1} of ${hours}`;
+  document.getElementById('liveHourLbl').textContent = sessionComplete ? 'Session complete' : `Period ${curHour + 1} of ${getDurationBucketCount()}`;
   if (curHour < 0) {
     document.getElementById('liveHourLbl').textContent = `Starts ${fmt(new Date(sessionStartTs), 0)}`;
     document.getElementById('planLabel').textContent = 'Scheduled Plan';
   } else if (elapsedHours >= hours && !sessionComplete) {
-    document.getElementById('planLabel').textContent = 'Reconcile Hourly Log';
+    document.getElementById('planLabel').textContent = 'Reconcile Period Log';
   } else if (!sessionComplete) {
     document.getElementById('planLabel').textContent = 'Active Hourly Plan';
   }
@@ -1351,11 +1409,10 @@ function saveSession() {
     const sel = document.getElementById('profileSelect').value;
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       sessionStartTs, actualDrinks, plan, replanFlags, initialPlan, lastLogChange,
-      hours, bacMin, bacMax, ag, sessionComplete, completedAt, fasted,
+      durationMinutes, bacMin, bacMax, ag, sessionComplete, completedAt, fasted,
       profileName: sel,
       drinkOz:    document.getElementById('drinkOz').value,
       drinkAbv:   document.getElementById('drinkAbv').value,
-      startTime:  document.getElementById('startTime').value,
       weight:     document.getElementById('weight').value,
       units:      document.getElementById('units').value,
       sex:        document.getElementById('sex').value,
@@ -1366,15 +1423,33 @@ function saveSession() {
 
 function clearSavedSession() { try { localStorage.removeItem(STORAGE_KEY); } catch(e) {} }
 
+function normalizeRestoredSession(s) {
+  if (!s || typeof s !== 'object' || Array.isArray(s)) return s;
+  const normalized = s.durationMinutes !== undefined
+    ? { ...s }
+    : Number.isInteger(s.hours) ? { ...s, durationMinutes: s.hours * 60 } : { ...s };
+  if (normalized.sessionComplete === true
+      && normalized.completedAt === undefined
+      && Number.isFinite(normalized.sessionStartTs)
+      && Number.isInteger(normalized.durationMinutes)) {
+    normalized.completedAt = normalized.sessionStartTs + normalized.durationMinutes * 60000;
+  }
+  return normalized;
+}
+
 function isValidRestoredSession(s) {
   if (!s || typeof s !== 'object') return false;
-  if (!Number.isInteger(s.hours) || s.hours < 1 || s.hours > 8) return false;
+  if (!isValidDurationMinutes(s.durationMinutes)) return false;
+  const bucketCount = getDurationBucketCount(s.durationMinutes);
   if (s.sessionComplete !== undefined && typeof s.sessionComplete !== 'boolean') return false;
   if (!Number.isFinite(s.sessionStartTs) || s.sessionStartTs > Date.now() + 24 * 3600000) return false;
   const complete = s.sessionComplete === true;
-  const scheduledEnd = s.sessionStartTs + s.hours * 3600000;
+  const scheduledEnd = s.sessionStartTs + s.durationMinutes * 60000;
   const restoredCompletedAt = Number.isFinite(s.completedAt) ? s.completedAt : complete ? scheduledEnd : null;
-  if (complete && (!Number.isFinite(restoredCompletedAt) || restoredCompletedAt < s.sessionStartTs || restoredCompletedAt > Date.now() + 60000)) return false;
+  if (complete && (!Number.isFinite(restoredCompletedAt)
+      || restoredCompletedAt < s.sessionStartTs
+      || restoredCompletedAt > scheduledEnd
+      || restoredCompletedAt > Date.now() + 60000)) return false;
   if (!complete && s.completedAt !== undefined && s.completedAt !== null) return false;
   const retentionMs = complete ? 24 * 3600000 : 3600000;
   if (Date.now() > (complete ? restoredCompletedAt : scheduledEnd) + retentionMs) return false;
@@ -1382,40 +1457,45 @@ function isValidRestoredSession(s) {
   if (!Number.isFinite(s.ag) || s.ag <= 0 || s.ag > 1600 || !isValidProfile(s.profile)) return false;
   if (typeof s.profileName !== 'string' || s.profileName !== s.profile.name) return false;
   if (s.profileName.toLowerCase() === 'custom' && s.profileName !== 'custom') return false;
-  if (!Array.isArray(s.plan) || s.plan.length !== s.hours || s.plan.some(v => !Number.isInteger(v) || v < 0 || v > MAX_SLOTS)) return false;
-  if (s.initialPlan !== undefined && (!Array.isArray(s.initialPlan) || s.initialPlan.length !== s.hours || s.initialPlan.some(v => !Number.isInteger(v) || v < 0 || v > MAX_SLOTS))) return false;
-  if (!Array.isArray(s.actualDrinks) || s.actualDrinks.length !== s.hours || s.actualDrinks.some(v => v !== null && (!Number.isInteger(v) || v < 0 || v > MAX_SLOTS))) return false;
-  if (!Array.isArray(s.replanFlags) || s.replanFlags.length !== s.hours || s.replanFlags.some(v => typeof v !== 'boolean')) return false;
+  if (!Array.isArray(s.plan) || s.plan.length !== bucketCount || s.plan.some(v => !Number.isInteger(v) || v < 0 || v > MAX_SLOTS)) return false;
+  if (s.initialPlan !== undefined && (!Array.isArray(s.initialPlan) || s.initialPlan.length !== bucketCount || s.initialPlan.some(v => !Number.isInteger(v) || v < 0 || v > MAX_SLOTS))) return false;
+  if (!Array.isArray(s.actualDrinks) || s.actualDrinks.length !== bucketCount || s.actualDrinks.some(v => v !== null && (!Number.isInteger(v) || v < 0 || v > MAX_SLOTS))) return false;
+  if (!Array.isArray(s.replanFlags) || s.replanFlags.length !== bucketCount || s.replanFlags.some(v => typeof v !== 'boolean')) return false;
   if (s.fasted !== undefined && typeof s.fasted !== 'boolean') return false;
   if (s.lastLogChange !== undefined && s.lastLogChange !== null) {
     const change = s.lastLogChange;
-    if (!change || typeof change !== 'object' || !Number.isInteger(change.hour) || change.hour < 0 || change.hour >= s.hours
+    if (!change || typeof change !== 'object' || !Number.isInteger(change.hour) || change.hour < 0 || change.hour >= bucketCount
         || (change.previous !== null && (!Number.isInteger(change.previous) || change.previous < 0 || change.previous > MAX_SLOTS))
         || !Number.isInteger(change.next) || change.next < 0 || change.next > MAX_SLOTS
         || !Number.isFinite(change.changedAt) || change.changedAt > Date.now() + 60000
         || (change.previousPlan !== undefined && (
           !Array.isArray(change.previousPlan)
-          || change.previousPlan.length !== s.hours
+          || change.previousPlan.length !== bucketCount
           || change.previousPlan.some(value => !Number.isInteger(value) || value < 0 || value > MAX_SLOTS)
         ))
         || (change.previousReplanFlags !== undefined && (
           !Array.isArray(change.previousReplanFlags)
-          || change.previousReplanFlags.length !== s.hours
+          || change.previousReplanFlags.length !== bucketCount
           || change.previousReplanFlags.some(value => typeof value !== 'boolean')
         ))) return false;
   }
   const progressAt = complete ? restoredCompletedAt : Date.now();
   const elapsedHours = (progressAt - s.sessionStartTs) / 3600000;
-  const currentHour = elapsedHours < 0 ? -1 : Math.min(s.hours - 1, Math.floor(elapsedHours));
+  const currentHour = elapsedHours < 0 ? -1 : Math.min(bucketCount - 1, Math.floor(elapsedHours));
   if (s.actualDrinks.some((value, hour) => value !== null && hour > currentHour)) return false;
-  if (complete && s.actualDrinks.some((value, hour) => hour <= currentHour && value === null)) return false;
+  if (complete) {
+    const lastRequiredHour = Math.min(
+      bucketCount - 1,
+      Math.max(0, Math.floor(Math.max(0, elapsedHours - 1e-9)))
+    );
+    if (s.actualDrinks.some((value, hour) => hour <= lastRequiredHour ? value === null : value !== null)) return false;
+  }
   if (!Number.isFinite(Number(s.drinkOz)) || Number(s.drinkOz) < 1 || Number(s.drinkOz) > 64) return false;
   if (!Number.isFinite(Number(s.drinkAbv)) || Number(s.drinkAbv) < 0.5 || Number(s.drinkAbv) > 100) return false;
   const restoredWeight = Number(s.weight);
   if (s.profileName === 'custom' && (!Number.isFinite(restoredWeight) || (s.units === 'imperial'
     ? restoredWeight < 80 || restoredWeight > 500
     : restoredWeight < 36.3 || restoredWeight > 226.8))) return false;
-  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(s.startTime || '')) return false;
   return ['imperial','metric'].includes(s.units) && ['male','female'].includes(s.sex);
 }
 
@@ -1423,7 +1503,7 @@ function loadSavedSession() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
-    const s = JSON.parse(raw);
+    const s = normalizeRestoredSession(JSON.parse(raw));
     if (s?.profile?.useWidmark === true) s.profile = { ...s.profile, risePerStd: null };
     if (!isValidRestoredSession(s)) { clearSavedSession(); return false; }
 
@@ -1441,9 +1521,8 @@ function loadSavedSession() {
 
     document.getElementById('drinkOz').value    = s.drinkOz;
     document.getElementById('drinkAbv').value   = s.drinkAbv;
-    document.getElementById('startTime').value  = s.startTime;
-    document.getElementById('duration').value   = s.hours;
-    document.getElementById('durationVal').textContent = s.hours == 1 ? '1 hour' : `${s.hours} hours`;
+    document.getElementById('duration').value   = s.durationMinutes;
+    document.getElementById('durationVal').textContent = formatDuration(s.durationMinutes);
     document.getElementById('bacMin').value     = s.bacMin;
     document.getElementById('bacMax').value     = s.bacMax;
     profileSelect.value = restoredProfileName;
@@ -1463,13 +1542,14 @@ function loadSavedSession() {
     replanFlags    = s.replanFlags;
     initialPlan    = Array.isArray(s.initialPlan) ? s.initialPlan : s.plan.slice();
     lastLogChange  = s.lastLogChange || null;
-    hours          = s.hours;
+    durationMinutes = s.durationMinutes;
+    hours          = getDurationHours();
     bacMin         = s.bacMin;
     bacMax         = s.bacMax;
     ag             = s.ag;
     profile        = s.profile;
     sessionComplete = s.sessionComplete === true;
-    completedAt    = Number.isFinite(s.completedAt) ? s.completedAt : sessionComplete ? s.sessionStartTs + s.hours * 3600000 : null;
+    completedAt    = Number.isFinite(s.completedAt) ? s.completedAt : sessionComplete ? s.sessionStartTs + s.durationMinutes * 60000 : null;
     fasted         = s.fasted === true;
     renderFastedState();
     return true;
@@ -1482,7 +1562,7 @@ function checkHourTransitions() {
 }
 
 // ── Session controls ──────────────────────────────────────────
-const CONFIG_IDS = ['drinkOz','drinkAbv','bacMin','bacMax','duration','startTime','drinkPreset','profileSelect','weight','units','sex','saveProfileName','saveProfileBtn','saveDrinkName','saveDrinkBtn','fastedToggle'];
+const CONFIG_IDS = ['drinkOz','drinkAbv','bacMin','bacMax','duration','drinkPreset','profileSelect','weight','units','sex','saveProfileName','saveProfileBtn','saveDrinkName','saveDrinkBtn','fastedToggle'];
 
 function renderSessionView() {
   const complete = sessionActive && sessionComplete;
@@ -1510,18 +1590,18 @@ function activateSessionUI() {
 
 function startSession() {
   if (!validateConfig(true)) return;
-  const configuredStartTs = getStart().getTime();
   profile        = getActiveProfile();
   ag             = getAlcGrams();
   bacMin         = parseFloat(document.getElementById('bacMin').value);
   bacMax         = parseFloat(document.getElementById('bacMax').value);
-  hours          = Number(document.getElementById('duration').value);
+  durationMinutes = Number(document.getElementById('duration').value);
+  hours          = getDurationHours();
   plan           = buildSchedule(ag, profile, bacMin, bacMax, hours);
   sessionActive  = true;
   sessionComplete = false;
-  sessionStartTs = configuredStartTs; // anchor to configured start time
-  actualDrinks   = new Array(hours).fill(undefined);
-  replanFlags    = new Array(hours).fill(false);
+  sessionStartTs = Date.now();
+  actualDrinks   = new Array(getDurationBucketCount()).fill(undefined);
+  replanFlags    = new Array(getDurationBucketCount()).fill(false);
   initialPlan    = plan.slice();
   completedAt    = null;
   lastLogChange  = null;
@@ -1537,15 +1617,15 @@ function startSession() {
 
 function renderCompletionSummary() {
   if (!sessionComplete || !Number.isFinite(completedAt)) return;
-  const elapsedHours = Math.max(0, Math.min(hours, (completedAt - sessionStartTs) / 3600000));
+  const elapsedHours = Math.max(0, Math.min(getDurationHours(), (completedAt - sessionStartTs) / 3600000));
   const throughHour = getElapsedThroughHour(completedAt);
   const actualTotal = actualDrinks.slice(0, throughHour + 1).reduce((sum, count) => sum + (count ?? 0), 0);
   const plannedTotal = initialPlan.reduce((sum, count) => sum + count, 0);
   const finalBac = estimateSessionBac(completedAt);
-  const fullHours = Math.min(hours, Math.floor(elapsedHours));
+  const fullHours = Math.min(getDurationBucketCount(), Math.floor(elapsedHours));
   const completedSchedule = actualDrinks.slice(0, fullHours).map(count => count ?? 0);
-  const trace = completedSchedule.length ? simulate(completedSchedule, ag, profile) : [];
-  const fraction = elapsedHours >= hours ? 0 : elapsedHours - Math.floor(elapsedHours);
+  const trace = completedSchedule.length ? simulate(completedSchedule, ag, profile, completedSchedule.length * 60) : [];
+  const fraction = elapsedHours - fullHours;
   const checkpoints = fraction > 0.0001 ? [...trace, finalBac] : trace.length ? trace : [finalBac];
   const peak = Math.max(0, ...checkpoints);
   const rangeHours = checkpoints.filter(value => value >= bacMin && value <= bacMax).length;
@@ -1564,8 +1644,8 @@ function openSessionDialog(id) {
     dialog.showModal();
     return;
   }
-  if (id === 'discardSessionDialog' && confirm('Discard this session and permanently remove its hourly log?')) discardSession();
-  if (id === 'finishSessionDialog' && confirm('Finish this session and preserve its confirmed hourly log?')) finishSession();
+  if (id === 'discardSessionDialog' && confirm('Discard this session and permanently remove its period log?')) discardSession();
+  if (id === 'finishSessionDialog' && confirm('Finish this session and preserve its confirmed period log?')) finishSession();
 }
 
 function requestFinishSession() {
@@ -1575,14 +1655,14 @@ function requestFinishSession() {
     renderActiveSessionPanel();
     const firstUnresolved = document.getElementById(`hourLog${unresolvedHours[0]}`);
     document.getElementById('reconcileSummary').textContent =
-      `Confirm Hour ${unresolvedHours[0] + 1} before finishing. Choose zero only when you confirm no drinks.`;
+      `Confirm ${getPeriodLabel(unresolvedHours[0])} before finishing. Choose zero only when you confirm no drinks.`;
     firstUnresolved?.closest('.log-row')?.classList.add('needs-review');
     firstUnresolved?.focus();
     return;
   }
   document.getElementById('finishDialogCopy').textContent = Date.now() < getScheduledEndTs()
-    ? 'This ends the session early. Your confirmed hourly log will be preserved and future hours will remain unlogged.'
-    : 'Your confirmed hourly log will be preserved and a completion summary will be shown.';
+    ? 'This ends the session early. Your confirmed period log will be preserved and future periods will remain unlogged.'
+    : 'Your confirmed period log will be preserved and a completion summary will be shown.';
   openSessionDialog('finishSessionDialog');
 }
 
@@ -1611,8 +1691,8 @@ function resetToPlanning() {
   loadCustomDrinks();
   updateDrinkTrash();
   document.getElementById('planLabel').textContent = 'Hourly Plan';
-  actualDrinks = new Array(hours).fill(undefined);
-  replanFlags  = new Array(hours).fill(false);
+  actualDrinks = new Array(getDurationBucketCount()).fill(undefined);
+  replanFlags  = new Array(getDurationBucketCount()).fill(false);
   initialPlan = [];
   reconcileSignature = '';
   renderSessionView();
@@ -1632,10 +1712,10 @@ function startAnotherSession() {
 
 // ── Events ────────────────────────────────────────────────────
 document.getElementById('duration').addEventListener('input', function() {
-  document.getElementById('durationVal').textContent = this.value == 1 ? '1 hour' : `${this.value} hours`;
+  document.getElementById('durationVal').textContent = formatDuration(Number(this.value));
   update();
 });
-['weight','sex','drinkOz','drinkAbv','bacMin','bacMax','startTime'].forEach(id => {
+['weight','sex','drinkOz','drinkAbv','bacMin','bacMax'].forEach(id => {
   const el = document.getElementById(id);
   if (el) { el.addEventListener('input', update); el.addEventListener('change', update); }
 });
@@ -1879,6 +1959,11 @@ function initTheme() {
     renderSessionView();
     update();
   }
+  previewInterval = setInterval(refreshPlanningPreview, 30000);
+  window.addEventListener('pageshow', refreshPlanningPreview);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshPlanningPreview();
+  });
 })();
 </script>
 </body>

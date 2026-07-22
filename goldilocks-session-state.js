@@ -88,14 +88,24 @@
     return true;
   }
 
-  function inspectZone(value, now = Date.now()) {
+  function inspectZone(value, now) {
+    if (!Number.isFinite(now)) now = Date.now();
     const parsed = parseValue(value, 'zone');
     if (parsed.result) return parsed.result;
     const session = parsed.value;
+    const durationMinutes = session.durationMinutes === undefined && Number.isInteger(session.hours)
+      ? session.hours * 60
+      : session.durationMinutes;
+    const durationIsInteger = Number.isInteger(durationMinutes);
+    const bucketCount = durationIsInteger ? Math.ceil(durationMinutes / 60) : 0;
+    const durationHours = durationIsInteger ? durationMinutes / 60 : 0;
     const complete = session.sessionComplete === true;
     const completedAt = session.completedAt ?? null;
 
-    if (!Number.isInteger(session.hours) || session.hours < 1 || session.hours > 8
+    if (!durationIsInteger
+        || durationMinutes < 60
+        || durationMinutes > 480
+        || durationMinutes % 15 !== 0
         || (session.sessionComplete !== undefined && typeof session.sessionComplete !== 'boolean')
         || (completedAt !== null && (!Number.isFinite(completedAt) || !complete))
         || !Number.isFinite(session.sessionStartTs)
@@ -111,25 +121,24 @@
         || session.profileName !== session.profile.name
         || (session.profileName.toLowerCase() === 'custom' && session.profileName !== 'custom')
         || !Array.isArray(session.plan)
-        || session.plan.length !== session.hours
+        || session.plan.length !== bucketCount
         || session.plan.some((count) => !Number.isInteger(count) || count < 0 || count > 6)
         || !Array.isArray(session.actualDrinks)
-        || session.actualDrinks.length !== session.hours
+        || session.actualDrinks.length !== bucketCount
         || session.actualDrinks.some((count) => count !== null && (!Number.isInteger(count) || count < 0 || count > 6))
         || !Array.isArray(session.replanFlags)
-        || session.replanFlags.length !== session.hours
+        || session.replanFlags.length !== bucketCount
         || session.replanFlags.some((flag) => typeof flag !== 'boolean')
         || (session.initialPlan !== undefined && (
           !Array.isArray(session.initialPlan)
-          || session.initialPlan.length !== session.hours
+          || session.initialPlan.length !== bucketCount
           || session.initialPlan.some((count) => !Number.isInteger(count) || count < 0 || count > 6)
         ))
-        || !validSharedConfiguration(session)
-        || !/^([01]\d|2[0-3]):[0-5]\d$/.test(session.startTime || '')) {
+        || !validSharedConfiguration(session)) {
       return modeResult('zone', 'corrupt', 'invalid-session');
     }
 
-    const scheduledEndAt = session.sessionStartTs + session.hours * HOUR_MS;
+    const scheduledEndAt = session.sessionStartTs + durationMinutes * MINUTE_MS;
     if (completedAt !== null && (
       completedAt < session.sessionStartTs
       || completedAt > now + 5000
@@ -142,19 +151,19 @@
       : scheduledEndAt + HOUR_MS;
     if (now > retentionEndAt) return modeResult('zone', 'expired');
     const elapsedHours = (now - session.sessionStartTs) / HOUR_MS;
-    const currentHour = elapsedHours < 0 ? -1 : Math.min(session.hours - 1, Math.floor(elapsedHours));
+    const currentHour = elapsedHours < 0 ? -1 : Math.min(bucketCount - 1, Math.floor(elapsedHours));
     if (session.actualDrinks.some((count, hour) => count !== null && hour > currentHour)) {
       return modeResult('zone', 'corrupt', 'invalid-progress');
     }
     if (complete) {
       if (completedAt === null) {
-        if (elapsedHours < session.hours || session.actualDrinks.some((count) => count === null)) {
+        if (elapsedHours < durationHours || session.actualDrinks.some((count) => count === null)) {
           return modeResult('zone', 'corrupt', 'invalid-progress');
         }
       } else {
         const completionElapsed = (completedAt - session.sessionStartTs) / HOUR_MS;
         const lastRequiredHour = Math.min(
-          session.hours - 1,
+          bucketCount - 1,
           Math.max(0, Math.floor(Math.max(0, completionElapsed - 1e-9)))
         );
         if (session.actualDrinks.some((count, hour) => (
@@ -175,7 +184,7 @@
     const reconciliationThrough = state === 'scheduled' || state === 'complete'
       ? -1
       : state === 'needs-finalize'
-        ? session.hours - 1
+        ? bucketCount - 1
         : Math.max(-1, currentHour - 1);
     const unresolvedPeriods = session.actualDrinks.reduce((count, value, hour) => (
       hour <= reconciliationThrough && value === null ? count + 1 : count
@@ -188,9 +197,9 @@
       endAt: completedAt ?? scheduledEndAt,
       scheduledEndAt,
       completedAt,
-      durationMinutes: session.hours * 60,
+      durationMinutes,
       currentStep: state === 'active' ? currentHour + 1 : null,
-      totalSteps: session.hours,
+      totalSteps: bucketCount,
       plannedDrinks: plannedSource.reduce((sum, count) => sum + count, 0),
       loggedDrinks: session.actualDrinks.reduce((sum, count) => sum + (count || 0), 0),
       unresolvedPeriods,

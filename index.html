@@ -285,7 +285,7 @@
 </div>
 
 <script src="goldilocks-core.js"></script>
-<script src="goldilocks-session-state.js?v=20260721-pace-slots"></script>
+<script src="goldilocks-session-state.js?v=20260721-zone-quarter-hour"></script>
 <script>
 GoldilocksTheme.init({ mode:'mission', pickerId:'themePicker' });
 
@@ -304,18 +304,25 @@ function formatRemaining(milliseconds) {
   return `${minutes}m`;
 }
 
+function formatDurationMinutes(minutes) {
+  return Number.isFinite(minutes) && minutes >= 0
+    ? formatRemaining(minutes * 60000)
+    : '—';
+}
+
 function describeResume(entry, now) {
   if (entry.mode === 'zone') {
-    if (entry.state === 'scheduled') return `Starts ${formatClock(entry.startAt)} · ${entry.totalSteps}h · ${entry.plannedDrinks} planned`;
+    const duration = formatDurationMinutes(entry.durationMinutes);
+    if (entry.state === 'scheduled') return `Starts ${formatClock(entry.startAt)} · ${duration} session · ${entry.plannedDrinks} planned`;
     if (entry.state === 'needs-finalize') {
-      const review = entry.unresolvedPeriods ? ` · ${entry.unresolvedPeriods} ${entry.unresolvedPeriods === 1 ? 'hour needs' : 'hours need'} review` : '';
-      return `Session time elapsed${review}`;
+      const review = entry.unresolvedPeriods ? ` · ${entry.unresolvedPeriods} ${entry.unresolvedPeriods === 1 ? 'period needs' : 'periods need'} review` : '';
+      return `Session time elapsed · ${duration} planned${review}`;
     }
-    if (entry.state === 'complete') return `Finished · ${entry.loggedDrinks} logged · review the summary`;
+    if (entry.state === 'complete') return `Finished · ${duration} planned · ${entry.loggedDrinks} logged · review the summary`;
     if (entry.needsReconciliation) {
-      return `${entry.unresolvedPeriods} prior ${entry.unresolvedPeriods === 1 ? 'hour needs' : 'hours need'} review · Hour ${entry.currentStep} of ${entry.totalSteps}`;
+      return `${entry.unresolvedPeriods} prior ${entry.unresolvedPeriods === 1 ? 'period needs' : 'periods need'} review · Period ${entry.currentStep} of ${entry.totalSteps} · ${duration} session`;
     }
-    return `Hour ${entry.currentStep} of ${entry.totalSteps} · ${entry.loggedDrinks} logged · ends ${formatClock(entry.endAt)}`;
+    return `Period ${entry.currentStep} of ${entry.totalSteps} · ${duration} session · ${entry.loggedDrinks} logged · ends ${formatClock(entry.endAt)}`;
   }
   if (entry.mode === 'pace') {
     if (entry.state === 'scheduled') return `Starts ${formatClock(entry.startAt)} · ${entry.plannedDrinks} planned`;
@@ -402,9 +409,11 @@ function updateMissionControl() {
         ? 'Protocol active'
         : entry.state === 'complete'
           ? 'Summary ready'
-          : entry.state === 'needs-finalize' || entry.needsReconciliation
-            ? 'Needs review'
-            : 'Session active';
+          : entry.state === 'scheduled'
+            ? 'Session scheduled'
+            : entry.state === 'needs-finalize' || entry.needsReconciliation
+              ? 'Needs review'
+              : 'Session active';
       status.hidden = false;
     }
   });

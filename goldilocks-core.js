@@ -194,41 +194,45 @@
     profile,
     low,
     high,
-    hours,
+    durationHours,
     startBac = 0
   ) {
     requireNonNegative(low, 'low');
     requireNonNegative(high, 'high');
     if (low > high) throw new RangeError('low must be less than or equal to high');
-    requirePositiveInteger(hours, 'hours');
+    requireDurationHours(durationHours);
     requireNonNegative(startBac, 'startBac');
 
     const rise = bacPerDrink(alcoholGrams, profile);
     const metabolism = requireMetabolism(profile);
+    const bucketCount = durationBucketCount(durationHours);
     const schedule = [];
     let bac = startBac;
 
-    for (let hour = 0; hour < hours; hour += 1) {
-      const bacAfterMetabolism = Math.max(0, bac - metabolism);
+    for (let hour = 0; hour < bucketCount; hour += 1) {
+      const bucketHours = durationBucketHours(durationHours, hour);
+      const bucketMetabolism = metabolism * bucketHours;
+      const bacAfterMetabolism = Math.max(0, bac - bucketMetabolism);
       const maximumDrinks = Math.max(
         0,
-        Math.floor((high - bac + metabolism) / rise)
+        Math.floor((high - bac + bucketMetabolism) / rise)
       );
       let drinks = 0;
 
       if (bacAfterMetabolism < low) {
-        const needed = Math.ceil((low - bac + metabolism) / rise);
+        const needed = Math.ceil((low - bac + bucketMetabolism) / rise);
         drinks = Math.max(0, Math.min(maximumDrinks, needed));
-      } else {
-        const nextHourBac = Math.max(0, bacAfterMetabolism - metabolism);
-        if (nextHourBac < low && hour < hours - 1) {
-          const needed = Math.ceil((low - bacAfterMetabolism + metabolism) / rise);
+      } else if (hour < bucketCount - 1) {
+        const nextBucketMetabolism = metabolism * durationBucketHours(durationHours, hour + 1);
+        const nextHourBac = Math.max(0, bacAfterMetabolism - nextBucketMetabolism);
+        if (nextHourBac < low) {
+          const needed = Math.ceil((low - bacAfterMetabolism + nextBucketMetabolism) / rise);
           drinks = Math.max(0, Math.min(maximumDrinks, needed));
         }
       }
 
       schedule.push(drinks);
-      bac = Math.max(0, bac + drinks * rise - metabolism);
+      bac = Math.max(0, bac + drinks * rise - bucketMetabolism);
       requireFiniteResult(bac, `BAC at hour ${hour + 1}`);
     }
 
