@@ -420,7 +420,10 @@ test('all pages use a transparent astronaut mark with a live theme-aware wordmar
     assert.match(html, /class="brand-lockup(?:\s+brand-lockup--mission)?"/);
     assert.match(html, /class="brand-mark"\s+src="goldilocks-astronaut\.png\?v=20260722-astronaut"\s+alt=""/);
     assert.match(html, /<h1 class="logo" aria-label="Goldilocks">/);
-    assert.match(html, /Goldil<span class="brand-orbit-o">o<\/span>cks/);
+    assert.match(html, /Goldil<span class="brand-orbit-o" aria-hidden="true"><svg class="brand-orbit-o__svg"/);
+    assert.match(html, /class="brand-orbit-o__ring"/);
+    assert.match(html, /class="brand-orbit-o__spark"/);
+    assert.match(html, /<\/svg><\/span>cks/);
   }
 
   const mark = fs.readFileSync(path.join(root, 'goldilocks-astronaut.png'));

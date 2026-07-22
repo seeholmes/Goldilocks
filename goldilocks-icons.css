@@ -48,22 +48,40 @@
 }
 
 .brand-orbit-o {
-  position: relative;
   display: inline-block;
-  color: var(--gold, #f5c842);
-  -webkit-text-fill-color: var(--gold, #f5c842);
+  width: 0.82em;
+  height: 1.08em;
+  margin: 0 0.015em;
+  vertical-align: -0.16em;
+  -webkit-text-fill-color: initial;
 }
 
-.brand-orbit-o::after {
-  content: "✦";
-  position: absolute;
-  top: -0.22em;
-  right: -0.12em;
-  font-size: 0.24em;
-  line-height: 1;
-  color: var(--gold, #f5c842);
-  -webkit-text-fill-color: var(--gold, #f5c842);
-  text-shadow: 0 0 8px color-mix(in srgb, var(--gold, #f5c842) 62%, transparent);
+.brand-orbit-o__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--gold, #f5c842) 40%, transparent));
+}
+
+.brand-orbit-o__ring {
+  fill: none;
+  stroke: var(--gold, #f5c842);
+  stroke-width: 4.8;
+}
+
+.brand-orbit-o__highlight {
+  fill: none;
+  stroke: color-mix(in srgb, var(--gold, #f5c842) 34%, white);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.brand-orbit-o__spark {
+  fill: color-mix(in srgb, var(--gold, #f5c842) 74%, white);
+  stroke: var(--gold, #f5c842);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
 }
 
 .hero:is(:hover, :focus-within) .brand-mark {
