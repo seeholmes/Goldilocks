@@ -31,9 +31,9 @@ test('publishes the theme API as a browser global', () => {
   assert.equal(typeof browser.GoldilocksTheme.bootstrap, 'function');
 });
 
-test('provides one shared six-theme catalog', () => {
+test('provides one curated four-theme catalog for the original logo', () => {
   assert.deepEqual(Object.keys(themes.THEMES), [
-    'cosmos', 'navy', 'espresso', 'parchment', 'honey', 'slate',
+    'cosmos', 'navy', 'parchment', 'slate',
   ]);
   assert.equal(themes.DEFAULT_THEME, 'cosmos');
 });
@@ -53,7 +53,9 @@ test('resolves accessible mode accents in dark and light themes', () => {
 });
 
 test('loads a valid stored theme and falls back safely', () => {
-  assert.equal(themes.load(new MemoryStorage({ goldilocks_theme: 'honey' })), 'honey');
+  assert.equal(themes.load(new MemoryStorage({ goldilocks_theme: 'navy' })), 'navy');
+  assert.equal(themes.load(new MemoryStorage({ goldilocks_theme: 'espresso' })), 'cosmos');
+  assert.equal(themes.load(new MemoryStorage({ goldilocks_theme: 'honey' })), 'parchment');
   assert.equal(themes.load(new MemoryStorage({ goldilocks_theme: 'unknown' })), 'cosmos');
   assert.equal(themes.load({ getItem() { throw new Error('blocked'); } }), 'cosmos');
 });

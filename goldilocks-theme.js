@@ -7,6 +7,10 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function buildGoldilocksTheme() {
   const STORAGE_KEY = 'goldilocks_theme';
   const DEFAULT_THEME = 'cosmos';
+  const LEGACY_THEME_IDS = Object.freeze({
+    espresso: 'cosmos',
+    honey: 'parchment',
+  });
 
   const THEMES = Object.freeze({
     cosmos: Object.freeze({
@@ -21,23 +25,11 @@
       text: '#e6edf3', muted: '#aab3bd',
       logo: Object.freeze(['#f5c842', '#e8a020', '#ff8c3a']),
     }),
-    espresso: Object.freeze({
-      name: 'Espresso', dark: true,
-      space: '#120e0a', deep: '#0a0705', surface: '#1c1510', border: '#2e2218',
-      text: '#e8ddd0', muted: '#b29a88',
-      logo: Object.freeze(['#f5c842', '#d4956a', '#c0622a']),
-    }),
     parchment: Object.freeze({
       name: 'Parchment', dark: false,
       space: '#f5f0e8', deep: '#ede8de', surface: '#ffffff', border: '#e0d8cc',
       text: '#2a2420', muted: '#6f625b',
       logo: Object.freeze(['#c8820a', '#e8a020', '#d4600a']),
-    }),
-    honey: Object.freeze({
-      name: 'Honey', dark: false,
-      space: '#fdf4e3', deep: '#f8edd8', surface: '#fff8ec', border: '#f0dab0',
-      text: '#3a2808', muted: '#735421',
-      logo: Object.freeze(['#d4700a', '#f5a820', '#e87010']),
     }),
     slate: Object.freeze({
       name: 'Slate', dark: false,
@@ -51,7 +43,8 @@
   const controllers = new WeakMap();
 
   function normalizeThemeId(id) {
-    return Object.prototype.hasOwnProperty.call(THEMES, id) ? id : DEFAULT_THEME;
+    const migrated = LEGACY_THEME_IDS[id] || id;
+    return Object.prototype.hasOwnProperty.call(THEMES, migrated) ? migrated : DEFAULT_THEME;
   }
 
   function normalizeMode(mode) {

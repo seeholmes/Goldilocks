@@ -2,6 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -414,23 +415,22 @@ test('all pages use the shared theme catalog and animated icon system', () => {
   }
 });
 
-test('all pages use a transparent astronaut mark with a live theme-aware wordmark', () => {
+test('all pages use the exact original logo artwork in a theme-independent brand stage', () => {
   for (const page of pages) {
     const html = read(page);
     assert.match(html, /class="brand-lockup(?:\s+brand-lockup--mission)?"/);
-    assert.match(html, /class="brand-mark"\s+src="goldilocks-astronaut\.png\?v=20260722-astronaut"\s+alt=""/);
-    assert.match(html, /<h1 class="logo" aria-label="Goldilocks">/);
-    assert.match(html, /Goldil<span class="brand-orbit-o" aria-hidden="true"><svg class="brand-orbit-o__svg"/);
-    assert.match(html, /class="brand-orbit-o__ring"/);
-    assert.match(html, /class="brand-orbit-o__spark"/);
-    assert.match(html, /<\/svg><\/span>cks/);
+    assert.match(html, /<h1 class="logo logo--original" aria-label="Goldilocks">/);
+    assert.match(html, /class="brand-art-crop" aria-hidden="true"/);
+    assert.match(html, /class="brand-original-art" src="goldilocks-original-lockup\.jpg\?v=20260722-og" alt=""/);
   }
 
-  const mark = fs.readFileSync(path.join(root, 'goldilocks-astronaut.png'));
-  assert.equal(mark.toString('ascii', 1, 4), 'PNG');
-  assert.equal(mark.readUInt32BE(16), 512);
-  assert.equal(mark.readUInt32BE(20), 512);
-  assert.equal(mark[25], 6, 'astronaut mark must remain an RGBA PNG');
+  const artwork = fs.readFileSync(path.join(root, 'goldilocks-original-lockup.jpg'));
+  assert.equal(artwork.subarray(0, 3).toString('hex'), 'ffd8ff', 'original artwork must remain a JPEG');
+  assert.equal(
+    crypto.createHash('sha256').update(artwork).digest('hex'),
+    'b0bff74d4003f83c62535a037d923c2e5cddda2b241b0b64365050dd23182c15',
+    'original artwork pixels must remain unchanged'
+  );
 });
 
 test('Pace branding is consistent while legacy compatibility remains', () => {
