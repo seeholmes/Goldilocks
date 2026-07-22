@@ -321,29 +321,35 @@
     </div>
   </section>
 
-  <!-- Pace settings -->
-  <section class="card" aria-labelledby="settingsHeading">
-    <h2 class="sec" id="settingsHeading">Pace Settings</h2>
-    <div style="margin-bottom:18px">
-      <label for="duration" style="display:block;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue2);opacity:0.8;margin-bottom:14px">Session Length</label>
-      <input type="range" id="duration" min="60" max="480" step="15" value="240" aria-describedby="durationVal durationResolution">
-      <div class="slider-labels"><span>1h</span><span>4h 30m</span><span>8h</span></div>
-      <div style="font-family:'Anybody',sans-serif;font-size:24px;font-weight:400;color:var(--blue);margin-top:8px" id="durationVal">4h</div>
-      <div id="durationResolution" style="font-size:9px;color:var(--muted);margin-top:5px">15-minute increments</div>
-    </div>
-    <div>
-      <label class="field-label" for="bacEnd">Planning Reference at End</label>
-      <div class="input-wrap"><input type="number" id="bacEnd" value="0.04" min="0.00" max="0.20" step="0.01"></div>
-      <div style="font-size:9px;color:var(--muted);margin-top:7px;line-height:1.6">Pace spaces planned check-ins across the session · timing begins when you tap Start.</div>
-    </div>
-    <div class="form-error" id="configError" role="alert" aria-live="assertive"></div>
-  </section>
   </div>
 
   <section id="preStartReview" class="preflight-review" aria-labelledby="preStartReviewHeading">
-    <div class="session-kicker">Before you start</div>
-    <h2 class="session-heading" id="preStartReviewHeading" tabindex="-1">Review the Pace session</h2>
-    <p class="session-detail">Timing starts immediately when you tap Start. Times below are a live preview.</p>
+    <div class="session-kicker">Plan tuner</div>
+    <h2 class="session-heading" id="preStartReviewHeading" tabindex="-1">Tune the Pace plan</h2>
+    <p class="session-detail">Adjust the duration or ending reference and the projection updates immediately. Timing starts immediately when you tap Start; times below are a live preview.</p>
+    <div class="plan-tuner-controls">
+      <div class="plan-tuner-control">
+        <div class="plan-tuner-heading">
+          <label class="plan-tuner-label" for="duration">Session duration</label>
+          <output class="plan-tuner-value" id="durationVal" for="duration">4h</output>
+        </div>
+        <input type="range" id="duration" min="60" max="480" step="15" value="240" aria-describedby="durationVal durationResolution">
+        <div class="slider-labels"><span>1h</span><span>4h 30m</span><span>8h</span></div>
+        <div class="plan-tuner-help" id="durationResolution">15-minute increments</div>
+      </div>
+      <div class="plan-tuner-control">
+        <div class="plan-tuner-heading">
+          <label class="plan-tuner-label" for="bacEnd">Planning reference at end</label>
+        </div>
+        <div class="input-wrap"><input type="number" id="bacEnd" value="0.04" min="0.00" max="0.20" step="0.01"></div>
+        <div class="plan-tuner-help">Pace spaces planned check-ins across the session.</div>
+      </div>
+    </div>
+    <div class="form-error" id="configError" role="alert" aria-live="assertive"></div>
+    <details class="trajectory-panel" open>
+      <summary>Projected BAC trajectory</summary>
+      <div id="reviewTrajectory"></div>
+    </details>
     <div class="review-grid">
       <div class="review-item"><div class="review-value" id="reviewStart">—</div><div class="review-label">Start</div></div>
       <div class="review-item"><div class="review-value" id="reviewEnd">—</div><div class="review-label">End</div></div>
@@ -353,14 +359,9 @@
       <div class="review-item"><div class="review-value" id="summaryEnding">—</div><div class="review-label">Estimated BAC at end</div></div>
       <div class="review-item"><div class="review-value" id="summaryPeak">—</div><div class="review-label">Estimated peak BAC</div></div>
     </div>
-    <details class="trajectory-panel" open>
-      <summary>Projected BAC trajectory</summary>
-      <div id="reviewTrajectory"></div>
-    </details>
     <p class="session-caution">Planning reference only — not a safety threshold. Estimates vary, and no BAC level guarantees safety.</p>
+    <button class="start-btn plan-tuner-start" id="startBtn" onclick="startSession()">Start Pace Session</button>
   </section>
-
-  <button class="start-btn" id="startBtn" onclick="startSession()">Start Pace Session</button>
 
   <section id="activeSessionPanel" class="active-session-panel" aria-labelledby="activeSessionHeading" hidden>
     <div class="session-kicker">Session in progress</div>

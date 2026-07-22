@@ -287,6 +287,27 @@ test('Zone and Pace expose an accessible planning, active, and completion flow',
   }
 });
 
+test('Zone and Pace keep every live tuning control with the projected trajectory', () => {
+  const planners = {
+    'goldilocks-zone.html': ['bacMin', 'bacMax'],
+    'goldilocks-cruise.html': ['bacEnd'],
+  };
+
+  for (const [page, modeControlIds] of Object.entries(planners)) {
+    const html = read(page);
+    const tunerStart = html.indexOf('id="preStartReview"');
+    const tunerEnd = html.indexOf('id="activeSessionPanel"');
+    assert.ok(tunerStart >= 0 && tunerEnd > tunerStart, `${page} must place its tuner before the active session`);
+    const tuner = html.slice(tunerStart, tunerEnd);
+
+    for (const id of ['duration', 'reviewTrajectory', 'startBtn', ...modeControlIds]) {
+      assert.match(tuner, new RegExp(`\\bid="${id}"`), `${page}#${id} must live inside the plan tuner`);
+    }
+    assert.ok(tuner.indexOf('id="duration"') < tuner.indexOf('id="reviewTrajectory"'));
+    assert.ok(tuner.indexOf('id="reviewTrajectory"') < tuner.indexOf('id="startBtn"'));
+  }
+});
+
 test('Zone and Pace provide distinct finish, discard, undo, edit, and reconciliation paths', () => {
   const planners = {
     'goldilocks-zone.html': {
