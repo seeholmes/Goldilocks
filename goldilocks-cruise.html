@@ -130,12 +130,7 @@
   /* Vertical drink timeline */
   .drink-timeline { padding: 4px 0 0; }
   .dte { display:flex; align-items:flex-start; gap:10px; position:relative; width:100%; border:0; background:transparent; color:inherit; font:inherit; text-align:left; }
-  .dte-track { display:flex; flex-direction:column; align-items:center; flex-shrink:0; width:20px; }
-  .dte-dot { width:14px; height:14px; border-radius:50%; border:2px solid var(--muted); background:var(--space); flex-shrink:0; transition:all 0.25s; }
-  .dte.done .dte-dot  { background:var(--blue2); border-color:var(--blue); box-shadow:0 0 6px rgba(126,184,255,0.35); }
-  .dte.next .dte-dot  { border-color:var(--blue); box-shadow:0 0 10px rgba(126,184,255,0.4); animation:dotPulse 1.8s ease-in-out infinite; }
-  .dte.extra .dte-dot { background:var(--amber); border-color:var(--amber); }
-  @keyframes dotPulse { 0%,100%{box-shadow:0 0 6px rgba(126,184,255,0.3)} 50%{box-shadow:0 0 14px rgba(126,184,255,0.7)} }
+  .dte-track { display:flex; flex-direction:column; align-items:center; flex-shrink:0; width:28px; }
   .dte-connector { width:2px; flex:1; min-height:22px; background:var(--border); margin:3px 0; }
   .dte-time { font-size:11px; color:var(--muted); width:64px; flex-shrink:0; padding-top:1px; font-variant-numeric:tabular-nums; }
   .dte.done .dte-time { color:var(--blue2); }
@@ -146,7 +141,7 @@
   .dte.extra .dte-label { color:var(--amber); }
   .dte-sub { display:block; font-size:9px; color:var(--muted); margin-top:3px; letter-spacing:0.05em; }
   .dte.tappable { cursor:pointer; }
-  .dte.tappable:active .dte-dot { transform:scale(1.3); }
+  .dte.tappable:active .drink-waypoint { transform:scale(1.08); }
   /* Now line */
   .dt-now { display:flex; align-items:center; gap:8px; padding:10px 0 10px 30px; }
   .dt-now-line { flex:1; height:1px; background:linear-gradient(90deg,var(--blue2),transparent); }
@@ -377,7 +372,7 @@
     </div>
     <p class="session-caution">Estimates use only the drinks you log. The planning reference is not a safety threshold.</p>
     <div class="session-actions">
-      <button type="button" class="session-action-btn primary" id="logNowBtn" onclick="logNextDrinkNow()">Log drink now</button>
+      <button type="button" class="session-action-btn primary drink-log-action" id="logNowBtn" onclick="logNextDrinkNow()">Log drink now</button>
       <button type="button" class="session-action-btn" id="undoLatestBtn" onclick="undoLatestDrink()">Undo latest</button>
       <button type="button" class="session-action-btn" id="recalculateNowBtn" onclick="recalculateScheduleFromNow()">Recalculate from now</button>
       <button type="button" class="session-action-btn finish" id="finishSessionBtn" onclick="requestSessionAction('finish')">Finish session</button>
@@ -435,6 +430,8 @@
 <script src="goldilocks-presets.js"></script>
 <script src="goldilocks-core.js?v=20260721-pace-cadence"></script>
 <script src="goldilocks-session-flow.js?v=20260721-pace-slots"></script>
+<script src="goldilocks-session-history.js"></script>
+<script src="goldilocks-drink-waypoint.js"></script>
 <script>
 // ── Profiles ──────────────────────────────────────────────────
 const PROFILES = {
@@ -922,7 +919,9 @@ function renderActiveSession() {
   document.getElementById('activeCurrentBac').textContent = currentBac.toFixed(3);
   document.getElementById('activeProjectedBac').textContent = projectedBac.toFixed(3);
   document.getElementById('activeLoggedCount').textContent = String(loggedCount);
-  document.getElementById('logNowBtn').disabled = nextIndex < 0;
+  const logNowButton = document.getElementById('logNowBtn');
+  logNowButton.disabled = nextIndex < 0;
+  GoldilocksDrinkWaypoint.decorateButton(logNowButton, nextIndex < 0 ? 'No drinks remaining' : 'Log drink now', nextIndex < 0 ? 'inactive' : 'ready');
   document.getElementById('undoLatestBtn').disabled = !lastPaceLogChange;
   document.getElementById('recalculateNowBtn').disabled = nextIndex < 0 || deadline.state !== 'overdue';
   refreshLogEditor();
@@ -1007,13 +1006,16 @@ function renderTimeline() {
     dte.innerHTML = `
       <span class="dte-time">${timeStr}</span>
       <span class="dte-track">
-        <span class="dte-dot"></span>
+        <span class="drink-waypoint-anchor"></span>
         ${i < drinkSchedule.length - 1 ? '<span class="dte-connector"></span>' : ''}
       </span>
       <span class="dte-body">
         <span class="dte-label">Drink ${i + 1}</span>
         ${sublabel ? `<span class="dte-sub">${sublabel}</span>` : ''}
       </span>`;
+
+    const waypointState = isLogged ? 'logged' : isNext ? 'ready' : 'planned';
+    dte.querySelector('.drink-waypoint-anchor').replaceWith(GoldilocksDrinkWaypoint.create(document, waypointState));
 
     if (isNext) {
       dte.type = 'button';
@@ -1280,7 +1282,38 @@ function completeSession(reason, finishTimestamp) {
   renderCompletionSummary();
   renderTimeline();
   saveSession();
+  saveCompletedSessionHistory();
   setTimeout(() => document.getElementById('sessionSummaryHeading').focus(), 0);
+}
+
+function saveCompletedSessionHistory() {
+  if (!sessionComplete || !Number.isFinite(completedAt)) return;
+  const loggedTimes = getLoggedTimes();
+  const peakBac = Math.max(0, completionBac || 0, ...loggedTimes.map(timestamp => getEstimatedBacAt(timestamp)));
+  try {
+    GoldilocksSessionHistory.save(localStorage, {
+      version: GoldilocksSessionHistory.VERSION,
+      id: `pace-${sessionStartTs}`,
+      mode: 'pace',
+      startedAt: sessionStartTs,
+      completedAt,
+      durationMinutes,
+      profileName: document.getElementById('profileSelect').value || profile.name,
+      drinkOz: Number(document.getElementById('drinkOz').value),
+      drinkAbv: Number(document.getElementById('drinkAbv').value),
+      plannedDrinks: initialPlannedDrinks,
+      loggedDrinks: loggedTimes.length,
+      standardDrinks: loggedTimes.length * ag / STD_DRINK_G,
+      finalBac: completionBac || 0,
+      peakBac,
+      completionReason,
+      detail: {
+        type: 'pace',
+        targetEnd: bacEnd,
+        initialProjectedEnd,
+      },
+    });
+  } catch (error) {}
 }
 
 function updateLiveBac() {

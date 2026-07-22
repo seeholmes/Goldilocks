@@ -124,20 +124,11 @@
   .end-btn { width:100%; padding:12px; margin-bottom:8px; background:transparent; border:1px solid var(--danger); border-radius:var(--radius); color:var(--danger); font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; opacity:0.6; transition:all 0.2s; display:none; }
   .end-btn:hover { opacity:1; background:rgba(255,90,90,0.06); }
 
-  /* Orbit summary */
-  .orbit-summary { display:flex; justify-content:center; align-items:center; padding:20px 0; margin-bottom:8px; }
-  .orbit-svg-wrap { position:relative; width:220px; height:220px; flex-shrink:0; }
-  .orbit-svg-wrap svg { width:100%; height:100%; }
-  .orbit-center-text { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; }
-  .orbit-big { font-family:'Anybody',sans-serif; font-size:64px; font-weight:800; line-height:1; color:#1a0e00; text-shadow: 0 1px 0 rgba(255,255,255,0.25), 0 -1px 0 rgba(0,0,0,0.3); -webkit-text-fill-color: #1a0e00; }
-  .orbit-lbl { font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:rgba(80,40,0,0.7); margin-top:2px; }
-  .stat-pills { display:flex; flex-direction:column; gap:8px; margin-left:20px; }
-  .pill { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:10px 14px; min-width:110px; }
-  .pill-val { font-family:'Anybody',sans-serif; font-size:20px; font-weight:400; color:var(--gold); line-height:1; }
-  .pill-lbl { font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-top:3px; }
-  .std-banner { background:var(--surface); border:1px solid rgba(245,200,66,0.2); border-radius:var(--radius); padding:12px 20px; text-align:center; margin-bottom:8px; }
-  .std-val { font-family:'Anybody',sans-serif; font-size:26px; font-weight:400; color:var(--gold); }
-  .std-lbl { font-size:9px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-top:3px; }
+  /* Plain planning summary */
+  .planning-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; margin-bottom:8px; }
+  .planning-metric { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:11px 12px; min-width:0; }
+  .planning-value { font-family:'Anybody',sans-serif; font-size:20px; font-weight:400; color:var(--gold); overflow-wrap:anywhere; }
+  .planning-label { font-size:8px; letter-spacing:0.09em; line-height:1.35; text-transform:uppercase; color:var(--muted); margin-top:3px; }
 
   /* Timeline */
   .hour-block { border:1px solid var(--border); border-radius:9px; margin-bottom:6px; overflow:hidden; transition:border-color 0.3s; }
@@ -151,15 +142,15 @@
   .hour-bar-wrap { height:3px; background:var(--space); overflow:hidden; }
   .hour-bar-fill { height:100%; transition:width 0.5s ease, background 0.3s; }
   .drink-slots { display:flex; align-items:center; gap:6px; padding:10px 12px; flex-wrap:wrap; }
-  .slot { width:34px; height:34px; border-radius:7px; border:1px solid var(--border); background:var(--space); display:flex; align-items:center; justify-content:center; font-size:16px; cursor:default; transition:all 0.15s; user-select:none; }
-  .slot.planned { border-color:rgba(245,200,66,0.5); background:rgba(245,200,66,0.06); }
-  .slot.consumed { border-color:var(--gold); background:rgba(245,200,66,0.18); box-shadow:0 0 8px rgba(245,200,66,0.2); }
-  .slot.extra { border-color:var(--amber); background:rgba(255,140,58,0.15); box-shadow:0 0 8px rgba(255,140,58,0.2); }
+  .slot { width:34px; height:34px; border-radius:7px; border:1px solid var(--border); background:var(--space); display:flex; align-items:center; justify-content:center; cursor:default; transition:border-color 0.15s,background 0.15s; user-select:none; }
+  .slot.planned { border-color:color-mix(in srgb,var(--gold) 46%,var(--border)); background:color-mix(in srgb,var(--gold) 5%,var(--space)); }
+  .slot.consumed { border-color:var(--gold); background:color-mix(in srgb,var(--gold) 8%,var(--space)); }
+  .slot.extra { border-color:var(--amber); background:color-mix(in srgb,var(--amber) 8%,var(--space)); }
   .slot.reserve { border-color:var(--border); background:transparent; opacity:0.4; }
   .slot.reserve.live { opacity:0.7; cursor:pointer; }
   .slot.reserve.live:hover { border-color:var(--gold2); background:rgba(245,200,66,0.05); opacity:1; }
   .slot.planned.live { cursor:pointer; }
-  .slot.planned.live:hover { border-color:var(--gold); box-shadow:0 0 12px rgba(245,200,66,0.3); }
+  .slot.planned.live:hover { border-color:var(--gold); }
   .clear-hour-btn { border:1px solid var(--border); border-radius:6px; background:transparent; color:var(--muted); padding:5px 8px; font:inherit; font-size:9px; cursor:pointer; }
   .clear-hour-btn:hover:not(:disabled) { border-color:var(--gold2); color:var(--text); }
   .clear-hour-btn:disabled { opacity:0.4; cursor:not-allowed; }
@@ -192,9 +183,7 @@
     .live-bac-bar { padding:10px 12px; gap:9px; }
     .live-bac-num { font-size:27px; }
     .live-time { font-size:9px; }
-    .orbit-summary { flex-direction:column; }
-    .stat-pills { width:100%; flex-direction:row; margin:10px 0 0; }
-    .pill { flex:1; min-width:0; }
+    .planning-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
     .hour-top { grid-template-columns:64px 1fr 50px; padding:9px 8px; }
     .drink-slots { padding:10px 8px; gap:5px; }
     .slot { width:32px; height:32px; }
@@ -419,7 +408,7 @@
     </div>
     <p class="session-caution">BAC values are estimates. The selected range is not a safety threshold.</p>
     <div class="session-actions">
-      <button type="button" class="session-action-btn primary" id="logOneBtn" onclick="logOneDrink()">Log one drink</button>
+      <button type="button" class="session-action-btn primary drink-log-action" id="logOneBtn" onclick="logOneDrink()">Log one drink</button>
       <button type="button" class="session-action-btn" id="undoLogBtn" onclick="undoLastLog()" disabled>Undo last change</button>
     </div>
     <div id="reconcilePanel" class="reconcile-panel" aria-labelledby="reconcileHeading" hidden>
@@ -451,47 +440,11 @@
     </div>
   </section>
 
-  <!-- Orbital summary -->
-  <div class="orbit-summary" id="planOverview">
-    <div class="orbit-svg-wrap">
-      <svg viewBox="0 0 200 200" fill="none">
-        <circle cx="100" cy="100" r="90" stroke="var(--border)" stroke-width="1"/>
-        <!-- Track ring (background) -->
-        <circle cx="100" cy="100" r="78" stroke="var(--border)" stroke-width="14" opacity="0.6"/>
-        <!-- Arc 1: Time elapsed — dim, behind -->
-        <circle id="timeArc" cx="100" cy="100" r="78" stroke="var(--gold2)" stroke-width="14" stroke-dasharray="0 490" stroke-linecap="round" opacity="0.25" transform="rotate(-90 100 100)"/>
-        <!-- Arc 2: BAC level — bright, on top -->
-        <circle id="peakArc" cx="100" cy="100" r="78" stroke="#f5c842" stroke-width="7" stroke-dasharray="0 490" stroke-linecap="round" opacity="0.9" transform="rotate(-90 100 100)"/>
-        <!-- Dashed orbit guides -->
-        <circle cx="100" cy="100" r="69" stroke="var(--gold)" stroke-width="0.5" stroke-dasharray="3 4" opacity="0.2"/>
-        <circle cx="100" cy="100" r="87" stroke="var(--gold2)" stroke-width="0.5" stroke-dasharray="3 4" opacity="0.2"/>
-        <!-- Planet -->
-        <circle cx="100" cy="100" r="55" fill="url(#sg)" opacity="0.95"/>
-        <circle cx="100" cy="100" r="55" fill="none" stroke="rgba(245,200,66,0.5)" stroke-width="1.5"/>
-        <circle cx="100" cy="100" r="55" fill="url(#sg-shine)" opacity="0.3"/>
-        <defs>
-          <radialGradient id="sg" cx="38%" cy="32%" r="60%">
-            <stop offset="0%" stop-color="#ffe580"/><stop offset="50%" stop-color="#e8a020"/><stop offset="100%" stop-color="#8a3000"/>
-          </radialGradient>
-          <radialGradient id="sg-shine" cx="38%" cy="28%" r="45%">
-            <stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="transparent"/>
-          </radialGradient>
-        </defs>
-      </svg>
-      <div class="orbit-center-text">
-        <div class="orbit-big" id="summaryTotal">—</div>
-        <div class="orbit-lbl">drinks</div>
-      </div>
-    </div>
-    <div class="stat-pills">
-      <div class="pill"><div class="pill-val" id="summaryWindow">—</div><div class="pill-lbl">First model match</div></div>
-      <div class="pill"><div class="pill-val" id="summaryPeak" style="font-size:18px">—</div><div class="pill-lbl">Peak BAC</div></div>
-    </div>
-  </div>
-
-  <div class="std-banner" id="stdBanner">
-    <div class="std-val" id="summaryStd">—</div>
-    <div class="std-lbl">Standard Drinks · 0.6 oz pure alcohol each</div>
+  <div class="planning-summary" id="planOverview">
+    <div class="planning-metric"><div class="planning-value" id="summaryTotal">—</div><div class="planning-label">Planned drinks</div></div>
+    <div class="planning-metric"><div class="planning-value" id="summaryStd">—</div><div class="planning-label">Standard drinks</div></div>
+    <div class="planning-metric"><div class="planning-value" id="summaryWindow">—</div><div class="planning-label">First model match</div></div>
+    <div class="planning-metric"><div class="planning-value" id="summaryPeak">—</div><div class="planning-label">Estimated peak BAC</div></div>
   </div>
 
   <button class="start-btn" id="startBtn" onclick="startSession()">Start Zone Session</button>
@@ -530,6 +483,8 @@
 <script src="goldilocks-presets.js"></script>
 <script src="goldilocks-core.js?v=20260721-zone-duration"></script>
 <script src="goldilocks-session-flow.js"></script>
+<script src="goldilocks-session-history.js"></script>
+<script src="goldilocks-drink-waypoint.js"></script>
 <script>
 // ── Profiles ──────────────────────────────────────────────────
 const PROFILES = {
@@ -936,7 +891,7 @@ function updatePlanSummary(effectivePlan, trace, provisional = false) {
   const firstIn = trace.findIndex(bac => bac >= bacMin && bac <= bacMax);
   const peak = Math.max(...trace);
   document.getElementById('summaryTotal').textContent = total;
-  document.getElementById('summaryStd').textContent = `${(total * ag / STD_DRINK_G).toFixed(1)} std drinks`;
+  document.getElementById('summaryStd').textContent = (total * ag / STD_DRINK_G).toFixed(1);
   document.getElementById('summaryWindow').textContent = firstIn >= 0 ? getPeriodLabel(firstIn) : '—';
   const peakEl = document.getElementById('summaryPeak');
   peakEl.textContent = peak.toFixed(3);
@@ -1026,8 +981,10 @@ function renderTimeline() {
       else if (isConsumed && !isPlanned) slot.className = 'slot extra';
       else if (isPlanned && !isConsumed) slot.className = 'slot planned' + (canEdit ? ' live' : '');
       else                               slot.className = 'slot reserve' + (canEdit ? ' live' : '');
-      slot.textContent = (isConsumed || isPlanned || isCurrent) ? '🍺' : '';
-      if (!isConsumed && !isPlanned) slot.textContent = '';
+      const waypointState = isConsumed
+        ? (isPlanned ? 'logged' : 'extra')
+        : isPlanned ? 'planned' : canEdit ? 'ready' : 'inactive';
+      slot.appendChild(GoldilocksDrinkWaypoint.create(document, waypointState));
       if (canEdit) slot.addEventListener('click', () => setHourLog(h, s + 1));
       slotsDiv.appendChild(slot);
     }
@@ -1072,35 +1029,6 @@ function renderTimeline() {
     }
     tlEl.appendChild(block);
   });
-
-  const peak  = Math.max(...trace);
-  const circ  = 2 * Math.PI * 78;
-  const bacArcEl  = document.getElementById('peakArc');
-  const timeArcEl = document.getElementById('timeArc');
-
-  if (bacArcEl) {
-    // BAC arc: peak (planning) or live BAC (session) as % of ceiling
-    const bacVal  = sessionActive ? (() => {
-      const curHour = getCurrentHour();
-      const frac    = getFracThroughHour();
-      const completed = [];
-      for (let h = 0; h < curHour; h++) completed.push(actualDrinks[h] !== undefined ? actualDrinks[h] : 0);
-      const curActual = actualDrinks[curHour] !== undefined ? actualDrinks[curHour] : 0;
-      return estimateLiveBac(completed, curActual, frac);
-    })() : peak;
-    const bacFrac = unresolvedHours.length ? 0 : Math.min(1, bacVal / BAC_DISPLAY_SCALE);
-    bacArcEl.setAttribute('stroke-dasharray', `${bacFrac * circ} ${circ}`);
-    bacArcEl.setAttribute('stroke', '#7eb8ff');
-  }
-
-  if (timeArcEl) {
-    // Time arc: full ring in planning (shows full session), live progress in session
-    const timeFrac = sessionActive ? (() => {
-      const elapsed = (Date.now() - sessionStartTs) / 1000;
-      return Math.max(0, Math.min(1, elapsed / (hours * 3600)));
-    })() : 1;
-    timeArcEl.setAttribute('stroke-dasharray', `${timeFrac * circ} ${circ}`);
-  }
 
   const firstIn = trace.findIndex(b => b >= bacMin && b <= bacMax);
   document.getElementById('windowNote').innerHTML = unresolvedHours.length
@@ -1325,7 +1253,8 @@ function renderActiveSessionPanel() {
   const hasEarlierGap = throughHour >= 0 && unresolvedHours.some(hour => hour < throughHour);
   const currentCount = throughHour >= 0 ? (actualDrinks[throughHour] ?? 0) : MAX_SLOTS;
   logButton.disabled = throughHour < 0 || hasEarlierGap || currentCount >= MAX_SLOTS;
-  logButton.textContent = hasEarlierGap ? 'Review earlier period first' : currentCount >= MAX_SLOTS ? 'Period limit reached' : 'Log one drink';
+  const logLabel = hasEarlierGap ? 'Review earlier period first' : currentCount >= MAX_SLOTS ? 'Period limit reached' : 'Log one drink';
+  GoldilocksDrinkWaypoint.decorateButton(logButton, logLabel, logButton.disabled ? 'inactive' : 'ready');
   document.getElementById('undoLogBtn').disabled = !lastLogChange;
   document.getElementById('finishSessionBtn').disabled = throughHour < 0;
   renderReconcileEditor();
@@ -1366,21 +1295,6 @@ function updateLiveBac() {
 
   const rf = document.getElementById('timeRingFill');
   if (rf) rf.style.width = (periodProgress * 100) + '%';
-
-  // Update orbit arcs live
-  const circ = 2 * Math.PI * 78;
-  const bacArcEl  = document.getElementById('peakArc');
-  const timeArcEl = document.getElementById('timeArc');
-  if (bacArcEl) {
-    const bacFrac  = hasUnresolved ? 0 : Math.min(1, liveBac / BAC_DISPLAY_SCALE);
-    bacArcEl.setAttribute('stroke-dasharray', `${bacFrac * circ} ${circ}`);
-    bacArcEl.setAttribute('stroke', '#7eb8ff');
-  }
-  if (timeArcEl) {
-    const elapsed   = (Date.now() - sessionStartTs) / 1000;
-    const timeFrac  = Math.max(0, Math.min(1, elapsed / (hours * 3600)));
-    timeArcEl.setAttribute('stroke-dasharray', `${timeFrac * circ} ${circ}`);
-  }
 
   const now = new Date();
   let hh = now.getHours(), mm = now.getMinutes();
@@ -1567,7 +1481,6 @@ function renderSessionView() {
   document.getElementById('activeSessionPanel').hidden = !active;
   document.getElementById('sessionSummary').hidden = !complete;
   document.getElementById('planOverview').hidden = complete;
-  document.getElementById('stdBanner').hidden = complete;
   document.getElementById('timelineCard').hidden = complete;
   document.getElementById('startBtn').style.display = sessionActive ? 'none' : 'block';
   document.getElementById('liveBacBar').classList.toggle('visible', active);
@@ -1610,7 +1523,7 @@ function startSession() {
   }
 }
 
-function renderCompletionSummary() {
+function getCompletionMetrics() {
   if (!sessionComplete || !Number.isFinite(completedAt)) return;
   const elapsedHours = Math.max(0, Math.min(getDurationHours(), (completedAt - sessionStartTs) / 3600000));
   const throughHour = getElapsedThroughHour(completedAt);
@@ -1624,13 +1537,50 @@ function renderCompletionSummary() {
   const checkpoints = fraction > 0.0001 ? [...trace, finalBac] : trace.length ? trace : [finalBac];
   const peak = Math.max(0, ...checkpoints);
   const rangeHours = checkpoints.filter(value => value >= bacMin && value <= bacMax).length;
+  return { actualTotal, plannedTotal, finalBac, peak, rangeHours };
+}
+
+function renderCompletionSummary() {
+  const metrics = getCompletionMetrics();
+  if (!metrics) return;
   document.getElementById('summaryTiming').textContent = `${fmtDateTime(sessionStartTs)} to ${fmtDateTime(completedAt)}`;
-  document.getElementById('completedActual').textContent = `${actualTotal} / ${plannedTotal}`;
-  document.getElementById('completedStd').textContent = (actualTotal * ag / STD_DRINK_G).toFixed(1);
+  document.getElementById('completedActual').textContent = `${metrics.actualTotal} / ${metrics.plannedTotal}`;
+  document.getElementById('completedStd').textContent = (metrics.actualTotal * ag / STD_DRINK_G).toFixed(1);
   document.getElementById('completedDuration').textContent = GoldilocksSessionFlow.formatMinutes(GoldilocksSessionFlow.elapsedMinutes(sessionStartTs, completedAt));
-  document.getElementById('completedBac').textContent = finalBac.toFixed(3);
-  document.getElementById('completedPeak').textContent = peak.toFixed(3);
-  document.getElementById('completedRangeHours').textContent = String(rangeHours);
+  document.getElementById('completedBac').textContent = metrics.finalBac.toFixed(3);
+  document.getElementById('completedPeak').textContent = metrics.peak.toFixed(3);
+  document.getElementById('completedRangeHours').textContent = String(metrics.rangeHours);
+}
+
+function saveCompletedSessionHistory() {
+  const metrics = getCompletionMetrics();
+  if (!metrics) return;
+  const scheduledEnd = sessionStartTs + durationMinutes * 60000;
+  try {
+    GoldilocksSessionHistory.save(localStorage, {
+      version: GoldilocksSessionHistory.VERSION,
+      id: `zone-${sessionStartTs}`,
+      mode: 'zone',
+      startedAt: sessionStartTs,
+      completedAt,
+      durationMinutes,
+      profileName: document.getElementById('profileSelect').value || profile.name,
+      drinkOz: Number(document.getElementById('drinkOz').value),
+      drinkAbv: Number(document.getElementById('drinkAbv').value),
+      plannedDrinks: metrics.plannedTotal,
+      loggedDrinks: metrics.actualTotal,
+      standardDrinks: metrics.actualTotal * ag / STD_DRINK_G,
+      finalBac: metrics.finalBac,
+      peakBac: metrics.peak,
+      completionReason: completedAt >= scheduledEnd - 1000 ? 'elapsed' : 'manual',
+      detail: {
+        type: 'zone',
+        targetMin: bacMin,
+        targetMax: bacMax,
+        matchedPeriods: metrics.rangeHours,
+      },
+    });
+  } catch (error) {}
 }
 
 function openSessionDialog(id) {
@@ -1669,6 +1619,7 @@ function finishSession() {
   clearInterval(clockInterval);
   clockInterval = null;
   saveSession();
+  saveCompletedSessionHistory();
   activateSessionUI();
   setTimeout(() => document.getElementById('sessionSummaryHeading').focus(), 0);
 }

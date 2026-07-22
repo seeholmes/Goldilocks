@@ -160,6 +160,7 @@
   .mode-card.zone { --card-accent:var(--gold); --card-glow:rgba(245,200,66,0.05); --card-shadow:rgba(245,200,66,0.12); }
   .mode-card.pace { --card-accent:var(--blue); --card-glow:rgba(126,184,255,0.05); --card-shadow:rgba(126,184,255,0.12); }
   .mode-card.training { --card-accent:var(--green); --card-glow:rgba(82,224,156,0.05); --card-shadow:rgba(82,224,156,0.12); }
+  .mode-card.history { --card-accent:var(--history); --card-glow:rgba(255,140,58,0.05); --card-shadow:rgba(255,140,58,0.12); }
 
   .disclaimer { color:var(--muted); font-size:10px; line-height:1.8; text-align:center; margin-top:32px; }
   :where(a,button):focus-visible { outline-offset:3px; }
@@ -277,6 +278,31 @@
           <span class="chip">Shared profile</span>
         </div>
       </a>
+
+      <a class="mode-card history" data-mode-card="history" href="goldilocks-history.html">
+        <div class="mode-card-top">
+          <span class="mode-glyph mode-glyph--history" aria-hidden="true">
+            <svg class="mode-glyph__svg" viewBox="0 0 44 44" focusable="false">
+              <circle class="glyph-line glyph-bound" cx="22" cy="22" r="14"/>
+              <path class="glyph-line" d="M22 12v10l6 4"/>
+              <path class="glyph-line glyph-ticks" d="M8 12h7M8 17h5"/>
+              <circle class="glyph-fill" cx="34" cy="11" r="2"/>
+            </svg>
+          </span>
+          <span class="mode-card-actions">
+            <span class="mode-arrow" aria-hidden="true">→</span>
+          </span>
+        </div>
+        <h3 class="mode-name">History</h3>
+        <div class="mode-sub">Review completed sessions</div>
+        <div class="mode-desc">See concise summaries from completed Zone and Pace sessions stored on this device.</div>
+        <div class="mode-state" id="historyState">No completed sessions saved yet</div>
+        <div class="mode-chips">
+          <span class="chip lit">Zone + Pace</span>
+          <span class="chip lit">Local history</span>
+          <span class="chip">Up to 50 sessions</span>
+        </div>
+      </a>
     </nav>
 
     <p class="disclaimer">⚠ For harm reduction only · Estimates vary — food, hydration, meds and tolerance all affect real BAC · Never drive</p>
@@ -285,6 +311,7 @@
 
 <script src="goldilocks-core.js"></script>
 <script src="goldilocks-session-state.js?v=20260722-calibration"></script>
+<script src="goldilocks-session-history.js"></script>
 <script>
 GoldilocksTheme.init({ mode:'mission', pickerId:'themePicker' });
 
@@ -386,6 +413,18 @@ function updateCalibrationStatus() {
   }
 }
 
+function updateHistoryStatus() {
+  const records = GoldilocksSessionHistory.read(localStorage);
+  const label = document.getElementById('historyState');
+  if (!records.length) {
+    label.textContent = 'No completed sessions saved yet';
+    return;
+  }
+  const zoneCount = records.filter(record => record.mode === 'zone').length;
+  const paceCount = records.length - zoneCount;
+  label.textContent = `${records.length} saved ${records.length === 1 ? 'session' : 'sessions'} · ${zoneCount} Zone · ${paceCount} Pace`;
+}
+
 function updateMissionControl() {
   const now = Date.now();
   const snapshot = GoldilocksSessionState.inspectStorage(localStorage, now, GoldilocksCore);
@@ -425,12 +464,14 @@ function updateMissionControl() {
       : (sessions.length === 1 ? 'Resume your session' : 'Resume your sessions');
   section.hidden = sessions.length === 0;
   updateCalibrationStatus();
+  updateHistoryStatus();
 }
 
 updateMissionControl();
 window.addEventListener('pageshow', updateMissionControl);
 window.addEventListener('storage', (event) => {
-  if (Object.values(GoldilocksSessionState.KEYS).includes(event.key)) updateMissionControl();
+  if (Object.values(GoldilocksSessionState.KEYS).includes(event.key)
+      || event.key === GoldilocksSessionHistory.STORAGE_KEY) updateMissionControl();
 });
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) updateMissionControl();

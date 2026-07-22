@@ -2,12 +2,14 @@
   --zone-rgb: 245, 200, 66;
   --pace-rgb: 126, 184, 255;
   --training-rgb: 82, 224, 156;
+  --history-rgb: 255, 140, 58;
 }
 
 :root:is([data-theme="parchment"], [data-theme="slate"]) {
   --zone-rgb: 118, 80, 0;
   --pace-rgb: 36, 95, 158;
   --training-rgb: 31, 107, 79;
+  --history-rgb: 138, 63, 0;
 }
 
 .brand-lockup {
@@ -84,7 +86,81 @@
 .mode-glyph--zone { --glyph-rgb: var(--zone-rgb); }
 .mode-glyph--pace { --glyph-rgb: var(--pace-rgb); }
 .mode-glyph--training { --glyph-rgb: var(--training-rgb); }
+.mode-glyph--history { --glyph-rgb: var(--history-rgb); }
 .hero > .mode-glyph { margin: 0 auto 8px; }
+
+.drink-log-action {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.drink-waypoint {
+  color: var(--muted);
+  display: inline-grid;
+  flex: 0 0 auto;
+  height: 26px;
+  place-items: center;
+  width: 26px;
+}
+
+.drink-waypoint__svg {
+  display: block;
+  height: 100%;
+  overflow: visible;
+  width: 100%;
+}
+
+.drink-waypoint__orbit {
+  fill: none;
+  opacity: 0.55;
+  stroke: currentColor;
+  stroke-width: 1.4;
+}
+
+.drink-waypoint__planet {
+  fill: color-mix(in srgb, currentColor 16%, var(--deep));
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.drink-waypoint__shine {
+  fill: none;
+  opacity: 0.62;
+  stroke: color-mix(in srgb, currentColor 34%, white);
+  stroke-linecap: round;
+  stroke-width: 1.4;
+}
+
+.drink-waypoint__moon {
+  fill: currentColor;
+  opacity: 0.75;
+}
+
+.drink-waypoint__check {
+  fill: none;
+  opacity: 0;
+  stroke: var(--deep);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.drink-waypoint.is-planned { color: var(--accent2); }
+.drink-waypoint.is-ready { color: var(--accent); }
+.drink-waypoint.is-logged { color: var(--accent); }
+.drink-waypoint.is-extra { color: var(--amber); }
+.drink-waypoint.is-inactive { opacity: 0.42; }
+.drink-waypoint.is-logged .drink-waypoint__planet,
+.drink-waypoint.is-extra .drink-waypoint__planet { fill: currentColor; }
+.drink-waypoint.is-logged .drink-waypoint__check,
+.drink-waypoint.is-extra .drink-waypoint__check { opacity: 1; }
+
+.drink-log-action .drink-waypoint {
+  height: 23px;
+  width: 23px;
+}
 
 .mode-glyph__svg {
   width: 36px;

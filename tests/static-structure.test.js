@@ -12,8 +12,13 @@ const pages = [
   'goldilocks-zone.html',
   'goldilocks-cruise.html',
   'goldilocks-training.html',
+  'goldilocks-history.html',
 ];
-const modePages = pages.filter((page) => page !== 'index.html');
+const modePages = [
+  'goldilocks-zone.html',
+  'goldilocks-cruise.html',
+  'goldilocks-training.html',
+];
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
@@ -409,10 +414,46 @@ test('all pages use the shared theme catalog and animated icon system', () => {
     'goldilocks-zone.html': 'mode-glyph--zone',
     'goldilocks-cruise.html': 'mode-glyph--pace',
     'goldilocks-training.html': 'mode-glyph--training',
+    'goldilocks-history.html': 'mode-glyph--history',
   };
   for (const [page, className] of Object.entries(expectedIcons)) {
     assert.match(read(page), new RegExp(className));
   }
+});
+
+test('Mission Control exposes shared local Zone and Pace history', () => {
+  const landing = read('index.html');
+  const historyPage = read('goldilocks-history.html');
+  assert.match(landing, /href="goldilocks-history\.html"/);
+  assert.match(landing, /<h3 class="mode-name">History<\/h3>/);
+  assert.match(landing, /<script src="goldilocks-session-history\.js"><\/script>/);
+  assert.match(landing, /GoldilocksSessionHistory\.read\(localStorage\)/);
+  assert.match(historyPage, /GoldilocksSessionHistory\.read\(localStorage\)/);
+  assert.match(historyPage, /GoldilocksSessionHistory\.remove\(localStorage, record\.id\)/);
+  assert.match(historyPage, /GoldilocksSessionHistory\.clear\(localStorage\)/);
+  assert.match(historyPage, /\bconfirm\s*\(/, 'history deletion must require confirmation');
+
+  for (const page of ['goldilocks-zone.html', 'goldilocks-cruise.html']) {
+    const html = read(page);
+    assert.match(html, /<script src="goldilocks-session-history\.js"><\/script>/);
+    assert.match(html, /GoldilocksSessionHistory\.save\(localStorage,/);
+    assert.match(html, /id:\s*`(?:zone|pace)-\$\{sessionStartTs\}`/);
+  }
+});
+
+test('Zone and Pace share the ringed-planet drink control without gamified drink rewards', () => {
+  const zone = read('goldilocks-zone.html');
+  const pace = read('goldilocks-cruise.html');
+  for (const html of [zone, pace]) {
+    assert.match(html, /<script src="goldilocks-drink-waypoint\.js"><\/script>/);
+    assert.match(html, /class="session-action-btn primary drink-log-action"/);
+    assert.match(html, /GoldilocksDrinkWaypoint\.decorateButton\(/);
+  }
+  assert.match(zone, /GoldilocksDrinkWaypoint\.create\(document, waypointState\)/);
+  assert.match(pace, /GoldilocksDrinkWaypoint\.create\(document, waypointState\)/);
+  assert.doesNotMatch(zone, /🍺|orbit-summary|orbit-svg-wrap|orbit-big|peakArc|timeArc/);
+  assert.doesNotMatch(pace, /dte-dot|dotPulse/);
+  assert.doesNotMatch(`${zone}\n${pace}`, /troph|achievement|streak|reward|confetti/i);
 });
 
 test('all pages use the exact original logo artwork in a theme-independent brand stage', () => {

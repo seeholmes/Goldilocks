@@ -39,7 +39,7 @@
     }),
   });
 
-  const MODE_NAMES = new Set(['mission', 'zone', 'pace', 'training']);
+  const MODE_NAMES = new Set(['mission', 'zone', 'pace', 'training', 'history']);
   const controllers = new WeakMap();
 
   function normalizeThemeId(id) {
@@ -59,6 +59,8 @@
     const pace2 = light ? '#325c98' : '#5a9aee';
     const training = light ? '#1f6b4f' : '#52e09c';
     const training2 = light ? '#245f9e' : '#7eb8ff';
+    const history = light ? '#8a3f00' : '#ff8c3a';
+    const history2 = light ? '#765000' : '#f5c842';
     const selectedMode = normalizeMode(mode);
 
     if (selectedMode === 'pace') {
@@ -68,7 +70,7 @@
         logo: light
           ? ['#245f9e', '#3a80d4', '#1f6b4f']
           : ['#7eb8ff', '#5a9aee', '#52e09c'],
-        zone, zone2, pace, pace2, training, training2,
+        zone, zone2, pace, pace2, training, training2, history, history2,
       };
     }
     if (selectedMode === 'training') {
@@ -78,14 +80,22 @@
         logo: light
           ? ['#1f6b4f', '#245f9e', '#1f6b4f']
           : ['#52e09c', '#7eb8ff', '#52e09c'],
-        zone, zone2, pace, pace2, training, training2,
+        zone, zone2, pace, pace2, training, training2, history, history2,
+      };
+    }
+    if (selectedMode === 'history') {
+      return {
+        accent: history,
+        accent2: history2,
+        logo: [...theme.logo],
+        zone, zone2, pace, pace2, training, training2, history, history2,
       };
     }
     return {
       accent: zone,
       accent2: zone2,
       logo: [...theme.logo],
-      zone, zone2, pace, pace2, training, training2,
+      zone, zone2, pace, pace2, training, training2, history, history2,
     };
   }
 
@@ -113,6 +123,7 @@
         '--blue': colors.pace,
         '--blue2': colors.pace2,
         '--green': colors.training,
+        '--history': colors.history,
         '--amber': theme.dark ? '#ff8c3a' : '#8a3f00',
         '--danger': theme.dark ? '#ff5a5a' : '#a12626',
         '--below': theme.dark ? '#9aac77' : '#3f5f2b',

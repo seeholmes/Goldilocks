@@ -42,13 +42,16 @@ test('resolves accessible mode accents in dark and light themes', () => {
   const zone = themes.resolve('cosmos', 'zone');
   const pace = themes.resolve('cosmos', 'pace');
   const training = themes.resolve('cosmos', 'training');
+  const history = themes.resolve('cosmos', 'history');
   const lightPace = themes.resolve('parchment', 'pace');
 
   assert.equal(zone.colors.accent, '#f5c842');
   assert.equal(pace.colors.accent, '#7eb8ff');
   assert.equal(training.colors.accent, '#52e09c');
+  assert.equal(history.colors.accent, '#ff8c3a');
   assert.equal(lightPace.colors.accent, '#245f9e');
   assert.equal(lightPace.variables['--green'], '#1f6b4f');
+  assert.equal(themes.resolve('parchment', 'history').colors.accent, '#8a3f00');
   assert.notDeepEqual(pace.colors.logo, zone.colors.logo);
 });
 

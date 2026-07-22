@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Review completed Goldilocks Zone and Pace session summaries stored on this device.">
+<meta name="theme-color" content="#08090d">
+<title>Goldilocks — Session History</title>
+<link rel="icon" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260722-astronaut">
+<link rel="manifest" href="manifest.json?v=20260722-astronaut">
+<link rel="stylesheet" href="goldilocks-icons.css">
+<link href="https://fonts.googleapis.com/css2?family=Anybody:wght@200;400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="goldilocks-theme.js"></script>
+<script>GoldilocksTheme.bootstrap('history');</script>
+<style>
+  :root {
+    --space:#08090d; --deep:#0e1018; --surface:#13151f; --border:#1e2130;
+    --text:#e8e0cc; --muted:#aaa3bb; --gold:#f5c842; --gold2:#e8a020;
+    --blue:#7eb8ff; --green:#52e09c; --amber:#ff8c3a; --danger:#ff5a5a;
+    --accent:var(--amber); --accent2:var(--gold); --radius:10px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--space); color:var(--text); font-family:'Space Mono',monospace; min-height:100vh; padding:0 0 72px; font-size:12px; }
+  .container { max-width:820px; margin:0 auto; padding:0 16px; }
+  .hero { text-align:center; padding:40px 0 28px; }
+  .logo-sub { font-family:'Anybody',sans-serif; font-size:28px; font-weight:600; color:var(--accent); margin-top:6px; }
+  .tagline { color:var(--muted); margin-top:5px; font-size:9px; letter-spacing:0.16em; text-transform:uppercase; }
+  .back-link { display:inline-block; margin-top:10px; color:var(--muted); text-decoration:none; border:1px solid var(--border); border-radius:100px; padding:5px 14px; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; }
+  .back-link:hover { color:var(--accent); border-color:var(--accent); }
+  .theme-row { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:14px; }
+  .theme-label { color:var(--muted); font-size:8px; letter-spacing:0.12em; text-transform:uppercase; }
+  .theme-picker { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .theme-swatch { width:28px; height:28px; border-radius:50%; cursor:pointer; flex-shrink:0; padding:0; }
+
+  .history-toolbar { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:16px 18px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); }
+  .history-count { font-family:'Anybody',sans-serif; font-size:20px; font-weight:400; }
+  .history-context { color:var(--muted); font-size:9px; line-height:1.5; margin-top:3px; }
+  .clear-btn { background:transparent; border:1px solid color-mix(in srgb,var(--danger) 55%,var(--border)); border-radius:7px; color:var(--danger); cursor:pointer; font:inherit; font-size:9px; padding:8px 11px; text-transform:uppercase; }
+  .clear-btn[hidden] { display:none; }
+
+  .filters { display:flex; gap:7px; margin:12px 0; flex-wrap:wrap; }
+  .filter-btn { background:var(--deep); border:1px solid var(--border); border-radius:100px; color:var(--muted); cursor:pointer; font:inherit; font-size:9px; padding:6px 12px; text-transform:uppercase; }
+  .filter-btn[aria-pressed="true"] { color:var(--accent); border-color:var(--accent); background:color-mix(in srgb,var(--accent) 9%,var(--deep)); }
+
+  .history-list { display:grid; gap:10px; }
+  .history-card { --record-accent:var(--accent); position:relative; overflow:hidden; background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--record-accent); border-radius:var(--radius); padding:18px 18px 16px; }
+  .history-card.zone { --record-accent:var(--gold); }
+  .history-card.pace { --record-accent:var(--blue); }
+  .record-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+  .record-mode { color:var(--record-accent); font-size:9px; letter-spacing:0.14em; text-transform:uppercase; }
+  .record-date { font-family:'Anybody',sans-serif; font-size:20px; font-weight:400; margin-top:4px; }
+  .delete-btn { background:transparent; border:1px solid var(--border); border-radius:7px; color:var(--muted); cursor:pointer; font:inherit; font-size:9px; padding:7px 10px; }
+  .delete-btn:hover { color:var(--danger); border-color:var(--danger); }
+  .record-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; margin-top:14px; }
+  .record-stat { background:var(--deep); border:1px solid var(--border); border-radius:7px; padding:9px 10px; min-width:0; }
+  .record-value { font-family:'Anybody',sans-serif; font-size:17px; font-weight:400; overflow-wrap:anywhere; }
+  .record-label { color:var(--muted); font-size:8px; letter-spacing:0.08em; line-height:1.35; margin-top:3px; text-transform:uppercase; }
+  .record-detail { color:var(--muted); font-size:9px; line-height:1.65; margin-top:12px; }
+  .empty-state { background:var(--surface); border:1px dashed var(--border); border-radius:var(--radius); color:var(--muted); padding:34px 20px; text-align:center; line-height:1.75; }
+  .empty-state strong { color:var(--text); display:block; font-family:'Anybody',sans-serif; font-size:22px; font-weight:400; margin-bottom:5px; }
+  .disclaimer { color:var(--muted); font-size:9px; line-height:1.75; text-align:center; margin-top:24px; }
+  :where(a,button):focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+
+  @media(max-width:600px) {
+    .hero { padding-top:32px; }
+    .history-toolbar { align-items:flex-start; flex-direction:column; }
+    .record-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  }
+  @media(prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <header class="hero">
+    <div class="brand-lockup">
+      <h1 class="logo logo--original" aria-label="Goldilocks"><span class="brand-art-crop" aria-hidden="true"><img class="brand-original-art" src="goldilocks-original-lockup.jpg?v=20260722-og" alt=""></span></h1>
+    </div>
+    <span class="mode-glyph mode-glyph--history" aria-hidden="true">
+      <svg class="mode-glyph__svg" viewBox="0 0 44 44" focusable="false">
+        <circle class="glyph-line glyph-bound" cx="22" cy="22" r="14"/>
+        <path class="glyph-line" d="M22 12v10l6 4"/>
+        <path class="glyph-line glyph-ticks" d="M8 12h7M8 17h5"/>
+        <circle class="glyph-fill" cx="34" cy="11" r="2"/>
+      </svg>
+    </span>
+    <div class="logo-sub">Session History</div>
+    <div class="tagline">completed Zone and Pace sessions</div>
+    <a class="back-link" href="index.html">← Mission Control</a>
+    <div class="theme-row">
+      <span class="theme-label" id="themePickerLabel">Theme</span>
+      <div class="theme-picker" id="themePicker" role="group" aria-labelledby="themePickerLabel"></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="history-toolbar" aria-labelledby="historyCount">
+      <div>
+        <h2 class="history-count" id="historyCount">No saved sessions</h2>
+        <p class="history-context">Stored only in this browser on this device.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearHistoryBtn" hidden>Clear history</button>
+    </section>
+
+    <div class="filters" role="group" aria-label="Filter session history">
+      <button type="button" class="filter-btn" data-filter="all" aria-pressed="true">All</button>
+      <button type="button" class="filter-btn" data-filter="zone" aria-pressed="false">Zone</button>
+      <button type="button" class="filter-btn" data-filter="pace" aria-pressed="false">Pace</button>
+    </div>
+
+    <div class="history-list" id="historyList" aria-live="polite"></div>
+    <p class="disclaimer">Historical BAC values are model estimates, not measurements or safety thresholds. Never use them to decide whether to drive.</p>
+  </main>
+</div>
+
+<script src="goldilocks-session-history.js"></script>
+<script>
+GoldilocksTheme.init({ mode:'history', pickerId:'themePicker' });
+
+let activeFilter = 'all';
+
+function formatDate(timestamp) {
+  return new Intl.DateTimeFormat(undefined, { dateStyle:'medium', timeStyle:'short' }).format(new Date(timestamp));
+}
+
+function formatDuration(minutes) {
+  const rounded = Math.max(0, Math.round(minutes));
+  const hours = Math.floor(rounded / 60);
+  const remainder = rounded % 60;
+  if (hours && remainder) return `${hours}h ${remainder}m`;
+  if (hours) return `${hours}h`;
+  return `${remainder}m`;
+}
+
+function formatNumber(value) {
+  return Number(value).toLocaleString(undefined, { maximumFractionDigits:2 });
+}
+
+function addStat(documentRef, grid, value, label) {
+  const stat = documentRef.createElement('div');
+  stat.className = 'record-stat';
+  const statValue = documentRef.createElement('div');
+  statValue.className = 'record-value';
+  statValue.textContent = value;
+  const statLabel = documentRef.createElement('div');
+  statLabel.className = 'record-label';
+  statLabel.textContent = label;
+  stat.append(statValue, statLabel);
+  grid.appendChild(stat);
+}
+
+function deleteRecord(record) {
+  if (!confirm(`Delete this ${record.mode === 'zone' ? 'Zone' : 'Pace'} session from history?`)) return;
+  try { GoldilocksSessionHistory.remove(localStorage, record.id); } catch (error) { return; }
+  renderHistory();
+}
+
+function createRecordCard(record) {
+  const card = document.createElement('article');
+  card.className = `history-card ${record.mode}`;
+  const head = document.createElement('div');
+  head.className = 'record-head';
+  const heading = document.createElement('div');
+  const mode = document.createElement('div');
+  mode.className = 'record-mode';
+  mode.textContent = record.mode === 'zone' ? 'Zone session' : 'Pace session';
+  const date = document.createElement('h3');
+  date.className = 'record-date';
+  date.textContent = formatDate(record.startedAt);
+  heading.append(mode, date);
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'delete-btn';
+  remove.textContent = 'Delete';
+  remove.setAttribute('aria-label', `Delete ${mode.textContent} from ${date.textContent}`);
+  remove.addEventListener('click', () => deleteRecord(record));
+  head.append(heading, remove);
+
+  const grid = document.createElement('div');
+  grid.className = 'record-grid';
+  addStat(document, grid, `${record.loggedDrinks} / ${record.plannedDrinks}`, 'Logged / planned');
+  addStat(document, grid, formatDuration((record.completedAt - record.startedAt) / 60000), 'Elapsed');
+  addStat(document, grid, record.finalBac.toFixed(3), 'Estimate at finish');
+  addStat(document, grid, record.peakBac.toFixed(3), 'Estimated peak');
+
+  const detail = document.createElement('p');
+  detail.className = 'record-detail';
+  const drink = `${formatNumber(record.drinkOz)} oz at ${formatNumber(record.drinkAbv)}% ABV`;
+  const plan = record.mode === 'zone'
+    ? `planning range ${record.detail.targetMin.toFixed(3)}–${record.detail.targetMax.toFixed(3)} · ${record.detail.matchedPeriods} modeled ${record.detail.matchedPeriods === 1 ? 'period' : 'periods'} in range`
+    : `planning reference ${record.detail.targetEnd.toFixed(3)} · initial end projection ${record.detail.initialProjectedEnd.toFixed(3)}`;
+  detail.textContent = `${drink} · ${record.standardDrinks.toFixed(1)} standard drinks · ${plan} · ${record.completionReason === 'elapsed' ? 'scheduled time elapsed' : 'finished manually'} · profile ${record.profileName}`;
+  card.append(head, grid, detail);
+  return card;
+}
+
+function renderHistory() {
+  const records = GoldilocksSessionHistory.read(localStorage);
+  const visible = activeFilter === 'all' ? records : records.filter(record => record.mode === activeFilter);
+  const list = document.getElementById('historyList');
+  list.replaceChildren();
+  document.getElementById('historyCount').textContent = records.length
+    ? `${records.length} saved ${records.length === 1 ? 'session' : 'sessions'}`
+    : 'No saved sessions';
+  document.getElementById('clearHistoryBtn').hidden = records.length === 0;
+
+  if (!visible.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    const title = document.createElement('strong');
+    title.textContent = records.length ? `No saved ${activeFilter === 'zone' ? 'Zone' : 'Pace'} sessions` : 'Your completed sessions will appear here';
+    const copy = document.createElement('span');
+    copy.textContent = records.length ? 'Choose another filter to review your saved sessions.' : 'Finish a Zone or Pace session to save its summary on this device.';
+    empty.append(title, copy);
+    list.appendChild(empty);
+    return;
+  }
+  visible.forEach(record => list.appendChild(createRecordCard(record)));
+}
+
+document.querySelectorAll('[data-filter]').forEach(button => {
+  button.addEventListener('click', () => {
+    activeFilter = button.dataset.filter;
+    document.querySelectorAll('[data-filter]').forEach(candidate => candidate.setAttribute('aria-pressed', String(candidate === button)));
+    renderHistory();
+  });
+});
+
+document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+  if (!confirm('Clear every saved Zone and Pace session from this device?')) return;
+  try { GoldilocksSessionHistory.clear(localStorage); } catch (error) { return; }
+  renderHistory();
+});
+
+window.addEventListener('storage', event => {
+  if (event.key === GoldilocksSessionHistory.STORAGE_KEY) renderHistory();
+});
+window.addEventListener('pageshow', renderHistory);
+renderHistory();
+</script>
+</body>
+</html>
