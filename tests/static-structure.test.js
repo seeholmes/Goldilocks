@@ -450,7 +450,7 @@ test('Mission Control exposes shared local Zone and Pace history', () => {
   }
 });
 
-test('Zone and Pace share the ringed-planet drink control without gamified drink rewards', () => {
+test('Zone and Pace share the native bear drink control without gamified drink rewards', () => {
   const zone = read('goldilocks-zone.html');
   const pace = read('goldilocks-cruise.html');
   for (const html of [zone, pace]) {
@@ -463,6 +463,18 @@ test('Zone and Pace share the ringed-planet drink control without gamified drink
   assert.doesNotMatch(zone, /🍺|orbit-summary|orbit-svg-wrap|orbit-big|peakArc|timeArc/);
   assert.doesNotMatch(pace, /dte-dot|dotPulse/);
   assert.doesNotMatch(`${zone}\n${pace}`, /troph|achievement|streak|reward|confetti/i);
+});
+
+test('Zone and Pace review the plan with the shared period-end trajectory', () => {
+  for (const page of ['goldilocks-zone.html', 'goldilocks-cruise.html']) {
+    const html = read(page);
+    assert.match(html, /<link rel="stylesheet" href="goldilocks-trajectory\.css">/);
+    assert.match(html, /<script src="goldilocks-trajectory\.js"><\/script>/);
+    assert.match(html, /<summary>Projected BAC trajectory<\/summary>/);
+    assert.match(html, /id="reviewTrajectory"/);
+    assert.match(html, /GoldilocksTrajectory\.render\(document\.getElementById\('reviewTrajectory'\)/);
+    assert.match(html, /absorption (?:is|are) not modeled/i);
+  }
 });
 
 test('all pages use the exact original logo artwork in a theme-independent brand stage', () => {

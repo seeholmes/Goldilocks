@@ -1,0 +1,109 @@
+.trajectory-panel {
+  border-top: 1px solid var(--border);
+  margin-top: 14px;
+  padding-top: 12px;
+  position: relative;
+}
+
+.trajectory-panel > summary {
+  color: var(--text);
+  cursor: pointer;
+  font-family: 'Anybody', sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  list-style-position: inside;
+}
+
+.trajectory-panel[open] > summary {
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.trajectory-panel > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.trajectory-figure {
+  margin: 0;
+}
+
+.trajectory-chart {
+  display: block;
+  height: auto;
+  max-width: 100%;
+  overflow: visible;
+  width: 100%;
+}
+
+.trajectory-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.trajectory-range {
+  fill: var(--accent);
+  opacity: 0.1;
+}
+
+.trajectory-target {
+  stroke: var(--accent);
+  stroke-dasharray: 5 5;
+  stroke-width: 1.5;
+}
+
+.trajectory-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.trajectory-point {
+  fill: var(--deep);
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.trajectory-axis-label,
+.trajectory-annotation,
+.trajectory-lane-label,
+.trajectory-count {
+  fill: var(--muted);
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+}
+
+.trajectory-annotation,
+.trajectory-count {
+  fill: var(--accent2);
+}
+
+.trajectory-lane-label {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.trajectory-bear {
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+  font-size: 21px;
+  opacity: 0.72;
+}
+
+.trajectory-caption,
+.trajectory-empty {
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.6;
+  margin-top: 4px;
+}
+
+@media (max-width: 480px) {
+  .trajectory-panel > summary { font-size: 14px; }
+  .trajectory-axis-label,
+  .trajectory-annotation,
+  .trajectory-lane-label,
+  .trajectory-count { font-size: 16px; }
+  .trajectory-bear { font-size: 31px; }
+}

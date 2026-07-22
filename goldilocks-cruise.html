@@ -11,6 +11,7 @@
 <link rel="manifest" href="manifest.json?v=20260722-astronaut">
 <link rel="stylesheet" href="goldilocks-icons.css">
 <link rel="stylesheet" href="goldilocks-session-flow.css">
+<link rel="stylesheet" href="goldilocks-trajectory.css">
 <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@200;400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="goldilocks-theme.js"></script>
 <script>GoldilocksTheme.bootstrap('pace');</script>
@@ -352,6 +353,10 @@
       <div class="review-item"><div class="review-value" id="summaryEnding">—</div><div class="review-label">Estimated BAC at end</div></div>
       <div class="review-item"><div class="review-value" id="summaryPeak">—</div><div class="review-label">Estimated peak BAC</div></div>
     </div>
+    <details class="trajectory-panel" open>
+      <summary>Projected BAC trajectory</summary>
+      <div id="reviewTrajectory"></div>
+    </details>
     <p class="session-caution">Planning reference only — not a safety threshold. Estimates vary, and no BAC level guarantees safety.</p>
   </section>
 
@@ -432,6 +437,7 @@
 <script src="goldilocks-session-flow.js?v=20260721-pace-slots"></script>
 <script src="goldilocks-session-history.js"></script>
 <script src="goldilocks-drink-waypoint.js"></script>
+<script src="goldilocks-trajectory.js"></script>
 <script>
 // ── Profiles ──────────────────────────────────────────────────
 const PROFILES = {
@@ -801,6 +807,16 @@ function renderPreStartReview(result, previewStart, trace) {
   document.getElementById('summaryTotal').textContent = result.n > 0 ? String(result.n) : '0';
   document.getElementById('summarySpacing').textContent = result.n > 1 ? fmtSpacing(result.spacing) : '—';
   document.getElementById('summaryEnding').textContent = result.endpoint.toFixed(3);
+  GoldilocksTrajectory.render(document.getElementById('reviewTrajectory'), {
+    durationMinutes,
+    trace,
+    drinks: drinkSchedule.map(timestamp => ({
+      minute: Math.max(0, Math.min(durationMinutes, (timestamp - previewStart) / 60000)),
+      count: 1,
+    })),
+    target: bacEnd,
+    caption: 'The line connects period-end model estimates. Bears show planned drink times; absorption is not modeled. The ending reference is not a safety threshold.',
+  });
 }
 
 function setSessionFlowState(state) {
@@ -1042,6 +1058,7 @@ function update() {
       document.getElementById('summaryPeak').textContent = '—';
       document.getElementById('scheduleNote').textContent = 'Fix the settings above to create a Pace plan.';
       document.getElementById('timeline').replaceChildren();
+      GoldilocksTrajectory.clear(document.getElementById('reviewTrajectory'));
     }
     return;
   }

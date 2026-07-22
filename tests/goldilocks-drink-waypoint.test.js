@@ -22,3 +22,26 @@ test('normalizes only supported visual states', () => {
   assert.equal(waypoint.normalizeState('reward'), 'inactive');
   assert.equal(waypoint.normalizeState(null), 'inactive');
 });
+
+test('uses the native bear emoji and exposes logged state for the CSS outline', () => {
+  const documentRef = {
+    createElement(tagName) {
+      return {
+        tagName,
+        className: '',
+        dataset: {},
+        children: [],
+        attributes: {},
+        ownerDocument: documentRef,
+        setAttribute(name, value) { this.attributes[name] = value; },
+        appendChild(child) { this.children.push(child); },
+      };
+    },
+  };
+  const marker = waypoint.create(documentRef, 'logged');
+  assert.equal(waypoint.EMOJI, '🐻');
+  assert.equal(marker.className, 'drink-waypoint is-logged');
+  assert.equal(marker.dataset.waypointState, 'logged');
+  assert.equal(marker.children[0].textContent, '🐻');
+  assert.equal(marker.attributes['aria-hidden'], 'true');
+});

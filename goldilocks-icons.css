@@ -97,69 +97,48 @@
 }
 
 .drink-waypoint {
-  color: var(--muted);
   display: inline-grid;
   flex: 0 0 auto;
-  height: 26px;
+  height: 28px;
   place-items: center;
-  width: 26px;
+  position: relative;
+  transition: filter 160ms ease, opacity 160ms ease, transform 160ms ease;
+  width: 28px;
 }
 
-.drink-waypoint__svg {
+.drink-waypoint__emoji {
   display: block;
-  height: 100%;
-  overflow: visible;
-  width: 100%;
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+  font-size: 21px;
+  line-height: 1;
 }
 
-.drink-waypoint__orbit {
-  fill: none;
-  opacity: 0.55;
-  stroke: currentColor;
-  stroke-width: 1.4;
-}
-
-.drink-waypoint__planet {
-  fill: color-mix(in srgb, currentColor 16%, var(--deep));
-  stroke: currentColor;
-  stroke-width: 1.5;
-}
-
-.drink-waypoint__shine {
-  fill: none;
-  opacity: 0.62;
-  stroke: color-mix(in srgb, currentColor 34%, white);
-  stroke-linecap: round;
-  stroke-width: 1.4;
-}
-
-.drink-waypoint__moon {
-  fill: currentColor;
-  opacity: 0.75;
-}
-
-.drink-waypoint__check {
-  fill: none;
+.drink-waypoint::after {
+  border: 2px solid transparent;
+  border-radius: 50%;
+  content: '';
+  inset: 0;
   opacity: 0;
-  stroke: var(--deep);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.8;
+  pointer-events: none;
+  position: absolute;
+  transition: border-color 160ms ease, opacity 160ms ease;
 }
 
-.drink-waypoint.is-planned { color: var(--accent2); }
-.drink-waypoint.is-ready { color: var(--accent); }
-.drink-waypoint.is-logged { color: var(--accent); }
-.drink-waypoint.is-extra { color: var(--amber); }
-.drink-waypoint.is-inactive { opacity: 0.42; }
-.drink-waypoint.is-logged .drink-waypoint__planet,
-.drink-waypoint.is-extra .drink-waypoint__planet { fill: currentColor; }
-.drink-waypoint.is-logged .drink-waypoint__check,
-.drink-waypoint.is-extra .drink-waypoint__check { opacity: 1; }
+.drink-waypoint.is-planned { filter: grayscale(0.28) saturate(0.7); opacity: 0.58; }
+.drink-waypoint.is-ready { filter: drop-shadow(0 0 7px color-mix(in srgb, var(--accent) 70%, transparent)); opacity: 1; }
+.drink-waypoint.is-logged { opacity: 1; }
+.drink-waypoint.is-extra { opacity: 1; }
+.drink-waypoint.is-inactive { filter: grayscale(0.7); opacity: 0.28; }
+.drink-waypoint.is-logged::after { border-color: var(--green); opacity: 1; }
+.drink-waypoint.is-extra::after { border-color: var(--amber); opacity: 1; }
 
 .drink-log-action .drink-waypoint {
-  height: 23px;
-  width: 23px;
+  height: 25px;
+  width: 25px;
+}
+
+.drink-log-action .drink-waypoint__emoji {
+  font-size: 19px;
 }
 
 .mode-glyph__svg {

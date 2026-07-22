@@ -2,6 +2,16 @@
 
 All notable user-facing changes to Goldilocks are documented here.
 
+## [Unreleased]
+
+### Added
+
+- Added a projected BAC trajectory to the Zone and Pace plan reviews, with planned drink timing shown separately from the period-end model estimates.
+
+### Changed
+
+- Replaced the shared ringed-planet drink marker with a native bear emoji, including a clear outline after a drink is logged.
+
 ## [1.1.0] - 2026-07-22
 
 ### Added

@@ -11,6 +11,7 @@
 <link rel="manifest" href="manifest.json?v=20260722-astronaut">
 <link rel="stylesheet" href="goldilocks-icons.css">
 <link rel="stylesheet" href="goldilocks-session-flow.css">
+<link rel="stylesheet" href="goldilocks-trajectory.css">
 <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@200;400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="goldilocks-theme.js"></script>
 <script>GoldilocksTheme.bootstrap('zone');</script>
@@ -389,6 +390,10 @@
       <div class="review-item"><div class="review-value" id="reviewEndingBac">—</div><div class="review-label">Projected ending BAC</div></div>
       <div class="review-item"><div class="review-value" id="reviewPeak">—</div><div class="review-label">Estimated peak BAC</div></div>
     </div>
+    <details class="trajectory-panel" open>
+      <summary>Projected BAC trajectory</summary>
+      <div id="reviewTrajectory"></div>
+    </details>
     <p class="session-caution" id="reviewPace">—</p>
     <p class="session-caution">The selected range is a planning preference, not a safety threshold. Never drive after drinking.</p>
   </section>
@@ -485,6 +490,7 @@
 <script src="goldilocks-session-flow.js"></script>
 <script src="goldilocks-session-history.js"></script>
 <script src="goldilocks-drink-waypoint.js"></script>
+<script src="goldilocks-trajectory.js"></script>
 <script>
 // ── Profiles ──────────────────────────────────────────────────
 const PROFILES = {
@@ -902,6 +908,7 @@ function clearPreStartReview() {
   ['reviewStart','reviewEnd','reviewDuration','reviewPlanned','reviewEndingBac','reviewPeak']
     .forEach(id => { document.getElementById(id).textContent = '—'; });
   document.getElementById('reviewPace').textContent = 'Adjust the settings above to create a review.';
+  GoldilocksTrajectory.clear(document.getElementById('reviewTrajectory'));
 }
 
 function renderPreStartReview() {
@@ -919,6 +926,17 @@ function renderPreStartReview() {
   document.getElementById('reviewPlanned').textContent = String(total);
   document.getElementById('reviewEndingBac').textContent = ending.toFixed(3);
   document.getElementById('reviewPeak').textContent = peak.toFixed(3);
+  const drinkMarkers = plan.map((count, index) => ({
+    minute: index * 60 + Math.min(60, durationMinutes - index * 60) / 2,
+    count,
+  })).filter(marker => marker.count > 0);
+  GoldilocksTrajectory.render(document.getElementById('reviewTrajectory'), {
+    durationMinutes,
+    trace,
+    drinks: drinkMarkers,
+    range: { low: bacMin, high: bacMax },
+    caption: 'The line connects period-end model estimates. Bears show planned drinks within each period; exact drink times and absorption are not modeled. This is not a safety threshold.',
+  });
   document.getElementById('reviewPace').textContent = averageMinutes === null
     ? 'No drinks are currently planned.'
     : `Average planned pace: about one drink every ${averageMinutes} minutes. See the hourly plan for the actual distribution.`;

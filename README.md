@@ -15,7 +15,7 @@ Open the hosted app at [seeholmes.github.io/Goldilocks](https://seeholmes.github
 
 ## Architecture
 
-The production app has no framework, bundler, backend, analytics, or device integration. Each mode is a standalone HTML page with inline presentation and controller code. Shared, testable BAC and calibration calculations live in `goldilocks-core.js`; shared custom-drink validation and storage live in `goldilocks-presets.js`; shared theme behavior lives in `goldilocks-theme.js`; shared session-flow helpers and presentation live in `goldilocks-session-flow.js` and `goldilocks-session-flow.css`; completed-session summaries are validated by `goldilocks-session-history.js`; and Mission Control reads resumable state through the non-mutating `goldilocks-session-state.js` inspector.
+The production app has no framework, bundler, backend, analytics, or device integration. Each mode is a standalone HTML page with inline presentation and controller code. Shared, testable BAC and calibration calculations live in `goldilocks-core.js`; shared custom-drink validation and storage live in `goldilocks-presets.js`; shared theme behavior lives in `goldilocks-theme.js`; shared session-flow helpers and presentation live in `goldilocks-session-flow.js` and `goldilocks-session-flow.css`; shared drink markers live in `goldilocks-drink-waypoint.js`; plan-review charts live in `goldilocks-trajectory.js` and `goldilocks-trajectory.css`; completed-session summaries are validated by `goldilocks-session-history.js`; and Mission Control reads resumable state through the non-mutating `goldilocks-session-state.js` inspector.
 
 The only external runtime dependency is Google Fonts. User data stays in same-origin browser storage:
 

@@ -8,16 +8,10 @@
   'use strict';
 
   const STATES = new Set(['planned', 'ready', 'logged', 'extra', 'inactive']);
-  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const EMOJI = '🐻';
 
   function normalizeState(state) {
     return STATES.has(state) ? state : 'inactive';
-  }
-
-  function svgElement(documentRef, name, attributes) {
-    const element = documentRef.createElementNS(SVG_NS, name);
-    Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
-    return element;
   }
 
   function create(documentRef, state = 'inactive') {
@@ -30,19 +24,10 @@
     wrapper.dataset.waypointState = normalized;
     wrapper.setAttribute('aria-hidden', 'true');
 
-    const svg = svgElement(documentRef, 'svg', {
-      class: 'drink-waypoint__svg',
-      viewBox: '0 0 32 32',
-      focusable: 'false',
-    });
-    svg.append(
-      svgElement(documentRef, 'ellipse', { class: 'drink-waypoint__orbit', cx: '16', cy: '16', rx: '13', ry: '6.5', transform: 'rotate(-18 16 16)' }),
-      svgElement(documentRef, 'circle', { class: 'drink-waypoint__planet', cx: '16', cy: '16', r: '7.2' }),
-      svgElement(documentRef, 'path', { class: 'drink-waypoint__shine', d: 'M12.2 13.2A5.4 5.4 0 0 1 16 10.7' }),
-      svgElement(documentRef, 'circle', { class: 'drink-waypoint__moon', cx: '27', cy: '10', r: '1.6' }),
-      svgElement(documentRef, 'path', { class: 'drink-waypoint__check', d: 'm12.7 16.2 2.2 2.2 4.7-5' })
-    );
-    wrapper.appendChild(svg);
+    const emoji = documentRef.createElement('span');
+    emoji.className = 'drink-waypoint__emoji';
+    emoji.textContent = EMOJI;
+    wrapper.appendChild(emoji);
     return wrapper;
   }
 
@@ -54,5 +39,5 @@
     return button;
   }
 
-  return Object.freeze({ STATES, normalizeState, create, decorateButton });
+  return Object.freeze({ EMOJI, STATES, normalizeState, create, decorateButton });
 }));
