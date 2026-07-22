@@ -24,6 +24,15 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
 }
 
+test('package and page version labels stay synchronized', () => {
+  const packageVersion = JSON.parse(read('package.json')).version;
+  assert.equal(packageVersion, '1.1.0');
+  for (const page of pages) {
+    const escapedVersion = packageVersion.replace(/\./g, '\\.');
+    assert.match(read(page), new RegExp(`v${escapedVersion}\\b`), `${page} must show v${packageVersion}`);
+  }
+});
+
 function openingTagWithId(html, id) {
   const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return html.match(new RegExp(`<[^>]+\\bid="${escaped}"[^>]*>`, 'i'))?.[0] || '';

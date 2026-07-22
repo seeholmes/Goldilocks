@@ -1,6 +1,6 @@
 {
   "name": "goldilocks-bac-planner",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
     "test": "node --test tests/goldilocks-core.test.js tests/goldilocks-presets.test.js tests/goldilocks-theme.test.js tests/goldilocks-session-flow.test.js tests/goldilocks-session-state.test.js tests/goldilocks-session-history.test.js tests/goldilocks-drink-waypoint.test.js tests/static-structure.test.js"
