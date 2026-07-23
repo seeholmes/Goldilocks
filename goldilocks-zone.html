@@ -278,7 +278,7 @@
       <!-- Save as named profile -->
       <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
         <div class="input-wrap blue-focus" style="flex:1">
-          <input type="text" id="saveProfileName" aria-label="Profile name" placeholder="name this profile" maxlength="24"
+          <input type="text" id="saveProfileName" aria-label="Profile name" placeholder="name this profile" maxlength="24" oninput="this.setCustomValidity('')"
             style="background:transparent;border:none;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;padding:9px 12px;width:100%;outline:none;">
         </div>
         <button type="button" id="saveProfileBtn" onclick="saveCustomProfile()" style="padding:9px 16px;background:rgba(126,184,255,0.1);border:1px solid rgba(126,184,255,0.3);border-radius:7px;color:var(--blue);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;white-space:nowrap;transition:all 0.2s" onmouseover="this.style.background='rgba(126,184,255,0.18)'" onmouseout="this.style.background='rgba(126,184,255,0.1)'">Save Profile</button>
@@ -1816,7 +1816,6 @@ function saveCustomProfile() {
   if (duplicateName) {
     nameInput.setCustomValidity(`A user named "${duplicateName}" already exists. Select that user or choose another name.`);
     nameInput.reportValidity();
-    nameInput.setCustomValidity('');
     return;
   }
   newProfile.sex = p.r === 0.55 ? 'female' : 'male';

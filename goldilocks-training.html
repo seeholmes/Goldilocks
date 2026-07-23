@@ -273,7 +273,7 @@
         </div>
         <div id="newCalibrationProfileFields" hidden>
           <div class="profile-create-wrap">
-            <input class="profile-name-input" type="text" id="newCalibrationProfileName" maxlength="24" placeholder="new user name" aria-label="New user name">
+            <input class="profile-name-input" type="text" id="newCalibrationProfileName" maxlength="24" placeholder="new user name" aria-label="New user name" oninput="this.setCustomValidity('')">
             <button class="profile-create-btn" type="button" onclick="createCalibrationProfile()">Create User</button>
           </div>
         </div>
@@ -676,7 +676,6 @@ function createCalibrationProfile() {
     : duplicate ? `A user named "${duplicate}" already exists.` : '');
   if (!input.checkValidity()) {
     input.reportValidity();
-    input.setCustomValidity('');
     return;
   }
   if (!validateBodyProfile()) {
