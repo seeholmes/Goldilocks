@@ -137,6 +137,19 @@ test('Zone and Pace use the shared custom-drink store', () => {
   }
 });
 
+test('Zone and Pace can both save and delete shared custom profiles', () => {
+  for (const page of ['goldilocks-zone.html', 'goldilocks-cruise.html']) {
+    const html = read(page);
+    for (const id of ['profileSelect', 'customProfileFields', 'saveProfileName', 'saveProfileBtn', 'profileTrashBtn']) {
+      assert.ok(openingTagWithId(html, id), `${page} must expose #${id}`);
+    }
+    assert.match(html, /function\s+saveCustomProfile\s*\(/);
+    assert.match(html, /function\s+deleteProfile\s*\(/);
+    assert.match(html, /localStorage\.setItem\(['"]goldilocks_profiles['"]/);
+    assert.match(html, /\['custom','seeholmes'\]/, `${page} must reserve built-in profile names`);
+  }
+});
+
 test('Pace exposes 15-minute session-length planning', () => {
   const html = read('goldilocks-cruise.html');
   const durationInput = html.match(/<input\b[^>]*\bid="duration"[^>]*>/i)?.[0] || '';

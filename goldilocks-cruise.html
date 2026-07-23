@@ -223,11 +223,14 @@
     <h2 class="sec" id="profileHeading">Profile</h2>
     <div>
       <label class="field-label" for="profileSelect">Who's drinking</label>
-      <div class="select-wrap">
-        <select id="profileSelect" onchange="applyProfile()">
-          <option value="seeholmes">seeholmes</option>
-          <option value="custom">Custom</option>
-        </select>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="select-wrap blue-focus" style="flex:1">
+          <select id="profileSelect" onchange="applyProfile()">
+            <option value="seeholmes">seeholmes</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <button type="button" id="profileTrashBtn" onclick="deleteProfile()" aria-label="Delete selected profile" title="Delete profile" style="display:none;padding:9px 12px;background:rgba(255,90,90,0.08);border:1px solid rgba(255,90,90,0.25);border-radius:7px;color:var(--danger);font-size:14px;cursor:pointer;transition:all 0.2s;flex-shrink:0">🗑</button>
       </div>
     </div>
     <div id="customProfileFields" style="display:none;margin-top:14px">
@@ -251,6 +254,13 @@
             <select id="sex"><option value="male">Male (r=0.68)</option><option value="female">Female (r=0.55)</option></select>
           </div>
         </div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+        <div class="input-wrap blue-focus" style="flex:1">
+          <input type="text" id="saveProfileName" aria-label="Profile name" placeholder="name this profile" maxlength="24"
+            style="background:transparent;border:none;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;padding:9px 12px;width:100%;outline:none;">
+        </div>
+        <button type="button" id="saveProfileBtn" onclick="saveCustomProfile()" style="padding:9px 16px;background:rgba(126,184,255,0.1);border:1px solid rgba(126,184,255,0.3);border-radius:7px;color:var(--blue);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;white-space:nowrap;transition:all 0.2s">Save Profile</button>
       </div>
     </div>
     <div class="widmark-strip">
@@ -509,7 +519,7 @@ function isUnsafeProfileKey(name) {
 }
 
 function isReservedStoredProfileName(name) {
-  return typeof name === 'string' && (name.trim().toLowerCase() === 'custom' || isUnsafeProfileKey(name));
+  return typeof name === 'string' && (['custom','seeholmes'].includes(name.trim().toLowerCase()) || isUnsafeProfileKey(name));
 }
 
 function toSafeProfileMap(value) {
@@ -537,7 +547,33 @@ function applyProfile() {
   const sel = document.getElementById('profileSelect').value;
   document.getElementById('customProfileFields').style.display =
     (sel === 'custom') ? 'block' : 'none';
+  updateProfileTrash();
   update();
+}
+
+function updateProfileTrash() {
+  const value = document.getElementById('profileSelect').value;
+  const button = document.getElementById('profileTrashBtn');
+  button.style.display = sessionActive || isReservedStoredProfileName(value) ? 'none' : 'block';
+}
+
+function deleteProfile() {
+  if (sessionActive) return;
+  const select = document.getElementById('profileSelect');
+  const name = select.value;
+  if (!name || isReservedStoredProfileName(name)) return;
+  if (!confirm(`Delete profile "${name}"?`)) return;
+
+  let profiles = Object.create(null);
+  try { profiles = toSafeProfileMap(JSON.parse(localStorage.getItem('goldilocks_profiles') || '{}')); } catch(e) {}
+  delete profiles[name];
+  try { localStorage.setItem('goldilocks_profiles', JSON.stringify(profiles)); } catch(e) { return; }
+
+  delete PROFILES[name];
+  const option = findOptionByValue(select, name);
+  if (option) option.remove();
+  select.value = 'seeholmes';
+  applyProfile();
 }
 
 function onUnitsChange() {
@@ -1604,11 +1640,12 @@ function checkHourTransitions() {
 }
 
 // ── Session controls ──────────────────────────────────────────
-const CONFIG_IDS = ['drinkOz','drinkAbv','bacEnd','drinkPreset','profileSelect','weight','units','sex','saveDrinkName','saveDrinkBtn'];
+const CONFIG_IDS = ['drinkOz','drinkAbv','bacEnd','drinkPreset','profileSelect','weight','units','sex','saveProfileName','saveProfileBtn','saveDrinkName','saveDrinkBtn'];
 
 function activateSessionUI() {
   CONFIG_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = true; });
   setSessionFlowState(sessionComplete ? 'complete' : 'active');
+  updateProfileTrash();
   updateDrinkTrash();
   if (sessionComplete) renderCompletionSummary();
   else renderActiveSession();
@@ -1669,6 +1706,7 @@ function resetSessionToPlanning() {
   CONFIG_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = false; });
   document.getElementById('duration').disabled = false;
   actualDrinkTimes = new Array(drinkSchedule.length).fill(null);
+  updateProfileTrash();
   loadCustomDrinks();
   updateDrinkTrash();
   setSessionFlowState('planning');
@@ -1893,6 +1931,66 @@ window.addEventListener('pageshow', () => {
   }
 });
 
+// ── Profile persistence ───────────────────────────────────────
+function saveCustomProfile() {
+  if (sessionActive) return;
+  const nameInput = document.getElementById('saveProfileName');
+  const name = (nameInput.value || '').trim();
+  nameInput.setCustomValidity(isReservedStoredProfileName(name) ? 'Choose a different profile name.' : '');
+  if (!name || !nameInput.checkValidity()) {
+    nameInput.reportValidity();
+    nameInput.focus();
+    return;
+  }
+
+  const currentProfile = getActiveProfile();
+  if (!isValidProfile({ ...currentProfile, name })) {
+    document.getElementById('weight').focus();
+    return;
+  }
+  const newProfile = {
+    name,
+    weightKg: currentProfile.weightKg,
+    r: currentProfile.r,
+    risePerStd: GoldilocksCore.widmarkRisePerStd(currentProfile.weightKg, currentProfile.r),
+    metab: currentProfile.metab,
+    useWidmark: true,
+    sessions: 0,
+    confidence: 'widmark',
+    calibratedAt: new Date().toISOString().slice(0, 10),
+  };
+
+  let profiles = Object.create(null);
+  try { profiles = toSafeProfileMap(JSON.parse(localStorage.getItem('goldilocks_profiles') || '{}')); } catch(e) {}
+  profiles[name] = newProfile;
+  try { localStorage.setItem('goldilocks_profiles', JSON.stringify(profiles)); } catch(e) {
+    alert('Could not save — localStorage unavailable.');
+    return;
+  }
+
+  PROFILES[name] = { ...newProfile };
+  const select = document.getElementById('profileSelect');
+  const existing = findOptionByValue(select, name);
+  if (existing) {
+    existing.textContent = name;
+  } else {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    select.insertBefore(option, findOptionByValue(select, 'custom'));
+  }
+
+  select.value = name;
+  applyProfile();
+  nameInput.value = '';
+
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(126,184,255,0.12);border:1px solid rgba(126,184,255,0.35);color:var(--blue);font-family:Space Mono,monospace;font-size:10px;letter-spacing:0.1em;padding:10px 18px;border-radius:8px;z-index:999;text-transform:uppercase;';
+  toast.textContent = `⊹ Profile "${name}" saved`;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
+}
+
 // ── Theme system (shared with zone.html) ──────────────────────
 function initTheme() {
   GoldilocksTheme.init({ mode:'pace', pickerId:'themePicker' });
@@ -1901,6 +1999,7 @@ function initTheme() {
 // ── Init ──────────────────────────────────────────────────────
 (function init() {
   loadCalibratedProfiles();
+  updateProfileTrash();
   loadCustomDrinks();
   initTheme();
   const restored = loadSavedSession();

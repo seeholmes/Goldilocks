@@ -13,6 +13,10 @@ All notable user-facing changes to Goldilocks are documented here.
 - Replaced the shared ringed-planet drink marker with a native bear emoji, including a clear outline after a drink is logged.
 - Combined duration, Zone range or Pace ending reference, projection, metrics, and Start into a single Plan Tuner card in both planners.
 
+### Fixed
+
+- Restored custom-profile saving and deletion directly in Pace so shared profiles can be managed from either planner.
+
 ## [1.1.0] - 2026-07-22
 
 ### Added

@@ -561,7 +561,7 @@ function isUnsafeProfileKey(name) {
 }
 
 function isReservedStoredProfileName(name) {
-  return typeof name === 'string' && (name.trim().toLowerCase() === 'custom' || isUnsafeProfileKey(name));
+  return typeof name === 'string' && (['custom','seeholmes'].includes(name.trim().toLowerCase()) || isUnsafeProfileKey(name));
 }
 
 function toSafeProfileMap(value) {
