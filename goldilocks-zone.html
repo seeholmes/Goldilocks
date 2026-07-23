@@ -561,6 +561,10 @@ function isUnsafeProfileKey(name) {
 }
 
 function isReservedStoredProfileName(name) {
+  return typeof name === 'string' && (name.trim().toLowerCase() === 'custom' || isUnsafeProfileKey(name));
+}
+
+function isReservedNewProfileName(name) {
   return typeof name === 'string' && (['custom','seeholmes'].includes(name.trim().toLowerCase()) || isUnsafeProfileKey(name));
 }
 
@@ -1782,7 +1786,7 @@ function saveCustomProfile() {
   if (sessionActive) return;
   const nameInput = document.getElementById('saveProfileName');
   const name = (nameInput.value || '').trim();
-  nameInput.setCustomValidity(isReservedStoredProfileName(name) ? 'Choose a different profile name.' : '');
+  nameInput.setCustomValidity(isReservedNewProfileName(name) ? 'Choose a different profile name.' : '');
   if (!name || !nameInput.checkValidity()) {
     nameInput.reportValidity();
     nameInput.focus();
@@ -1808,6 +1812,14 @@ function saveCustomProfile() {
 
   let profiles = Object.create(null);
   try { profiles = toSafeProfileMap(JSON.parse(localStorage.getItem('goldilocks_profiles') || '{}')); } catch(e) {}
+  const duplicateName = Object.keys(profiles).find(key => key.toLowerCase() === name.toLowerCase());
+  if (duplicateName) {
+    nameInput.setCustomValidity(`A user named "${duplicateName}" already exists. Select that user or choose another name.`);
+    nameInput.reportValidity();
+    nameInput.setCustomValidity('');
+    return;
+  }
+  newProfile.sex = p.r === 0.55 ? 'female' : 'male';
   profiles[name] = newProfile;
   try { localStorage.setItem('goldilocks_profiles', JSON.stringify(profiles)); } catch(e) {
     alert('Could not save — localStorage unavailable.'); return;

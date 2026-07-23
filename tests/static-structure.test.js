@@ -147,6 +147,7 @@ test('Zone and Pace can both save and delete shared custom profiles', () => {
     assert.match(html, /function\s+deleteProfile\s*\(/);
     assert.match(html, /localStorage\.setItem\(['"]goldilocks_profiles['"]/);
     assert.match(html, /\['custom','seeholmes'\]/, `${page} must reserve built-in profile names`);
+    assert.match(html, /duplicateName/, `${page} must not overwrite an existing calibrated user`);
   }
 });
 
@@ -585,6 +586,28 @@ test('Calibration saves profiles for and hands off to both planners', () => {
   assert.match(html, /Plan in Zone/);
   assert.match(html, /Plan in Pace/);
   assert.match(html, /id="profileHandoff"/);
+});
+
+test('Calibration selects, creates, deletes, and synchronizes shared users', () => {
+  const html = read('goldilocks-training.html');
+  for (const id of [
+    'calibrationProfileSelect',
+    'newCalibrationProfileFields',
+    'newCalibrationProfileName',
+    'calibrationProfileTrashBtn',
+    'profileSyncNote',
+  ]) {
+    assert.ok(openingTagWithId(html, id), `Calibration must expose #${id}`);
+  }
+  assert.match(html, /function\s+loadCalibrationProfiles\s*\(/);
+  assert.match(html, /function\s+applyCalibrationProfile\s*\(/);
+  assert.match(html, /function\s+createCalibrationProfile\s*\(/);
+  assert.match(html, /function\s+deleteCalibrationProfile\s*\(/);
+  assert.match(html, /function\s+syncSelectedProfileBody\s*\(/);
+  assert.match(html, /profileName:\s*sessionProfileName/);
+  assert.match(html, /sessionProfileName\s*=\s*document\.getElementById\('calibrationProfileSelect'\)\.value/);
+  assert.match(html, /window\.addEventListener\('storage'/);
+  assert.match(openingTagWithId(html, 'profileName'), /\breadonly\b/i);
 });
 
 test('Calibration explains fasted behavior without implying a safer metabolism', () => {

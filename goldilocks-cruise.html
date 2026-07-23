@@ -519,6 +519,10 @@ function isUnsafeProfileKey(name) {
 }
 
 function isReservedStoredProfileName(name) {
+  return typeof name === 'string' && (name.trim().toLowerCase() === 'custom' || isUnsafeProfileKey(name));
+}
+
+function isReservedNewProfileName(name) {
   return typeof name === 'string' && (['custom','seeholmes'].includes(name.trim().toLowerCase()) || isUnsafeProfileKey(name));
 }
 
@@ -554,14 +558,15 @@ function applyProfile() {
 function updateProfileTrash() {
   const value = document.getElementById('profileSelect').value;
   const button = document.getElementById('profileTrashBtn');
-  button.style.display = sessionActive || isReservedStoredProfileName(value) ? 'none' : 'block';
+  const isBuiltIn = value === 'seeholmes' || value === 'custom';
+  button.style.display = sessionActive || isBuiltIn ? 'none' : 'block';
 }
 
 function deleteProfile() {
   if (sessionActive) return;
   const select = document.getElementById('profileSelect');
   const name = select.value;
-  if (!name || isReservedStoredProfileName(name)) return;
+  if (!name || name === 'seeholmes' || isReservedStoredProfileName(name)) return;
   if (!confirm(`Delete profile "${name}"?`)) return;
 
   let profiles = Object.create(null);
@@ -1936,7 +1941,7 @@ function saveCustomProfile() {
   if (sessionActive) return;
   const nameInput = document.getElementById('saveProfileName');
   const name = (nameInput.value || '').trim();
-  nameInput.setCustomValidity(isReservedStoredProfileName(name) ? 'Choose a different profile name.' : '');
+  nameInput.setCustomValidity(isReservedNewProfileName(name) ? 'Choose a different profile name.' : '');
   if (!name || !nameInput.checkValidity()) {
     nameInput.reportValidity();
     nameInput.focus();
@@ -1962,6 +1967,14 @@ function saveCustomProfile() {
 
   let profiles = Object.create(null);
   try { profiles = toSafeProfileMap(JSON.parse(localStorage.getItem('goldilocks_profiles') || '{}')); } catch(e) {}
+  const duplicateName = Object.keys(profiles).find(key => key.toLowerCase() === name.toLowerCase());
+  if (duplicateName) {
+    nameInput.setCustomValidity(`A user named "${duplicateName}" already exists. Select that user or choose another name.`);
+    nameInput.reportValidity();
+    nameInput.setCustomValidity('');
+    return;
+  }
+  newProfile.sex = currentProfile.r === 0.55 ? 'female' : 'male';
   profiles[name] = newProfile;
   try { localStorage.setItem('goldilocks_profiles', JSON.stringify(profiles)); } catch(e) {
     alert('Could not save — localStorage unavailable.');

@@ -7,6 +7,7 @@ All notable user-facing changes to Goldilocks are documented here.
 ### Added
 
 - Added a projected BAC trajectory to the Zone and Pace plan reviews, with planned drink timing shown separately from the period-end model estimates.
+- Added shared user selection, creation, and deletion to Calibration, with body settings and calibration results synchronized across all modules.
 
 ### Changed
 
@@ -16,6 +17,7 @@ All notable user-facing changes to Goldilocks are documented here.
 ### Fixed
 
 - Restored custom-profile saving and deletion directly in Pace so shared profiles can be managed from either planner.
+- Prevented Zone and Pace from replacing an existing calibrated user with a new Widmark-only profile.
 
 ## [1.1.0] - 2026-07-22
 

@@ -188,6 +188,15 @@
   .profile-name-wrap { display:flex; gap:10px; align-items:center; }
   .profile-name-input { background:var(--deep); border:1px solid var(--border); border-radius:7px; color:var(--text); font-family:'Space Mono',monospace; font-size:15px; padding:10px 14px; flex:1; outline:none; transition:border-color 0.2s; }
   .profile-name-input:focus { border-color:var(--gold2); }
+  .profile-manager { margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--border); }
+  .profile-manager-row { display:flex; gap:8px; align-items:stretch; }
+  .profile-manager-row .select-wrap { flex:1; }
+  .profile-delete-btn { padding:9px 12px; background:rgba(255,90,90,0.08); border:1px solid rgba(255,90,90,0.25); border-radius:7px; color:var(--danger); font-size:14px; cursor:pointer; flex-shrink:0; }
+  .profile-delete-btn:hover { background:rgba(255,90,90,0.18); }
+  .profile-create-wrap { display:flex; gap:8px; margin-top:10px; }
+  .profile-create-btn { padding:10px 14px; background:rgba(126,184,255,0.1); border:1px solid rgba(126,184,255,0.3); border-radius:7px; color:var(--blue); font-family:'Space Mono',monospace; font-size:9px; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; white-space:nowrap; }
+  .profile-create-btn:hover { background:rgba(126,184,255,0.18); }
+  .profile-sync-note { margin-top:8px; color:var(--muted); font-size:9px; line-height:1.6; }
 
   .theme-swatch { width:28px; height:28px; border-radius:50%; cursor:pointer; flex-shrink:0; transition:transform 0.15s; padding:0; }
   .theme-swatch:hover { transform:scale(1.2); }
@@ -254,6 +263,22 @@
     <!-- Profile setup -->
     <div class="card blue-card">
       <div class="sec blue">Your Profile</div>
+      <div class="profile-manager">
+        <label class="field-label" for="calibrationProfileSelect">Who's calibrating</label>
+        <div class="profile-manager-row">
+          <div class="select-wrap">
+            <select id="calibrationProfileSelect" onchange="applyCalibrationProfile()"></select>
+          </div>
+          <button class="profile-delete-btn" type="button" id="calibrationProfileTrashBtn" onclick="deleteCalibrationProfile()" aria-label="Delete selected profile" title="Delete profile" hidden>🗑</button>
+        </div>
+        <div id="newCalibrationProfileFields" hidden>
+          <div class="profile-create-wrap">
+            <input class="profile-name-input" type="text" id="newCalibrationProfileName" maxlength="24" placeholder="new user name" aria-label="New user name">
+            <button class="profile-create-btn" type="button" onclick="createCalibrationProfile()">Create User</button>
+          </div>
+        </div>
+        <div class="profile-sync-note" id="profileSyncNote">Body settings and calibration results stay synchronized with Zone and Pace.</div>
+      </div>
       <div class="row3">
         <div>
           <label class="field-label" for="weight">Body Weight</label>
@@ -467,11 +492,11 @@
     <div class="card green-card">
       <div class="sec">Save Profile to Goldilocks</div>
       <div style="font-size:10px;color:var(--muted);margin-bottom:12px;line-height:1.7">
-        This profile will be available in both Zone and Pace. Saving the same name averages this session into it.
+        This calibration updates the selected user and is immediately available in both Zone and Pace.
       </div>
       <div style="margin-bottom:10px">
         <label class="field-label" for="profileName">Profile Name</label>
-        <input class="profile-name-input" type="text" id="profileName" value="seeholmes" maxlength="24" placeholder="your name">
+        <input class="profile-name-input" type="text" id="profileName" value="seeholmes" maxlength="24" readonly aria-readonly="true">
       </div>
       <button class="save-btn" id="saveProfileBtn" type="button" onclick="saveProfile()">✦ Save Profile</button>
       <div class="profile-handoff" id="profileHandoff" hidden>
@@ -515,6 +540,18 @@ const WEIGHT_KG_MAX = WEIGHT_LB_MAX * 0.453592;
 const WEIGHT_KG_INPUT_MIN = Number(WEIGHT_KG_MIN.toFixed(1));
 const WEIGHT_KG_INPUT_MAX = Number(WEIGHT_KG_MAX.toFixed(1));
 const RESERVED_PROFILE_NAMES = new Set(['custom', '__proto__', 'prototype', 'constructor']);
+const NEW_PROFILE_VALUE = '__new_profile__';
+const DEFAULT_PROFILE = Object.freeze({
+  name: 'seeholmes',
+  weightKg: 185 * 0.453592,
+  r: R_MALE,
+  risePerStd: 0.02,
+  metab: 0.015,
+  useWidmark: false,
+  sessions: 0,
+  fedSessions: 0,
+  confidence: 'low',
+});
 // Protocol timings in minutes from T0 (drink start)
 const READING_TIMES    = [45, 65, 85, 105];
 
@@ -532,6 +569,7 @@ let completedProtocolId = null;
 let savedProtocolId = null;
 let lastCalculationError = '';
 let weightUnits = 'imperial';
+let sessionProfileName = DEFAULT_PROFILE.name;
 
 // ── Setup helpers ─────────────────────────────────────────────
 function getWeightKg() {
@@ -546,6 +584,161 @@ function getAlcGrams() {
   const oz  = parseFloat(document.getElementById('drinkOz').value);
   const abv = parseFloat(document.getElementById('drinkAbv').value);
   return oz * (abv / 100) * 29.5735 * 0.789;
+}
+function isUnsafeProfileName(name) {
+  return typeof name !== 'string' || RESERVED_PROFILE_NAMES.has(name.trim().toLowerCase());
+}
+function findProfileName(profiles, name) {
+  const normalized = String(name || '').trim().toLowerCase();
+  return Object.keys(profiles).find(key => key.toLowerCase() === normalized) || null;
+}
+function getCalibrationProfiles() {
+  const profiles = readProfiles();
+  const storedDefault = findProfileName(profiles, DEFAULT_PROFILE.name);
+  if (!storedDefault) profiles[DEFAULT_PROFILE.name] = { ...DEFAULT_PROFILE };
+  return profiles;
+}
+function getProfileSex(profile) {
+  if (profile?.sex === 'male' || profile?.sex === 'female') return profile.sex;
+  return Number(profile?.r) === R_FEMALE ? 'female' : 'male';
+}
+function setWeightFromKg(weightKg) {
+  const input = document.getElementById('weight');
+  input.value = weightUnits === 'metric'
+    ? Number(weightKg).toFixed(1)
+    : String(Math.round(Number(weightKg) / 0.453592));
+}
+function writeProfiles(profiles) {
+  try {
+    localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
+    return true;
+  } catch(e) {
+    alert('Could not save — localStorage unavailable.');
+    return false;
+  }
+}
+function loadCalibrationProfiles(preferredName = '') {
+  const select = document.getElementById('calibrationProfileSelect');
+  const profiles = getCalibrationProfiles();
+  const current = preferredName || select.value || DEFAULT_PROFILE.name;
+  select.replaceChildren();
+  Object.values(profiles)
+    .filter(profile => isRecord(profile) && typeof profile.name === 'string' && !isUnsafeProfileName(profile.name))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .forEach(profile => {
+      const option = document.createElement('option');
+      option.value = profile.name;
+      const sessions = Number.isInteger(profile.sessions) && profile.sessions > 0 ? ` · ${profile.sessions} sess` : '';
+      const confidence = profile.confidence ? ` · ${profile.confidence} conf` : '';
+      option.textContent = `${profile.name}${sessions}${confidence}`;
+      select.appendChild(option);
+    });
+  const newOption = document.createElement('option');
+  newOption.value = NEW_PROFILE_VALUE;
+  newOption.textContent = '＋ Create new user';
+  select.appendChild(newOption);
+  const matchedName = findProfileName(profiles, current);
+  select.value = matchedName || DEFAULT_PROFILE.name;
+  applyCalibrationProfile();
+}
+function applyCalibrationProfile() {
+  const select = document.getElementById('calibrationProfileSelect');
+  const name = select.value;
+  const creating = name === NEW_PROFILE_VALUE;
+  document.getElementById('newCalibrationProfileFields').hidden = !creating;
+  document.getElementById('calibrationProfileTrashBtn').hidden =
+    creating || name.toLowerCase() === DEFAULT_PROFILE.name.toLowerCase();
+  const syncNote = document.getElementById('profileSyncNote');
+  if (creating) {
+    syncNote.textContent = 'Enter body settings below, then create the user before starting Calibration.';
+    document.getElementById('newCalibrationProfileName').focus();
+    return;
+  }
+  const profiles = getCalibrationProfiles();
+  const profile = profiles[findProfileName(profiles, name)];
+  if (!profile) return;
+  setWeightFromKg(profile.weightKg);
+  document.getElementById('sex').value = getProfileSex(profile);
+  document.getElementById('profileName').value = profile.name;
+  const sessions = Number.isInteger(profile.sessions) ? profile.sessions : 0;
+  syncNote.textContent = sessions > 0
+    ? `${sessions} calibration session${sessions === 1 ? '' : 's'} · changes and new results sync to Zone and Pace.`
+    : 'Widmark estimate · the first completed Calibration will personalize this user in every module.';
+  updateSetupInfo();
+}
+function createCalibrationProfile() {
+  const input = document.getElementById('newCalibrationProfileName');
+  const name = input.value.trim().slice(0, 24);
+  const profiles = getCalibrationProfiles();
+  const duplicate = findProfileName(profiles, name);
+  input.setCustomValidity(!name || isUnsafeProfileName(name)
+    ? 'Choose a different profile name.'
+    : duplicate ? `A user named "${duplicate}" already exists.` : '');
+  if (!input.checkValidity()) {
+    input.reportValidity();
+    input.setCustomValidity('');
+    return;
+  }
+  if (!validateBodyProfile()) {
+    document.getElementById('weight').reportValidity();
+    return;
+  }
+  const r = getR();
+  profiles[name] = {
+    name,
+    weightKg: getWeightKg(),
+    r,
+    sex: document.getElementById('sex').value,
+    risePerStd: GoldilocksCore.widmarkRisePerStd(getWeightKg(), r),
+    metab: 0.015,
+    useWidmark: true,
+    sessions: 0,
+    fedSessions: 0,
+    confidence: 'widmark',
+    calibratedAt: new Date().toISOString().slice(0, 10),
+  };
+  if (!writeProfiles(profiles)) return;
+  input.value = '';
+  loadCalibrationProfiles(name);
+  showToast(`User "${name}" created`, 'Available now in Calibration, Zone, and Pace.', 'green');
+}
+function deleteCalibrationProfile() {
+  const select = document.getElementById('calibrationProfileSelect');
+  const name = select.value;
+  if (!name || name === NEW_PROFILE_VALUE || name.toLowerCase() === DEFAULT_PROFILE.name.toLowerCase()) return;
+  if (!confirm(`Delete user "${name}" from Calibration, Zone, and Pace?`)) return;
+  const profiles = readProfiles();
+  const storedName = findProfileName(profiles, name);
+  if (storedName) delete profiles[storedName];
+  if (!writeProfiles(profiles)) return;
+  loadCalibrationProfiles(DEFAULT_PROFILE.name);
+  showToast(`User "${name}" deleted`, 'Removed from all planning modules.');
+}
+function validateBodyProfile() {
+  return document.getElementById('weight').checkValidity()
+    && document.getElementById('units').checkValidity()
+    && document.getElementById('sex').checkValidity()
+    && isFiniteInRange(getWeightKg(), WEIGHT_KG_MIN, WEIGHT_KG_MAX)
+    && [R_MALE, R_FEMALE].includes(getR());
+}
+function syncSelectedProfileBody() {
+  const selected = document.getElementById('calibrationProfileSelect').value;
+  if (!selected || selected === NEW_PROFILE_VALUE) return false;
+  const profiles = getCalibrationProfiles();
+  const storedName = findProfileName(profiles, selected);
+  const existing = profiles[storedName];
+  const r = getR();
+  const useWidmark = existing.useWidmark !== false;
+  profiles[storedName] = {
+    ...existing,
+    name: existing.name,
+    weightKg: getWeightKg(),
+    r,
+    sex: document.getElementById('sex').value,
+    risePerStd: useWidmark ? GoldilocksCore.widmarkRisePerStd(getWeightKg(), r) : existing.risePerStd,
+    useWidmark,
+  };
+  return writeProfiles(profiles);
 }
 function updateSetupInfo() {
   const wKg  = getWeightKg();
@@ -602,7 +795,8 @@ function validateSetup() {
       return false;
     }
   }
-  return isFiniteInRange(getWeightKg(), WEIGHT_KG_MIN, WEIGHT_KG_INPUT_MAX)
+  return document.getElementById('calibrationProfileSelect').value !== NEW_PROFILE_VALUE
+    && isFiniteInRange(getWeightKg(), WEIGHT_KG_MIN, WEIGHT_KG_MAX)
     && isFiniteInRange(getAlcGrams(), 1, 300)
     && [R_MALE, R_FEMALE].includes(getR());
 }
@@ -610,9 +804,13 @@ function validateSetup() {
 // ── Protocol start ────────────────────────────────────────────
 function startProtocol() {
   if (!validateSetup()) {
-    alert('Please enter a valid body weight and drink before starting.');
+    alert(document.getElementById('calibrationProfileSelect').value === NEW_PROFILE_VALUE
+      ? 'Create the new user before starting Calibration.'
+      : 'Please enter a valid body weight and drink before starting.');
     return;
   }
+  if (!syncSelectedProfileBody()) return;
+  sessionProfileName = document.getElementById('calibrationProfileSelect').value;
   sessionWeightKg = getWeightKg();
   sessionR        = getR();
   sessionAlcGrams = getAlcGrams();
@@ -960,6 +1158,7 @@ function finishProtocol() {
   document.getElementById('phaseActive').classList.add('hidden');
   document.getElementById('phaseResults').classList.remove('hidden');
   document.getElementById('resultsHeading').focus();
+  document.getElementById('profileName').value = sessionProfileName;
 
   // Fill results
   document.getElementById('resMetab').textContent    = results.metabPerHr.toFixed(4);
@@ -1073,17 +1272,16 @@ function saveProfile() {
   }
 
   const nameInput = document.getElementById('profileName');
-  const name = nameInput.value.trim().slice(0, 24) || 'calibrated';
-  if (RESERVED_PROFILE_NAMES.has(name.toLowerCase())) {
-    nameInput.setCustomValidity('Choose a different profile name.');
-    nameInput.reportValidity();
-    nameInput.setCustomValidity('');
+  const name = sessionProfileName;
+  if (!name || isUnsafeProfileName(name)) {
+    alert('The selected user is no longer available. Return to setup and select a user.');
     return;
   }
   nameInput.value = name;
 
   const profiles = readProfiles();
-  const existing = isRecord(profiles[name]) ? profiles[name] : null;
+  const existingName = findProfileName(profiles, name);
+  const existing = existingName && isRecord(profiles[existingName]) ? profiles[existingName] : null;
   if (existing?.lastTrainingId === completedProtocolId) {
     markProtocolSaved();
     showToast('Already saved', `This calibration is already included in profile "${name}".`);
@@ -1124,11 +1322,13 @@ function saveProfile() {
   const confidenceSessions = Math.min(sessions, fedSessions);
   const conf = confidenceSessions >= 4 ? 'high' : confidenceSessions >= 2 ? 'medium' : 'low';
 
+  if (existingName && existingName !== name) delete profiles[existingName];
   profiles[name] = {
     ...(existing || {}),
     name,
     weightKg:     sessionWeightKg,
     r:            sessionR,
+    sex:          sessionR === R_FEMALE ? 'female' : 'male',
     risePerStd:   newRise,
     metab:        newMetab,
     useWidmark:   newRise === null,
@@ -1218,7 +1418,12 @@ function readProfiles() {
   const profiles = Object.create(null);
   try {
     const parsed = JSON.parse(localStorage.getItem(PROFILES_KEY) || '{}');
-    if (isRecord(parsed)) Object.entries(parsed).forEach(([key, value]) => { profiles[key] = value; });
+    if (isRecord(parsed)) {
+      Object.entries(parsed).forEach(([key, value]) => {
+        if (isUnsafeProfileName(key) || !isRecord(value) || typeof value.name !== 'string' || isUnsafeProfileName(value.name)) return;
+        profiles[key] = value;
+      });
+    }
   } catch(e) {}
   return profiles;
 }
@@ -1281,6 +1486,7 @@ function saveTrainingSession() {
       t0, readings, fasted, currentStep,
       sessionAlcGrams, sessionWeightKg, sessionR,
       completedProtocolId, savedProtocolId,
+      profileName: sessionProfileName,
       weight:   document.getElementById('weight').value,
       units:    document.getElementById('units').value,
       sex:      document.getElementById('sex').value,
@@ -1309,7 +1515,9 @@ function loadSavedTrainingSession() {
     sessionWeightKg = s.sessionWeightKg; sessionR = s.sessionR;
     completedProtocolId = s.completedProtocolId || null;
     savedProtocolId = s.savedProtocolId || null;
+    sessionProfileName = typeof s.profileName === 'string' ? s.profileName : DEFAULT_PROFILE.name;
 
+    loadCalibrationProfiles(sessionProfileName);
     document.getElementById('weight').value   = s.weight;
     document.getElementById('units').value    = s.units;
     document.getElementById('sex').value      = s.sex;
@@ -1335,6 +1543,7 @@ function isValidSavedSession(s) {
       || ![R_MALE, R_FEMALE].includes(s.sessionR)
       || !['imperial', 'metric'].includes(s.units)
       || !['male', 'female'].includes(s.sex)
+      || (s.profileName !== undefined && (typeof s.profileName !== 'string' || s.profileName.length < 1 || s.profileName.length > 24 || isUnsafeProfileName(s.profileName)))
       || !isFiniteInRange(Number(s.weight), s.units === 'imperial' ? WEIGHT_LB_MIN : WEIGHT_KG_INPUT_MIN, s.units === 'imperial' ? WEIGHT_LB_MAX : WEIGHT_KG_INPUT_MAX)
       || !isFiniteInRange(Number(s.drinkOz), 1, 32)
       || !isFiniteInRange(Number(s.drinkAbv), 0.5, 100)) {
@@ -1398,6 +1607,7 @@ function resetToSetup() {
   document.getElementById('phaseSetup').classList.remove('hidden');
   readings = []; currentStep = 0; t0 = null;
   completedProtocolId = null; savedProtocolId = null;
+  sessionProfileName = document.getElementById('calibrationProfileSelect').value || DEFAULT_PROFILE.name;
   setFasted(false);
   document.getElementById('curvePreviewCard').classList.add('hidden');
   document.getElementById('fastedResultNote').style.display = 'none';
@@ -1420,6 +1630,11 @@ function clearProtocolUi() {
 ['weight','units','sex','drinkOz','drinkAbv'].forEach(id => {
   const el = document.getElementById(id);
   if (el) { el.addEventListener('input', updateSetupInfo); el.addEventListener('change', updateSetupInfo); }
+});
+window.addEventListener('storage', event => {
+  if (event.key === PROFILES_KEY && !protocolActive && !completedProtocolId) {
+    loadCalibrationProfiles(document.getElementById('calibrationProfileSelect').value);
+  }
 });
 
 // ── Theme system (shared with Goldilocks Zone) ─────────────────
@@ -1445,6 +1660,7 @@ function initTheme() {
 (function init() {
   initTheme();
   configureWeightInput(document.getElementById('units').value, false);
+  loadCalibrationProfiles(DEFAULT_PROFILE.name);
   updateSetupInfo();
   const restored = loadSavedTrainingSession();
   if (restored && t0) {
