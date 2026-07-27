@@ -58,6 +58,19 @@
   .record-value { font-family:'Anybody',sans-serif; font-size:17px; font-weight:400; overflow-wrap:anywhere; }
   .record-label { color:var(--muted); font-size:8px; letter-spacing:0.08em; line-height:1.35; margin-top:3px; text-transform:uppercase; }
   .record-detail { color:var(--muted); font-size:9px; line-height:1.65; margin-top:12px; }
+  .evidence-editor { background:var(--deep); border:1px solid var(--border); border-radius:8px; margin-top:12px; padding:0 12px 12px; }
+  .evidence-editor summary { color:var(--record-accent); cursor:pointer; font-size:9px; letter-spacing:0.08em; padding:11px 0; text-transform:uppercase; }
+  .evidence-grid { display:grid; grid-template-columns:0.85fr 0.7fr 1.3fr; gap:8px; }
+  .evidence-label { color:var(--muted); display:block; font-size:8px; letter-spacing:0.08em; margin-bottom:4px; text-transform:uppercase; }
+  .evidence-control { background:var(--surface); border:1px solid var(--border); border-radius:7px; color:var(--text); font:inherit; font-size:11px; padding:9px 10px; width:100%; }
+  .evidence-check { align-items:flex-start; color:var(--muted); cursor:pointer; display:flex; font-size:9px; gap:8px; line-height:1.55; margin-top:10px; }
+  .evidence-check input { accent-color:var(--record-accent); margin-top:2px; }
+  .evidence-actions { display:flex; gap:8px; margin-top:10px; }
+  .evidence-action { background:transparent; border:1px solid var(--border); border-radius:7px; color:var(--muted); cursor:pointer; font:inherit; font-size:9px; padding:8px 11px; }
+  .evidence-action.primary { border-color:var(--record-accent); color:var(--record-accent); }
+  .evidence-status { color:var(--muted); font-size:9px; line-height:1.55; margin-top:8px; }
+  .evidence-status.eligible { color:var(--green); }
+  .evidence-status.ineligible { color:var(--amber); }
   .empty-state { background:var(--surface); border:1px dashed var(--border); border-radius:var(--radius); color:var(--muted); padding:34px 20px; text-align:center; line-height:1.75; }
   .empty-state strong { color:var(--text); display:block; font-family:'Anybody',sans-serif; font-size:22px; font-weight:400; margin-bottom:5px; }
   .disclaimer { color:var(--muted); font-size:9px; line-height:1.75; text-align:center; margin-top:24px; }
@@ -67,6 +80,7 @@
     .hero { padding-top:32px; }
     .history-toolbar { align-items:flex-start; flex-direction:column; }
     .record-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .evidence-grid { grid-template-columns:1fr; }
   }
   @media(prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none !important; animation:none !important; } }
 </style>
@@ -138,6 +152,20 @@ function formatNumber(value) {
   return Number(value).toLocaleString(undefined, { maximumFractionDigits:2 });
 }
 
+function formatFoodState(value) {
+  return {
+    empty: 'Empty',
+    light: 'Light food',
+    meal: 'Meal',
+    unknown: 'Unknown',
+  }[value] || 'Unknown';
+}
+
+function toLocalDateTimeValue(timestamp) {
+  const date = new Date(timestamp - new Date(timestamp).getTimezoneOffset() * 60000);
+  return date.toISOString().slice(0, 19);
+}
+
 function addStat(documentRef, grid, value, label) {
   const stat = documentRef.createElement('div');
   stat.className = 'record-stat';
@@ -155,6 +183,131 @@ function deleteRecord(record) {
   if (!confirm(`Delete this ${record.mode === 'zone' ? 'Zone' : 'Pace'} session from history?`)) return;
   try { GoldilocksSessionHistory.remove(localStorage, record.id); } catch (error) { return; }
   renderHistory();
+}
+
+function createEvidenceEditor(record) {
+  const details = document.createElement('details');
+  details.className = 'evidence-editor';
+  const summary = document.createElement('summary');
+  summary.textContent = record.measurement ? 'Edit session evidence' : 'Add measured BAC';
+  const grid = document.createElement('div');
+  grid.className = 'evidence-grid';
+
+  const foodField = document.createElement('div');
+  const foodLabel = document.createElement('label');
+  foodLabel.className = 'evidence-label';
+  foodLabel.textContent = 'Food state';
+  const foodSelect = document.createElement('select');
+  foodSelect.className = 'evidence-control';
+  foodSelect.setAttribute('aria-label', 'Food state at session start');
+  [
+    ['', '— choose one —'],
+    ['empty', 'Empty stomach'],
+    ['light', 'Light food or snack'],
+    ['meal', 'Meal / full stomach'],
+  ].forEach(([value, label]) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    foodSelect.appendChild(option);
+  });
+  foodSelect.value = record.foodState === 'unknown' ? '' : record.foodState;
+  foodField.append(foodLabel, foodSelect);
+
+  const bacField = document.createElement('div');
+  const bacLabel = document.createElement('label');
+  bacLabel.className = 'evidence-label';
+  bacLabel.textContent = 'Measured BAC';
+  const bacInput = document.createElement('input');
+  bacInput.className = 'evidence-control';
+  bacInput.type = 'number';
+  bacInput.min = '0';
+  bacInput.max = '1';
+  bacInput.step = '0.001';
+  bacInput.inputMode = 'decimal';
+  bacInput.placeholder = '0.000';
+  bacInput.setAttribute('aria-label', 'Measured BAC');
+  bacInput.value = record.measurement ? record.measurement.value.toFixed(3) : '';
+  bacField.append(bacLabel, bacInput);
+
+  const timeField = document.createElement('div');
+  const timeLabel = document.createElement('label');
+  timeLabel.className = 'evidence-label';
+  timeLabel.textContent = 'Measurement time';
+  const timeInput = document.createElement('input');
+  timeInput.className = 'evidence-control';
+  timeInput.type = 'datetime-local';
+  timeInput.step = '1';
+  timeInput.min = toLocalDateTimeValue(record.completedAt);
+  timeInput.max = toLocalDateTimeValue(record.completedAt + GoldilocksSessionHistory.MEASUREMENT_WINDOW_MS);
+  timeInput.value = toLocalDateTimeValue(record.measurement?.measuredAt || record.completedAt);
+  timeInput.setAttribute('aria-label', 'Measurement time');
+  timeField.append(timeLabel, timeInput);
+  grid.append(foodField, bacField, timeField);
+
+  const protocolLabel = document.createElement('label');
+  protocolLabel.className = 'evidence-check';
+  const protocolInput = document.createElement('input');
+  protocolInput.type = 'checkbox';
+  protocolInput.checked = record.measurement?.protocolFollowed === true;
+  const protocolCopy = document.createElement('span');
+  protocolCopy.textContent = 'I waited at least 20 minutes after my final sip, put nothing in my mouth, and followed the device instructions.';
+  protocolLabel.append(protocolInput, protocolCopy);
+
+  const actions = document.createElement('div');
+  actions.className = 'evidence-actions';
+  const save = document.createElement('button');
+  save.type = 'button';
+  save.className = 'evidence-action primary';
+  save.textContent = 'Save evidence';
+  const removeMeasurement = document.createElement('button');
+  removeMeasurement.type = 'button';
+  removeMeasurement.className = 'evidence-action';
+  removeMeasurement.textContent = 'Remove reading';
+  removeMeasurement.hidden = !record.measurement;
+  actions.append(save, removeMeasurement);
+
+  const status = document.createElement('p');
+  status.className = `evidence-status ${record.measurement?.eligibleForRefinement ? 'eligible' : record.measurement ? 'ineligible' : ''}`;
+  if (record.measurement?.eligibleForRefinement) {
+    status.textContent = `Eligible evidence · model ${record.measurement.estimatedBac.toFixed(3)} vs measured ${record.measurement.value.toFixed(3)}.`;
+  } else if (record.measurement) {
+    status.textContent = 'Saved for comparison, but not eligible for model refinement.';
+  } else {
+    status.textContent = 'The reading is optional; food state is required for new session evidence.';
+  }
+
+  save.addEventListener('click', () => {
+    if (!['empty','light','meal'].includes(foodSelect.value)) {
+      status.className = 'evidence-status ineligible';
+      status.textContent = 'Choose the food state for this session.';
+      foodSelect.focus();
+      return;
+    }
+    try {
+      GoldilocksSessionHistory.setFoodState(localStorage, record.id, foodSelect.value);
+      if (bacInput.value !== '') {
+        GoldilocksSessionHistory.setMeasurement(localStorage, record.id, {
+          value: Number(bacInput.value),
+          measuredAt: new Date(timeInput.value).getTime(),
+          protocolFollowed: protocolInput.checked,
+        });
+      }
+      renderHistory();
+    } catch (error) {
+      status.className = 'evidence-status ineligible';
+      status.textContent = 'Enter a BAC from 0.000 to 1.000 and a time within four hours after finishing.';
+    }
+  });
+  removeMeasurement.addEventListener('click', () => {
+    try {
+      GoldilocksSessionHistory.setMeasurement(localStorage, record.id, null);
+      renderHistory();
+    } catch (error) {}
+  });
+
+  details.append(summary, grid, protocolLabel, actions, status);
+  return details;
 }
 
 function createRecordCard(record) {
@@ -184,6 +337,8 @@ function createRecordCard(record) {
   addStat(document, grid, formatDuration((record.completedAt - record.startedAt) / 60000), 'Elapsed');
   addStat(document, grid, record.finalBac.toFixed(3), 'Estimate at finish');
   addStat(document, grid, record.peakBac.toFixed(3), 'Estimated peak');
+  addStat(document, grid, formatFoodState(record.foodState), 'Food state');
+  addStat(document, grid, record.measurement ? record.measurement.value.toFixed(3) : '—', 'Measured BAC');
 
   const detail = document.createElement('p');
   detail.className = 'record-detail';
@@ -191,8 +346,11 @@ function createRecordCard(record) {
   const plan = record.mode === 'zone'
     ? `planning range ${record.detail.targetMin.toFixed(3)}–${record.detail.targetMax.toFixed(3)} · ${record.detail.matchedPeriods} modeled ${record.detail.matchedPeriods === 1 ? 'period' : 'periods'} in range`
     : `planning reference ${record.detail.targetEnd.toFixed(3)} · initial end projection ${record.detail.initialProjectedEnd.toFixed(3)}`;
-  detail.textContent = `${drink} · ${record.standardDrinks.toFixed(1)} standard drinks · ${plan} · ${record.completionReason === 'elapsed' ? 'scheduled time elapsed' : 'finished manually'} · profile ${record.profileName}`;
-  card.append(head, grid, detail);
+  const comparison = record.measurement
+    ? ` · measurement ${record.measurement.value >= record.measurement.estimatedBac ? '+' : ''}${(record.measurement.value - record.measurement.estimatedBac).toFixed(3)} vs model at measurement time`
+    : '';
+  detail.textContent = `${drink} · ${record.standardDrinks.toFixed(1)} standard drinks · ${plan} · ${record.completionReason === 'elapsed' ? 'scheduled time elapsed' : 'finished manually'} · profile ${record.profileName}${comparison}`;
+  card.append(head, grid, detail, createEvidenceEditor(record));
   return card;
 }
 

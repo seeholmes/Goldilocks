@@ -178,11 +178,20 @@
   .phase-pill.active   { background:rgba(82,224,156,0.1);  border:1px solid rgba(82,224,156,0.3);  color:var(--green); }
   .phase-pill.complete { background:rgba(245,200,66,0.1);  border:1px solid rgba(245,200,66,0.25); color:var(--gold); }
 
-  /* Fasted toggle */
-  .toggle-row { display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--deep); border:1px solid var(--border); border-radius:7px; cursor:pointer; }
-  .toggle-row:focus-within { border-color:var(--amber); box-shadow:0 0 0 2px rgba(255,140,58,0.08); }
-  .fasted-input { width:16px; height:16px; flex-shrink:0; accent-color:var(--amber); cursor:pointer; }
-  .toggle-label { font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); }
+  .model-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
+  .model-metric { background:var(--deep); border:1px solid var(--border); border-radius:7px; padding:10px 11px; min-width:0; }
+  .model-value { font-family:'Anybody',sans-serif; font-size:18px; overflow-wrap:anywhere; }
+  .model-label { color:var(--muted); font-size:8px; letter-spacing:0.08em; line-height:1.4; margin-top:3px; text-transform:uppercase; }
+  .model-source { color:var(--blue); font-size:8px; line-height:1.45; margin-top:4px; }
+  .evidence-note { color:var(--muted); font-size:9px; line-height:1.65; margin-top:10px; }
+  .expert-controls { background:var(--deep); border:1px solid var(--border); border-radius:8px; margin-top:12px; padding:0 12px 12px; }
+  .expert-controls summary { color:var(--gold); cursor:pointer; font-size:9px; letter-spacing:0.09em; padding:11px 0; text-transform:uppercase; }
+  .expert-grid { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:end; }
+  .expert-actions { display:flex; gap:8px; margin-top:9px; }
+  .expert-btn { background:transparent; border:1px solid var(--border); border-radius:7px; color:var(--muted); cursor:pointer; font:inherit; font-size:9px; padding:9px 11px; }
+  .expert-btn.primary { border-color:var(--gold2); color:var(--gold); }
+  .expert-btn:disabled { cursor:not-allowed; opacity:0.4; }
+  .expert-status { color:var(--muted); font-size:9px; line-height:1.55; margin-top:8px; }
 
   /* Profile name input */
   .profile-name-wrap { display:flex; gap:10px; align-items:center; }
@@ -218,6 +227,9 @@
     .history-item { grid-template-columns:1fr 1fr; gap:10px 14px; }
     .history-item > div { min-width:0; overflow-wrap:anywhere; }
     .history-item > div::before { content:attr(data-label); display:block; margin-bottom:2px; color:var(--muted); font-size:8px; letter-spacing:0.09em; text-transform:uppercase; }
+    .model-grid { grid-template-columns:1fr 1fr; }
+    .expert-grid { grid-template-columns:1fr; }
+    .expert-actions { flex-direction:column; }
   }
   @media(prefers-reduced-motion:reduce) {
     *, *::before, *::after { animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
@@ -305,8 +317,61 @@
         <div><span style="font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Widmark r</span><div style="font-family:'Anybody',sans-serif;font-size:16px;color:var(--blue)" id="refR">0.68</div></div>
         <div><span style="font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Weight kg</span><div style="font-family:'Anybody',sans-serif;font-size:16px;color:var(--blue)" id="refKg">83.9</div></div>
         <div><span style="font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Widmark BAC/std</span><div style="font-family:'Anybody',sans-serif;font-size:16px;color:var(--blue)" id="refBpd">—</div></div>
-        <div style="flex:1;min-width:120px;font-size:9px;color:var(--muted);line-height:1.6">Reference only — calibration will derive your personal values</div>
+        <div style="flex:1;min-width:120px;font-size:9px;color:var(--muted);line-height:1.6">Reference baseline — declining calibration updates elimination; session evidence can refine BAC per drink</div>
       </div>
+    </div>
+
+    <div class="card" id="modelEvidenceCard">
+      <div class="sec gold">Profile Model &amp; Session Evidence</div>
+      <div class="model-grid">
+        <div class="model-metric">
+          <div class="model-value" id="currentRiseValue">—</div>
+          <div class="model-label">BAC / standard drink</div>
+          <div class="model-source" id="currentRiseSource">—</div>
+        </div>
+        <div class="model-metric">
+          <div class="model-value" id="currentMetabValue">—</div>
+          <div class="model-label">Elimination / hour</div>
+          <div class="model-source" id="currentMetabSource">—</div>
+        </div>
+        <div class="model-metric">
+          <div class="model-value" id="eligibleEvidenceCount">0</div>
+          <div class="model-label">Eligible session readings</div>
+          <div class="model-source" id="evidenceConfidence">Insufficient evidence</div>
+        </div>
+        <div class="model-metric">
+          <div class="model-value" id="meanEvidenceError">—</div>
+          <div class="model-label">Mean measured − model</div>
+          <div class="model-source">Positive means underestimation</div>
+        </div>
+        <div class="model-metric">
+          <div class="model-value" id="suggestedRiseValue">—</div>
+          <div class="model-label">Suggested BAC / drink</div>
+          <div class="model-source" id="suggestedRiseSource">Needs 3 eligible readings</div>
+        </div>
+        <div class="model-metric">
+          <div class="model-value" id="meanAbsoluteError">—</div>
+          <div class="model-label">Mean absolute error</div>
+          <div class="model-source">Across eligible readings</div>
+        </div>
+      </div>
+      <p class="evidence-note" id="modelEvidenceSummary">Complete planner sessions and add qualifying breathalyzer readings to build evidence for this profile.</p>
+      <details class="expert-controls" id="expertModelControls">
+        <summary>Expert BAC-per-drink controls</summary>
+        <div class="expert-grid">
+          <div>
+            <label class="field-label" for="manualRiseInput">BAC contribution per standard drink</label>
+            <div class="input-wrap"><input type="number" id="manualRiseInput" min="0.001" max="0.1" step="0.0001" inputmode="decimal"></div>
+          </div>
+          <button class="expert-btn primary" type="button" onclick="applyManualRise()">Apply manual value</button>
+        </div>
+        <p class="evidence-note">This is a profile-wide expert override, not a rising-time slope. Lower values or faster elimination can make future plans more permissive.</p>
+        <div class="expert-actions">
+          <button class="expert-btn primary" type="button" id="applySuggestionBtn" onclick="applySuggestedRise()" disabled>Apply session suggestion</button>
+          <button class="expert-btn" type="button" id="resetRiseBtn" onclick="resetRiseOverride()">Reset to baseline</button>
+        </div>
+        <p class="expert-status" id="expertModelStatus" role="status" aria-live="polite"></p>
+      </details>
     </div>
 
     <!-- Drink config -->
@@ -326,14 +391,20 @@
         Pure alcohol: <span style="color:var(--green)" id="pureAlcoz">—</span> &nbsp;·&nbsp; Standard drinks: <span style="color:var(--green)" id="stdDrinkCount">—</span>
       </div>
 
-      <label class="toggle-row" for="fastedInput" style="margin-top:12px">
-        <input class="fasted-input" type="checkbox" id="fastedInput" aria-describedby="fastedTrainingHelp" onchange="setFasted(this.checked)">
-        <span class="toggle-label">Fasted (empty stomach)</span>
-        <span style="font-size:9px;color:var(--amber);margin-left:auto" id="fastedNote"></span>
-      </label>
-      <p id="fastedTrainingHelp" style="margin-top:8px;font-size:9px;color:var(--muted);line-height:1.7">
-        Calibration effect: elimination rate is kept, rise rate is excluded from the profile average, and protocol timing is unchanged.
-      </p>
+      <div style="margin-top:12px">
+        <label class="field-label" for="foodState">Food state at calibration start</label>
+        <div class="select-wrap">
+          <select id="foodState" required aria-describedby="foodStateHelp">
+            <option value="">— choose one —</option>
+            <option value="empty">Empty stomach</option>
+            <option value="light">Light food or snack</option>
+            <option value="meal">Meal / full stomach</option>
+          </select>
+        </div>
+        <p id="foodStateHelp" style="margin-top:8px;font-size:9px;color:var(--muted);line-height:1.7">
+          Required context. This declining-curve calibration updates elimination rate; the observed BAC-per-drink value remains evidence until you deliberately apply an adjustment.
+        </p>
+      </div>
     </div>
 
     <!-- Protocol overview -->
@@ -351,7 +422,7 @@
           <div class="step-num">2</div>
           <div class="step-body">
             <div class="step-title">Wait 45 minutes</div>
-            <div class="step-desc">Absorption phase completes. First reading at T+45.</div>
+            <div class="step-desc">Begin the observation window. The saved readings must form a declining curve.</div>
           </div>
         </div>
         <div class="step upcoming">
@@ -453,7 +524,7 @@
       </div>
       <div class="result-cell">
         <div class="result-val blue" id="resRise">—</div>
-        <div class="result-lbl">Rise / std drink</div>
+        <div class="result-lbl">Observed BAC / std drink</div>
         <div class="result-sub" id="resRiseComp">Widmark ref: —</div>
       </div>
       <div class="result-cell">
@@ -477,7 +548,7 @@
         </div>
         <div class="confidence-bar"><div class="confidence-fill" id="confFill" style="width:0%"></div></div>
       </div>
-      <div id="fastedResultNote" style="display:none;margin-top:10px;padding:9px 12px;background:rgba(255,140,58,0.07);border:1px solid rgba(255,140,58,0.2);border-radius:6px;font-size:10px;color:var(--amber);line-height:1.6"></div>
+      <div id="riseEvidenceNote" style="margin-top:10px;padding:9px 12px;background:rgba(126,184,255,0.06);border:1px solid rgba(126,184,255,0.2);border-radius:6px;font-size:10px;color:var(--blue);line-height:1.6">The BAC-per-drink result is supporting evidence only. Saving this calibration updates the declining elimination rate.</div>
     </div>
 
     <!-- Full curve -->
@@ -492,7 +563,7 @@
     <div class="card green-card">
       <div class="sec">Save Profile to Goldilocks</div>
       <div style="font-size:10px;color:var(--muted);margin-bottom:12px;line-height:1.7">
-        This calibration updates the selected user and is immediately available in both Zone and Pace.
+        Saving updates the selected user's elimination rate and makes it immediately available in both Zone and Pace. BAC per drink changes only through the evidence or expert controls above.
       </div>
       <div style="margin-bottom:10px">
         <label class="field-label" for="profileName">Profile Name</label>
@@ -522,6 +593,7 @@
 </div>
 
 <script src="goldilocks-core.js"></script>
+<script src="goldilocks-session-history.js"></script>
 <script>
 // ── Constants ─────────────────────────────────────────────────
 const STD_DRINK_G      = GoldilocksCore.STD_DRINK_G;
@@ -551,6 +623,10 @@ const DEFAULT_PROFILE = Object.freeze({
   sessions: 0,
   fedSessions: 0,
   confidence: 'low',
+  riseSource: 'legacy calibration',
+  baselineRisePerStd: 0.02,
+  baselineUseWidmark: false,
+  metabSource: 'default',
 });
 // Protocol timings in minutes from T0 (drink start)
 const READING_TIMES    = [45, 65, 85, 105];
@@ -559,7 +635,7 @@ const READING_TIMES    = [45, 65, 85, 105];
 let protocolActive  = false;
 let t0              = null;   // timestamp when protocol started
 let readings        = [];     // [{tMin, bac, ts}]
-let fasted          = false;
+let foodState       = '';
 let timerInterval   = null;
 let currentStep     = 0;      // 0=waiting for R1, 1=waiting for R2, etc.
 let sessionAlcGrams = 0;
@@ -651,6 +727,7 @@ function applyCalibrationProfile() {
   const syncNote = document.getElementById('profileSyncNote');
   if (creating) {
     syncNote.textContent = 'Enter body settings below, then create the user before starting Calibration.';
+    renderModelEvidence(null);
     document.getElementById('newCalibrationProfileName').focus();
     return;
   }
@@ -665,6 +742,160 @@ function applyCalibrationProfile() {
     ? `${sessions} calibration session${sessions === 1 ? '' : 's'} · changes and new results sync to Zone and Pace.`
     : 'Widmark estimate · the first completed Calibration will personalize this user in every module.';
   updateSetupInfo();
+  renderModelEvidence(profile);
+}
+
+let currentRiseEvidence = null;
+
+function getProfileRiseValue(profile) {
+  if (!profile) return null;
+  return profile.useWidmark !== false
+    ? GoldilocksCore.widmarkRisePerStd(profile.weightKg, profile.r)
+    : Number(profile.risePerStd);
+}
+
+function getRiseSourceLabel(profile) {
+  if (!profile) return 'No profile selected';
+  if (profile.riseSource === 'manual') return 'Manual override';
+  if (profile.riseSource === 'session') return 'Applied session suggestion';
+  if (profile.useWidmark !== false) return 'Widmark baseline';
+  return profile.riseSource || 'Existing calibrated value';
+}
+
+function renderModelEvidence(profile = null) {
+  const selected = document.getElementById('calibrationProfileSelect').value;
+  const profiles = getCalibrationProfiles();
+  const storedName = selected && selected !== NEW_PROFILE_VALUE
+    ? findProfileName(profiles, selected)
+    : null;
+  const activeProfile = profile || (storedName ? profiles[storedName] : null);
+  const currentRise = getProfileRiseValue(activeProfile);
+  document.getElementById('currentRiseValue').textContent = Number.isFinite(currentRise) ? currentRise.toFixed(4) : '—';
+  document.getElementById('currentRiseSource').textContent = getRiseSourceLabel(activeProfile);
+  document.getElementById('currentMetabValue').textContent = Number.isFinite(activeProfile?.metab)
+    ? Number(activeProfile.metab).toFixed(4)
+    : '—';
+  document.getElementById('currentMetabSource').textContent = Number.isInteger(activeProfile?.sessions) && activeProfile.sessions > 0
+    ? `Calibration · ${activeProfile.sessions} declining curve${activeProfile.sessions === 1 ? '' : 's'}`
+    : 'Default reference';
+  document.getElementById('manualRiseInput').value = Number.isFinite(currentRise) ? currentRise.toFixed(4) : '';
+  document.getElementById('expertModelControls').hidden = !activeProfile;
+
+  currentRiseEvidence = activeProfile
+    ? GoldilocksSessionHistory.calculateRiseEvidence(
+      GoldilocksSessionHistory.read(localStorage),
+      activeProfile.name
+    )
+    : null;
+  const evidence = currentRiseEvidence;
+  document.getElementById('eligibleEvidenceCount').textContent = String(evidence?.eligibleCount || 0);
+  document.getElementById('evidenceConfidence').textContent = evidence
+    ? `${evidence.confidence} confidence`
+    : 'Insufficient evidence';
+  document.getElementById('meanEvidenceError').textContent = Number.isFinite(evidence?.meanError)
+    ? `${evidence.meanError >= 0 ? '+' : ''}${evidence.meanError.toFixed(3)}`
+    : '—';
+  document.getElementById('meanAbsoluteError').textContent = Number.isFinite(evidence?.meanAbsoluteError)
+    ? evidence.meanAbsoluteError.toFixed(3)
+    : '—';
+  document.getElementById('suggestedRiseValue').textContent = Number.isFinite(evidence?.suggestedRisePerStd)
+    ? evidence.suggestedRisePerStd.toFixed(4)
+    : '—';
+  document.getElementById('suggestedRiseSource').textContent = evidence?.eligibleCount
+    ? `${evidence.eligibleCount} of ${evidence.minimumRequired} minimum`
+    : `Needs ${GoldilocksSessionHistory.MIN_REFINEMENT_SESSIONS} eligible readings`;
+  document.getElementById('applySuggestionBtn').disabled = !Number.isFinite(evidence?.suggestedRisePerStd);
+  document.getElementById('resetRiseBtn').disabled = !activeProfile
+    || !['manual','session'].includes(activeProfile.riseSource);
+  const foodSummary = evidence
+    ? ['empty','light','meal']
+      .map(state => `${state}: ${evidence.byFoodState[state].count}`)
+      .join(' · ')
+    : '';
+  document.getElementById('modelEvidenceSummary').textContent = evidence?.eligibleCount
+    ? `${foodSummary}. Suggestions use the median session-implied BAC contribution and never apply automatically.`
+    : 'Complete planner sessions and add qualifying breathalyzer readings to build evidence for this profile.';
+}
+
+function updateProfileRise(value, source) {
+  const selected = document.getElementById('calibrationProfileSelect').value;
+  if (!selected || selected === NEW_PROFILE_VALUE || !isFiniteInRange(value, 0.001, 0.1)) return false;
+  const profiles = getCalibrationProfiles();
+  const storedName = findProfileName(profiles, selected);
+  const existing = profiles[storedName];
+  if (!existing) return false;
+  const currentRise = getProfileRiseValue(existing);
+  if (!confirm(
+    `Change BAC contribution per standard drink for "${existing.name}" from ${currentRise.toFixed(4)} to ${value.toFixed(4)}? `
+    + 'This changes future BAC estimates and drink plans.'
+  )) return false;
+  const baselineUseWidmark = typeof existing.baselineUseWidmark === 'boolean'
+    ? existing.baselineUseWidmark
+    : existing.useWidmark !== false;
+  const baselineRisePerStd = isFiniteInRange(existing.baselineRisePerStd, 0.001, 0.1)
+    ? existing.baselineRisePerStd
+    : currentRise;
+  profiles[storedName] = {
+    ...existing,
+    risePerStd: value,
+    useWidmark: false,
+    riseSource: source,
+    baselineUseWidmark,
+    baselineRisePerStd,
+    riseAdjustedAt: new Date().toISOString(),
+  };
+  if (!writeProfiles(profiles)) return false;
+  loadCalibrationProfiles(existing.name);
+  return true;
+}
+
+function applyManualRise() {
+  const value = Number(document.getElementById('manualRiseInput').value);
+  const status = document.getElementById('expertModelStatus');
+  if (!isFiniteInRange(value, 0.001, 0.1)) {
+    status.textContent = 'Enter a BAC contribution from 0.0010 to 0.1000.';
+    return;
+  }
+  if (updateProfileRise(value, 'manual')) {
+    status.textContent = `Manual BAC-per-drink value ${value.toFixed(4)} applied.`;
+  }
+}
+
+function applySuggestedRise() {
+  const value = currentRiseEvidence?.suggestedRisePerStd;
+  if (!Number.isFinite(value)) return;
+  if (updateProfileRise(value, 'session')) {
+    document.getElementById('expertModelStatus').textContent =
+      `Session suggestion ${value.toFixed(4)} applied.`;
+  }
+}
+
+function resetRiseOverride() {
+  const selected = document.getElementById('calibrationProfileSelect').value;
+  const profiles = getCalibrationProfiles();
+  const storedName = findProfileName(profiles, selected);
+  const existing = profiles[storedName];
+  if (!existing || !['manual','session'].includes(existing.riseSource)) return;
+  const baselineUseWidmark = existing.baselineUseWidmark === true;
+  const baselineRise = baselineUseWidmark
+    ? GoldilocksCore.widmarkRisePerStd(existing.weightKg, existing.r)
+    : existing.baselineRisePerStd;
+  if (!isFiniteInRange(baselineRise, 0.001, 0.1)) return;
+  const currentRise = getProfileRiseValue(existing);
+  if (!confirm(
+    `Reset BAC contribution per standard drink for "${existing.name}" from ${currentRise.toFixed(4)} to ${baselineRise.toFixed(4)}? `
+    + 'This changes future BAC estimates and drink plans.'
+  )) return;
+  profiles[storedName] = {
+    ...existing,
+    risePerStd: baselineRise,
+    useWidmark: baselineUseWidmark,
+    riseSource: baselineUseWidmark ? 'widmark' : 'calibration baseline',
+    riseAdjustedAt: null,
+  };
+  if (!writeProfiles(profiles)) return;
+  loadCalibrationProfiles(existing.name);
+  document.getElementById('expertModelStatus').textContent = 'BAC-per-drink override reset to baseline.';
 }
 function createCalibrationProfile() {
   const input = document.getElementById('newCalibrationProfileName');
@@ -695,6 +926,10 @@ function createCalibrationProfile() {
     fedSessions: 0,
     confidence: 'widmark',
     calibratedAt: new Date().toISOString().slice(0, 10),
+    riseSource: 'widmark',
+    baselineRisePerStd: GoldilocksCore.widmarkRisePerStd(getWeightKg(), r),
+    baselineUseWidmark: true,
+    metabSource: 'default',
   };
   if (!writeProfiles(profiles)) return;
   input.value = '';
@@ -728,14 +963,16 @@ function syncSelectedProfileBody() {
   const existing = profiles[storedName];
   const r = getR();
   const useWidmark = existing.useWidmark !== false;
+  const widmarkRise = GoldilocksCore.widmarkRisePerStd(getWeightKg(), r);
   profiles[storedName] = {
     ...existing,
     name: existing.name,
     weightKg: getWeightKg(),
     r,
     sex: document.getElementById('sex').value,
-    risePerStd: useWidmark ? GoldilocksCore.widmarkRisePerStd(getWeightKg(), r) : existing.risePerStd,
+    risePerStd: useWidmark ? widmarkRise : existing.risePerStd,
     useWidmark,
+    baselineRisePerStd: existing.baselineUseWidmark === true ? widmarkRise : existing.baselineRisePerStd,
   };
   return writeProfiles(profiles);
 }
@@ -773,20 +1010,12 @@ function configureWeightInput(nextUnits, convertValue) {
   input.step = nextUnits === 'metric' ? '0.1' : '1';
   document.getElementById('weightUnit').textContent = nextUnits === 'metric' ? 'kg' : 'lbs';
 }
-function setFasted(value) {
-  fasted = Boolean(value);
-  const input = document.getElementById('fastedInput');
-  const note = document.getElementById('fastedNote');
-  input.checked = fasted;
-  note.textContent      = fasted ? 'Rise rate excluded from avg' : '';
-}
-
 function isFiniteInRange(value, min, max) {
   return Number.isFinite(value) && value >= min && value <= max;
 }
 
 function validateSetup() {
-  const fields = ['weight', 'units', 'sex', 'drinkOz', 'drinkAbv'];
+  const fields = ['weight', 'units', 'sex', 'drinkOz', 'drinkAbv', 'foodState'];
   for (const id of fields) {
     const field = document.getElementById(id);
     if (!field.checkValidity()) {
@@ -795,6 +1024,7 @@ function validateSetup() {
     }
   }
   return document.getElementById('calibrationProfileSelect').value !== NEW_PROFILE_VALUE
+    && ['empty','light','meal'].includes(document.getElementById('foodState').value)
     && isFiniteInRange(getWeightKg(), WEIGHT_KG_MIN, WEIGHT_KG_MAX)
     && isFiniteInRange(getAlcGrams(), 1, 300)
     && [R_MALE, R_FEMALE].includes(getR());
@@ -813,6 +1043,7 @@ function startProtocol() {
   sessionWeightKg = getWeightKg();
   sessionR        = getR();
   sessionAlcGrams = getAlcGrams();
+  foodState       = document.getElementById('foodState').value;
   t0              = Date.now();
   readings        = [];
   currentStep     = 0;
@@ -1139,7 +1370,7 @@ function finishEarly() {
 
 function finishProtocol() {
   const results = calcResults();
-  if (!results || !isPlausibleCalibration(results, !fasted)) {
+  if (!results || !isPlausibleCalibration(results, false)) {
     const reason = lastCalculationError || 'The calculated rate is outside plausible limits.';
     alert(`This calibration cannot be completed: ${reason} Readings must form a declining, valid curve.`);
     return;
@@ -1164,19 +1395,10 @@ function finishProtocol() {
   document.getElementById('resMetab').style.color    = 'var(--text)';
   document.getElementById('resMetabComp').textContent= `vs Widmark ref 0.0150`;
 
-  if (!fasted) {
-    document.getElementById('resRise').textContent   = results.risePerStd.toFixed(4);
-    document.getElementById('resRise').style.color   = 'var(--blue)';
-    document.getElementById('resRiseComp').textContent = `vs Widmark ${GoldilocksCore.widmarkRisePerStd(sessionWeightKg, sessionR).toFixed(4)}`;
-    document.getElementById('fastedResultNote').style.display = 'none';
-  } else {
-    document.getElementById('resRise').textContent   = 'N/A';
-    document.getElementById('resRise').style.color   = 'var(--muted)';
-    document.getElementById('resRiseComp').textContent = 'Fasted — excluded';
-    const fn = document.getElementById('fastedResultNote');
-    fn.style.display = 'block';
-    fn.textContent   = '⚠ Fasted session: elimination rate recorded. Rise rate excluded from profile average — run a fed session to calibrate rise rate.';
-  }
+  document.getElementById('resRise').textContent = results.risePerStd.toFixed(4);
+  document.getElementById('resRise').style.color = 'var(--blue)';
+  document.getElementById('resRiseComp').textContent =
+    `evidence only · Widmark ${GoldilocksCore.widmarkRisePerStd(sessionWeightKg, sessionR).toFixed(4)}`;
 
   document.getElementById('resPeak').textContent = results.bacAt45.toFixed(3);
   const r2 = results.r2;
@@ -1260,7 +1482,7 @@ function cancelProtocol() {
 // ── Save to Goldilocks profiles ───────────────────────────────
 function saveProfile() {
   const results = calcResults();
-  if (!completedProtocolId || !results || !isPlausibleCalibration(results, !fasted)) {
+  if (!completedProtocolId || !results || !isPlausibleCalibration(results, false)) {
     alert('This calibration is not valid and cannot be saved.');
     return;
   }
@@ -1278,7 +1500,7 @@ function saveProfile() {
   }
   nameInput.value = name;
 
-  const profiles = readProfiles();
+  const profiles = getCalibrationProfiles();
   const existingName = findProfileName(profiles, name);
   const existing = existingName && isRecord(profiles[existingName]) ? profiles[existingName] : null;
   if (existing?.lastTrainingId === completedProtocolId) {
@@ -1298,28 +1520,13 @@ function saveProfile() {
     ? results.metabPerHr
     : (existingMetab * priorSessions + results.metabPerHr) / sessions;
 
-  // Average rise only for fed sessions
-  const existingRise = existing
-      && existing.useWidmark === false
-      && Number.isInteger(existing.fedSessions)
-      && existing.fedSessions > 0
-      && isFiniteInRange(existing.risePerStd, 0.001, 0.1)
-    ? existing.risePerStd
-    : null;
-  const priorFedSessions = existingRise === null
-    ? 0
-    : Number.isInteger(existing?.fedSessions) && existing.fedSessions > 0 ? existing.fedSessions : 1;
-  let fedSessions = priorFedSessions;
-  let newRise = existingRise;
-  if (!fasted) {
-    fedSessions += 1;
-    newRise = existingRise === null
-      ? results.risePerStd
-      : (existingRise * priorFedSessions + results.risePerStd) / fedSessions;
-  }
-
-  const confidenceSessions = Math.min(sessions, fedSessions);
-  const conf = confidenceSessions >= 4 ? 'high' : confidenceSessions >= 2 ? 'medium' : 'low';
+  const useWidmark = existing?.useWidmark !== false;
+  const preservedRise = useWidmark
+    ? GoldilocksCore.widmarkRisePerStd(sessionWeightKg, sessionR)
+    : isFiniteInRange(existing?.risePerStd, 0.001, 0.1)
+      ? existing.risePerStd
+      : GoldilocksCore.widmarkRisePerStd(sessionWeightKg, sessionR);
+  const conf = sessions >= 4 ? 'high' : sessions >= 2 ? 'medium' : 'low';
 
   if (existingName && existingName !== name) delete profiles[existingName];
   profiles[name] = {
@@ -1328,15 +1535,24 @@ function saveProfile() {
     weightKg:     sessionWeightKg,
     r:            sessionR,
     sex:          sessionR === R_FEMALE ? 'female' : 'male',
-    risePerStd:   newRise,
+    risePerStd:   preservedRise,
     metab:        newMetab,
-    useWidmark:   newRise === null,
+    useWidmark,
     calibratedAt: new Date().toISOString().slice(0,10),
     sessions,
-    fedSessions,
     confidence:   conf,
     lastR2:       results.r2,
     lastTrainingId: completedProtocolId,
+    metabSource: 'calibration',
+    riseSource: existing?.riseSource || (useWidmark ? 'widmark' : 'legacy calibration'),
+    baselineRisePerStd: isFiniteInRange(existing?.baselineRisePerStd, 0.001, 0.1)
+      ? existing.baselineRisePerStd
+      : preservedRise,
+    baselineUseWidmark: typeof existing?.baselineUseWidmark === 'boolean'
+      ? existing.baselineUseWidmark
+      : useWidmark,
+    lastObservedRisePerStd: results.risePerStd,
+    lastCalibrationFoodState: foodState,
   };
 
   try {
@@ -1365,10 +1581,10 @@ function saveSessionToHistory(profileName, results) {
     date:       new Date().toISOString().slice(0,10),
     profile:    profileName,
     metab:      results.metabPerHr,
-    rise:       fasted ? null : results.risePerStd,
+    rise:       results.risePerStd,
     r2:         results.r2,
     readings:   readings.length,
-    fasted,
+    foodState,
   });
   history = history.slice(0, 20); // keep last 20
   try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch(e) {}
@@ -1384,7 +1600,7 @@ function renderHistory() {
     return;
   }
   card.style.display = 'block';
-  const labels = ['Date', 'Profile', 'Metab/hr', 'Rise/std', 'R²'];
+  const labels = ['Date', 'Profile', 'Metab/hr', 'Observed/std', 'R²'];
   const header = document.createElement('div');
   header.className = 'history-item header';
   labels.forEach(label => {
@@ -1396,7 +1612,7 @@ function renderHistory() {
   history.forEach(s => {
     const row = document.createElement('div');
     row.className = 'history-item';
-    const values = [s.date, s.profile, s.metab.toFixed(4), s.rise === null ? 'fasted' : s.rise.toFixed(4), s.r2.toFixed(3)];
+    const values = [s.date, s.profile, s.metab.toFixed(4), s.rise === null ? 'not recorded' : s.rise.toFixed(4), s.r2.toFixed(3)];
     const colors = ['var(--muted)', '', 'var(--green)', s.rise === null ? 'var(--muted)' : 'var(--blue)', s.r2 > 0.95 ? 'var(--green)' : 'var(--amber)'];
     values.forEach((value, index) => {
       const cell = document.createElement('div');
@@ -1434,14 +1650,21 @@ function isValidHistoryItem(item) {
     && isFiniteInRange(item.metab, 0.001, 0.05)
     && (item.rise === null || isFiniteInRange(item.rise, 0.001, 0.1))
     && isFiniteInRange(item.r2, 0, 1.000001)
-    && typeof item.fasted === 'boolean'
+    && (['empty','light','meal'].includes(item.foodState) || typeof item.fasted === 'boolean')
     && (item.sessionId === undefined || typeof item.sessionId === 'string');
 }
 
 function readHistory() {
   try {
     const parsed = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-    return Array.isArray(parsed) ? parsed.filter(isValidHistoryItem).slice(0, 20) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter(isValidHistoryItem).map(item => ({
+        ...item,
+        foodState: ['empty','light','meal'].includes(item.foodState)
+          ? item.foodState
+          : item.fasted ? 'empty' : 'light',
+      })).slice(0, 20)
+      : [];
   } catch(e) {
     return [];
   }
@@ -1482,7 +1705,7 @@ function showToast(message, detail = '', tone = 'gold') {
 function saveTrainingSession() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      t0, readings, fasted, currentStep,
+      t0, readings, foodState, currentStep,
       sessionAlcGrams, sessionWeightKg, sessionR,
       completedProtocolId, savedProtocolId,
       profileName: sessionProfileName,
@@ -1503,13 +1726,19 @@ function loadSavedTrainingSession() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
-    const s = JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    const s = {
+      ...parsed,
+      foodState: ['empty','light','meal'].includes(parsed?.foodState)
+        ? parsed.foodState
+        : parsed?.fasted ? 'empty' : 'light',
+    };
     if (!isValidSavedSession(s)) {
       clearSavedTrainingSession();
       return false;
     }
 
-    t0 = s.t0; readings = s.readings; fasted = s.fasted;
+    t0 = s.t0; readings = s.readings; foodState = s.foodState;
     currentStep = s.currentStep; sessionAlcGrams = s.sessionAlcGrams;
     sessionWeightKg = s.sessionWeightKg; sessionR = s.sessionR;
     completedProtocolId = s.completedProtocolId || null;
@@ -1522,9 +1751,9 @@ function loadSavedTrainingSession() {
     document.getElementById('sex').value      = s.sex;
     document.getElementById('drinkOz').value  = s.drinkOz;
     document.getElementById('drinkAbv').value = s.drinkAbv;
+    document.getElementById('foodState').value = s.foodState;
     weightUnits = s.units;
     configureWeightInput(s.units, false);
-    setFasted(s.fasted);
     return true;
   } catch(e) { clearSavedTrainingSession(); return false; }
 }
@@ -1532,7 +1761,7 @@ function loadSavedTrainingSession() {
 function isValidSavedSession(s) {
   if (!isRecord(s)
       || !Number.isFinite(s.t0)
-      || typeof s.fasted !== 'boolean'
+      || !['empty','light','meal'].includes(s.foodState)
       || !Array.isArray(s.readings)
       || s.readings.length > READING_TIMES.length
       || !Number.isInteger(s.currentStep)
@@ -1585,7 +1814,7 @@ function isValidSavedSession(s) {
   if (s.readings.length >= 3) {
     try {
       const results = GoldilocksCore.calculateCalibration(s.readings, s.sessionAlcGrams);
-      hasValidCalibration = isPlausibleCalibration(results, !s.fasted);
+      hasValidCalibration = isPlausibleCalibration(results, false);
     } catch (error) {
       hasValidCalibration = false;
     }
@@ -1607,12 +1836,13 @@ function resetToSetup() {
   readings = []; currentStep = 0; t0 = null;
   completedProtocolId = null; savedProtocolId = null;
   sessionProfileName = document.getElementById('calibrationProfileSelect').value || DEFAULT_PROFILE.name;
-  setFasted(false);
+  foodState = '';
+  document.getElementById('foodState').value = '';
   document.getElementById('curvePreviewCard').classList.add('hidden');
-  document.getElementById('fastedResultNote').style.display = 'none';
   updateSavedProfileUi(false);
   clearProtocolUi();
   clearSavedTrainingSession();
+  loadCalibrationProfiles(sessionProfileName);
   updateSetupInfo();
   document.getElementById('setupHeading').focus();
 }
@@ -1626,13 +1856,16 @@ function clearProtocolUi() {
 }
 
 // ── Events ────────────────────────────────────────────────────
-['weight','units','sex','drinkOz','drinkAbv'].forEach(id => {
+['weight','units','sex','drinkOz','drinkAbv','foodState'].forEach(id => {
   const el = document.getElementById(id);
   if (el) { el.addEventListener('input', updateSetupInfo); el.addEventListener('change', updateSetupInfo); }
 });
 window.addEventListener('storage', event => {
   if (event.key === PROFILES_KEY && !protocolActive && !completedProtocolId) {
     loadCalibrationProfiles(document.getElementById('calibrationProfileSelect').value);
+  }
+  if (event.key === GoldilocksSessionHistory.STORAGE_KEY && !protocolActive && !completedProtocolId) {
+    renderModelEvidence();
   }
 });
 

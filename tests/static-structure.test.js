@@ -416,18 +416,21 @@ test('planner BAC copy does not present a selected target as safe or nudge consu
   assert.doesNotMatch(pace, /Session Goal|Choose different session settings/i, 'Pace must not frame its reference as a goal to reach');
 });
 
-test('planner fasted controls disclose that they are advisory only', () => {
+test('planner food-state controls are required context and do not alter estimates', () => {
   for (const page of ['goldilocks-zone.html', 'goldilocks-cruise.html']) {
     const html = read(page);
-    const toggle = openingTagWithId(html, 'fastedToggle');
-    assert.match(toggle, /\baria-pressed="false"/i, `${page} fasted control must expose toggle state`);
-    const warningStart = html.indexOf('id="fastedWarning"');
-    assert.ok(warningStart >= 0, `${page} must expose #fastedWarning`);
-    const warning = html.slice(warningStart, warningStart + 700);
-    assert.match(warning, /Advisory only/i, `${page} must call the fasted setting advisory`);
-    assert.match(warning, /does not (?:change|alter)/i, `${page} must disclose that the model is unchanged`);
-    assert.match(warning, /\b(?:BAC )?estimate\b/i, `${page} must mention the estimate is unchanged`);
-    assert.match(warning, /\bplan\b/i, `${page} must mention the plan is unchanged`);
+    const foodState = openingTagWithId(html, 'foodState');
+    assert.match(foodState, /\brequired\b/i, `${page} food state must be required`);
+    for (const value of ['empty','light','meal']) {
+      assert.match(html, new RegExp(`<option\\s+value="${value}"`), `${page} must expose ${value} food state`);
+    }
+    const helpStart = html.indexOf('id="foodStateHelp"');
+    assert.ok(helpStart >= 0, `${page} must expose #foodStateHelp`);
+    const help = html.slice(helpStart, helpStart + 600);
+    assert.match(help, /does not change/i, `${page} must disclose that food state does not change the model`);
+    assert.match(help, /\bBAC estimate\b/i, `${page} must mention the BAC estimate`);
+    assert.match(help, /\bplan\b/i, `${page} must mention the plan`);
+    assert.match(html, /document\.getElementById\('foodState'\)\.value = '';/, `${page} must require a fresh food state for another session`);
   }
 });
 
@@ -475,13 +478,18 @@ test('Mission Control exposes shared local Zone and Pace history', () => {
   assert.match(historyPage, /GoldilocksSessionHistory\.read\(localStorage\)/);
   assert.match(historyPage, /GoldilocksSessionHistory\.remove\(localStorage, record\.id\)/);
   assert.match(historyPage, /GoldilocksSessionHistory\.clear\(localStorage\)/);
+  assert.match(historyPage, /GoldilocksSessionHistory\.setFoodState\(localStorage,/);
+  assert.match(historyPage, /GoldilocksSessionHistory\.setMeasurement\(localStorage,/);
   assert.match(historyPage, /\bconfirm\s*\(/, 'history deletion must require confirmation');
 
   for (const page of ['goldilocks-zone.html', 'goldilocks-cruise.html']) {
     const html = read(page);
     assert.match(html, /<script src="goldilocks-session-history\.js"><\/script>/);
     assert.match(html, /GoldilocksSessionHistory\.save\(localStorage,/);
+    assert.match(html, /GoldilocksSessionHistory\.setMeasurement\(localStorage,/);
     assert.match(html, /id:\s*`(?:zone|pace)-\$\{sessionStartTs\}`/);
+    assert.ok(openingTagWithId(html, 'measuredBac'), `${page} must expose a measured BAC input`);
+    assert.ok(openingTagWithId(html, 'measuredAt'), `${page} must expose a measurement-time input`);
   }
 });
 
@@ -610,21 +618,38 @@ test('Calibration selects, creates, deletes, and synchronizes shared users', () 
   assert.match(openingTagWithId(html, 'profileName'), /\breadonly\b/i);
 });
 
-test('Calibration explains fasted behavior without implying a safer metabolism', () => {
+test('Calibration owns elimination while session evidence and expert controls own BAC per drink', () => {
   const html = read('goldilocks-training.html');
-  const fastedInput = openingTagWithId(html, 'fastedInput');
-  assert.match(fastedInput, /\baria-describedby="fastedTrainingHelp"/i);
-
-  const helpStart = html.indexOf('id="fastedTrainingHelp"');
-  assert.ok(helpStart >= 0, 'Calibration must expose #fastedTrainingHelp');
+  const foodState = openingTagWithId(html, 'foodState');
+  assert.match(foodState, /\brequired\b/i);
+  const helpStart = html.indexOf('id="foodStateHelp"');
+  assert.ok(helpStart >= 0, 'Calibration must expose #foodStateHelp');
   const help = html.slice(helpStart, helpStart + 650);
-  assert.match(help, /elimination rate is kept/i);
-  assert.match(help, /rise rate is excluded from the profile average/i);
-  assert.match(help, /protocol timing is unchanged/i);
+  assert.match(help, /updates elimination rate/i);
+  assert.match(help, /BAC-per-drink value remains evidence/i);
 
   const metabolismResult = openingTagWithId(html, 'resMetab');
   assert.doesNotMatch(metabolismResult, /\bgreen\b/i, 'metabolism must not have a success color');
   assert.doesNotMatch(html, /\bmetabColor\b/, 'metabolism color must not classify a rate as good or safe');
+  for (const id of [
+    'currentRiseValue',
+    'currentMetabValue',
+    'eligibleEvidenceCount',
+    'suggestedRiseValue',
+    'manualRiseInput',
+    'applySuggestionBtn',
+    'resetRiseBtn',
+  ]) {
+    assert.ok(openingTagWithId(html, id), `Calibration must expose #${id}`);
+  }
+  assert.match(html, /GoldilocksSessionHistory\.calculateRiseEvidence\s*\(/);
+  assert.match(html, /function\s+applyManualRise\s*\(/);
+  assert.match(html, /function\s+applySuggestedRise\s*\(/);
+  assert.match(html, /function\s+resetRiseOverride\s*\(/);
+  const saveProfile = functionSource(html, 'saveProfile');
+  assert.match(saveProfile, /metab:\s*newMetab/);
+  assert.match(saveProfile, /risePerStd:\s*preservedRise/);
+  assert.doesNotMatch(saveProfile, /risePerStd:\s*results\.risePerStd/, 'formal calibration must not directly replace BAC per drink');
 });
 
 test('Calibration confirms destructive session resets', () => {

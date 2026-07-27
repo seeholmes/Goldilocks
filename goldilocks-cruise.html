@@ -82,7 +82,7 @@
   .field-label { display:block; font-size:9px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
   .input-wrap { display:flex; align-items:center; background:var(--deep); border:1px solid var(--border); border-radius:7px; overflow:hidden; transition:border-color 0.2s; }
   .input-wrap:focus-within { border-color:var(--blue); box-shadow:0 0 0 2px rgba(126,184,255,0.08); }
-  input[type="number"],input[type="time"] { background:transparent; border:none; color:var(--text); font-family:'Space Mono',monospace; font-size:17px; padding:9px 12px; width:100%; outline:none; -moz-appearance:textfield; }
+  input[type="number"],input[type="time"],input[type="datetime-local"] { background:transparent; border:none; color:var(--text); font-family:'Space Mono',monospace; font-size:17px; padding:9px 12px; width:100%; outline:none; -moz-appearance:textfield; }
   input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none}
   input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(0.4) sepia(1);opacity:0.5}
   .input-unit { color:var(--muted); font-size:10px; padding-right:11px; white-space:nowrap; flex-shrink:0; }
@@ -160,7 +160,6 @@
   .theme-swatch { width:28px; height:28px; border-radius:50%; cursor:pointer; flex-shrink:0; transition:transform 0.15s; padding:0; }
   .theme-swatch:hover { transform:scale(1.2); }
   .theme-swatch:focus-visible, .dte.tappable:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
-  .fasted-toggle { width:100%; font:inherit; color:inherit; text-align:left; }
   @media(max-width:360px) {
     .container { padding:0 10px; }
     .card { padding:16px 14px; }
@@ -322,12 +321,19 @@
       </div>
       <button type="button" id="saveDrinkBtn" onclick="saveCustomDrink()" style="padding:9px 16px;background:rgba(126,184,255,0.08);border:1px solid rgba(126,184,255,0.3);border-radius:7px;color:var(--blue);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;white-space:nowrap;transition:all 0.2s">Save Drink</button>
     </div>
-    <button type="button" class="fasted-toggle" id="fastedToggle" aria-pressed="false" style="margin-top:12px;display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--deep);border:1px solid var(--border);border-radius:7px;cursor:pointer" onclick="toggleFasted()">
-      <span id="fastedBox" aria-hidden="true" style="width:16px;height:16px;border:1px solid var(--muted);border-radius:4px;flex-shrink:0;transition:all 0.2s;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--space)"></span>
-      <span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">Drinking on an empty stomach</span>
-    </button>
-    <div id="fastedWarning" style="display:none;margin-top:8px;padding:10px 12px;background:rgba(255,140,58,0.08);border:1px solid rgba(255,140,58,0.25);border-radius:7px;font-size:10px;line-height:1.7;color:var(--amber)">
-      &#9888; Advisory only: fasting can change alcohol absorption. This toggle does not alter the estimate or plan.
+    <div style="margin-top:12px">
+      <label class="field-label" for="foodState">Food state at session start</label>
+      <div class="select-wrap">
+        <select id="foodState" required aria-describedby="foodStateHelp">
+          <option value="">— choose one —</option>
+          <option value="empty">Empty stomach</option>
+          <option value="light">Light food or snack</option>
+          <option value="meal">Meal / full stomach</option>
+        </select>
+      </div>
+      <p id="foodStateHelp" style="margin-top:8px;font-size:9px;color:var(--muted);line-height:1.7">
+        Required session context. Food can affect absorption, but this selection does not change the current plan or BAC estimate.
+      </p>
     </div>
   </section>
 
@@ -417,6 +423,29 @@
       <div class="completion-item"><div class="completion-value" id="completeInitialPeak">—</div><div class="completion-label">Initial estimated peak</div></div>
     </div>
     <p class="session-caution">These estimates are not measurements and do not establish sobriety or fitness to drive.</p>
+    <div class="measurement-card" aria-labelledby="measurementHeading">
+      <h3 class="measurement-card-title" id="measurementHeading">Add a breathalyzer reading</h3>
+      <p class="measurement-card-copy">Optional. Record a measured BAC at or shortly after the session finish to compare with the model.</p>
+      <div class="measurement-grid">
+        <div>
+          <label class="measurement-field-label" for="measuredBac">Measured BAC</label>
+          <div class="input-wrap"><input type="number" id="measuredBac" min="0" max="1" step="0.001" inputmode="decimal" placeholder="0.000"></div>
+        </div>
+        <div>
+          <label class="measurement-field-label" for="measuredAt">Measurement time</label>
+          <div class="input-wrap"><input type="datetime-local" id="measuredAt" step="1"></div>
+        </div>
+      </div>
+      <label class="measurement-check" for="measurementProtocol">
+        <input type="checkbox" id="measurementProtocol">
+        <span>I waited at least 20 minutes after my final sip, put nothing in my mouth, and followed the device instructions.</span>
+      </label>
+      <div class="measurement-actions">
+        <button type="button" class="session-action-btn primary" onclick="saveCompletionMeasurement()">Save reading</button>
+        <button type="button" class="session-action-btn" id="clearMeasurementBtn" onclick="clearCompletionMeasurement()" hidden>Remove</button>
+      </div>
+      <p class="measurement-status" id="measurementStatus" role="status" aria-live="polite"></p>
+    </div>
     <div class="session-actions">
       <button type="button" class="session-action-btn primary" id="startAnotherBtn" onclick="startAnotherSession()">Start another session</button>
     </div>
@@ -497,6 +526,7 @@ let initialPeakBac       = 0;
 let previewInterval      = null;
 let renderedLogSignature = null;
 let needsPaceScheduleMigration = false;
+let foodState            = '';
 
 // ── Profile helpers ───────────────────────────────────────────
 function getActiveProfile() {
@@ -508,6 +538,12 @@ function getActiveProfile() {
   const sex    = document.getElementById('sex').value;
   const r      = sex === 'male' ? 0.68 : 0.55;
   return { name:'custom', weightKg: weight, r, risePerStd: null, metab: 0.015, useWidmark: true };
+}
+
+function getProfileRisePerStd(activeProfile) {
+  return activeProfile.useWidmark
+    ? GoldilocksCore.widmarkRisePerStd(activeProfile.weightKg, activeProfile.r)
+    : activeProfile.risePerStd;
 }
 
 function findOptionByValue(select, value) {
@@ -704,7 +740,7 @@ function estimateLiveBac(completedSched, curDrinks, frac) {
   return GoldilocksCore.estimateLiveBac(completedSched, curDrinks, frac, ag, profile);
 }
 
-const VALIDATED_IDS = ['drinkOz','drinkAbv','bacEnd','duration','weight'];
+const VALIDATED_IDS = ['drinkOz','drinkAbv','bacEnd','duration','weight','foodState'];
 
 function setConfigError(message, invalidId = null, focusInvalid = false) {
   const error = document.getElementById('configError');
@@ -722,11 +758,13 @@ function validateConfig(focusInvalid = false) {
   const abv = parseFloat(document.getElementById('drinkAbv').value);
   const target = parseFloat(document.getElementById('bacEnd').value);
   const requestedDurationMinutes = Number(document.getElementById('duration').value);
+  const selectedFoodState = document.getElementById('foodState').value;
   let problem = null;
   if (!Number.isFinite(oz) || oz < 1 || oz > 64) problem = ['Drink size must be between 1 and 64 oz.', 'drinkOz'];
   else if (!Number.isFinite(abv) || abv < 0.5 || abv > 100) problem = ['ABV must be between 0.5% and 100%.', 'drinkAbv'];
   else if (!Number.isFinite(target) || target < 0 || target > 0.2) problem = ['Planning reference at end must be between 0.00 and 0.20.', 'bacEnd'];
   else if (!isValidDurationMinutes(requestedDurationMinutes)) problem = ['Session length must be between 1h and 8h in 15-minute increments.', 'duration'];
+  else if (!['empty','light','meal'].includes(selectedFoodState)) problem = ['Choose the food state at session start.', 'foodState'];
   else if (!isValidProfile(getActiveProfile())) problem = ['Enter a valid body weight and profile.', document.getElementById('profileSelect').value === 'custom' ? 'weight' : null];
   setConfigError(problem?.[0] || '', problem?.[1] || null, focusInvalid);
   return !problem;
@@ -1002,6 +1040,87 @@ function renderCompletionSummary() {
   document.getElementById('sessionSummaryDetail').textContent = completionReason === 'elapsed'
     ? 'The planned duration elapsed. This summary uses only the drinks you logged.'
     : 'You finished this session early. This summary uses only the drinks you logged.';
+  renderCompletionMeasurementEditor();
+}
+
+function toLocalDateTimeValue(timestamp) {
+  const date = new Date(timestamp - new Date(timestamp).getTimezoneOffset() * 60000);
+  return date.toISOString().slice(0, 19);
+}
+
+function getCompletedHistoryRecord() {
+  return GoldilocksSessionHistory.read(localStorage)
+    .find(record => record.id === `pace-${sessionStartTs}`) || null;
+}
+
+function measurementReasonText(reason) {
+  const messages = {
+    'protocol-not-confirmed': 'The reading is saved for comparison but excluded from model refinement because the measurement protocol was not confirmed.',
+    'food-state-unknown': 'The reading is saved for comparison but excluded because food state is unknown.',
+    'model-snapshot-unavailable': 'The reading is saved for comparison but this older session has no model snapshot.',
+    'no-standard-drinks': 'The reading is saved for comparison but cannot refine BAC per drink.',
+    'zero-reading': 'A zero reading is saved for comparison but excluded from model fitting.',
+    'estimate-at-floor': 'The reading is saved for comparison but the model estimate had already reached zero.',
+  };
+  return messages[reason] || 'The reading is saved for comparison but is not eligible for model refinement.';
+}
+
+function renderCompletionMeasurementEditor() {
+  if (!sessionComplete || !Number.isFinite(completedAt)) return;
+  const record = getCompletedHistoryRecord();
+  const valueInput = document.getElementById('measuredBac');
+  const timeInput = document.getElementById('measuredAt');
+  const protocolInput = document.getElementById('measurementProtocol');
+  const status = document.getElementById('measurementStatus');
+  const clearButton = document.getElementById('clearMeasurementBtn');
+  if (!record) {
+    status.textContent = 'Save the completed session before adding a reading.';
+    return;
+  }
+  timeInput.min = toLocalDateTimeValue(record.completedAt);
+  timeInput.max = toLocalDateTimeValue(record.completedAt + GoldilocksSessionHistory.MEASUREMENT_WINDOW_MS);
+  if (!record.measurement) {
+    valueInput.value = '';
+    timeInput.value = toLocalDateTimeValue(record.completedAt);
+    protocolInput.checked = false;
+    clearButton.hidden = true;
+    status.className = 'measurement-status';
+    status.textContent = 'Measurements can also be added or edited later in History.';
+    return;
+  }
+  valueInput.value = record.measurement.value.toFixed(3);
+  timeInput.value = toLocalDateTimeValue(record.measurement.measuredAt);
+  protocolInput.checked = record.measurement.protocolFollowed;
+  clearButton.hidden = false;
+  status.className = `measurement-status ${record.measurement.eligibleForRefinement ? 'saved' : 'ineligible'}`;
+  status.textContent = record.measurement.eligibleForRefinement
+    ? `Saved · model ${record.measurement.estimatedBac.toFixed(3)} vs measured ${record.measurement.value.toFixed(3)} · eligible for session evidence.`
+    : measurementReasonText(record.measurement.eligibilityReason);
+}
+
+function saveCompletionMeasurement() {
+  const rawValue = document.getElementById('measuredBac').value.trim();
+  const value = rawValue === '' ? NaN : Number(rawValue);
+  const measuredAt = new Date(document.getElementById('measuredAt').value).getTime();
+  const status = document.getElementById('measurementStatus');
+  try {
+    GoldilocksSessionHistory.setMeasurement(localStorage, `pace-${sessionStartTs}`, {
+      value,
+      measuredAt,
+      protocolFollowed: document.getElementById('measurementProtocol').checked,
+    });
+    renderCompletionMeasurementEditor();
+  } catch (error) {
+    status.className = 'measurement-status ineligible';
+    status.textContent = 'Enter a BAC from 0.000 to 1.000 and a time within four hours after finishing.';
+  }
+}
+
+function clearCompletionMeasurement() {
+  try {
+    GoldilocksSessionHistory.setMeasurement(localStorage, `pace-${sessionStartTs}`, null);
+    renderCompletionMeasurementEditor();
+  } catch (error) {}
 }
 
 function startSessionClock() {
@@ -1087,8 +1206,12 @@ function renderTimeline() {
 }
 
 function update() {
-  const valid = validateConfig(false);
   ag = getAlcGrams();
+  profile = getActiveProfile();
+  if (isValidProfile(profile) && Number.isFinite(ag) && ag > 0) {
+    updateWidmarkChip(profile, ag);
+  }
+  const valid = validateConfig(false);
   if (!valid) {
     if (!sessionActive) {
       plan = [];
@@ -1104,12 +1227,9 @@ function update() {
     }
     return;
   }
-  profile = getActiveProfile();
   bacEnd  = parseFloat(document.getElementById('bacEnd').value);
   durationMinutes = Number(document.getElementById('duration').value);
   const durationHours = getDurationHours();
-
-  updateWidmarkChip(profile, ag);
 
   let result;
   if (!sessionActive) {
@@ -1338,10 +1458,10 @@ function completeSession(reason, finishTimestamp) {
     `Session complete · ${logged} drink${logged === 1 ? '' : 's'} logged · estimated BAC at finish ${completionBac.toFixed(3)}`;
   document.getElementById('duration').disabled = true;
   setSessionFlowState('complete');
-  renderCompletionSummary();
   renderTimeline();
   saveSession();
   saveCompletedSessionHistory();
+  renderCompletionSummary();
   setTimeout(() => document.getElementById('sessionSummaryHeading').focus(), 0);
 }
 
@@ -1366,6 +1486,10 @@ function saveCompletedSessionHistory() {
       finalBac: completionBac || 0,
       peakBac,
       completionReason,
+      foodState,
+      modelRisePerStd: getProfileRisePerStd(profile),
+      modelMetabPerHr: profile.metab,
+      measurement: null,
       detail: {
         type: 'pace',
         targetEnd: bacEnd,
@@ -1409,6 +1533,7 @@ function saveSession() {
       planSpacing, sessionCadenceHours, planOffsetHours, plannedEndpoint, planAchievable,
       completedAt, completionReason, completionBac,
       initialPlannedDrinks, initialProjectedEnd, initialPeakBac,
+      foodState,
       profileName: document.getElementById('profileSelect').value,
       drinkOz:   document.getElementById('drinkOz').value,
       drinkAbv:  document.getElementById('drinkAbv').value,
@@ -1427,6 +1552,7 @@ function normalizeRestoredSession(s) {
   const normalized = s.durationMinutes !== undefined
     ? { ...s }
     : Number.isInteger(s.hours) ? { ...s, durationMinutes: s.hours * 60 } : { ...s };
+  if (!normalized.foodState) normalized.foodState = 'light';
   if (normalized.sessionComplete === true
       && normalized.completedAt === undefined
       && Number.isFinite(normalized.sessionStartTs)
@@ -1470,6 +1596,7 @@ function isValidRestoredSession(s) {
       && (!Number.isFinite(s.initialProjectedEnd) || s.initialProjectedEnd < 0)) return false;
   if (s.initialPeakBac !== undefined
       && (!Number.isFinite(s.initialPeakBac) || s.initialPeakBac < 0)) return false;
+  if (!['empty','light','meal'].includes(s.foodState)) return false;
   if (!Number.isFinite(s.ag) || s.ag <= 0 || s.ag > 1600 || !isValidProfile(s.profile)) return false;
   if (typeof s.profileName !== 'string' || s.profileName !== s.profile.name) return false;
   if (s.profileName.toLowerCase() === 'custom' && s.profileName !== 'custom') return false;
@@ -1593,6 +1720,8 @@ function loadSavedSession() {
     bacEnd           = s.bacEnd;
     ag               = s.ag;
     profile          = s.profile;
+    foodState        = s.foodState;
+    document.getElementById('foodState').value = foodState;
     sessionComplete  = s.sessionComplete === true;
     planSpacing      = Number.isFinite(s.planSpacing)
       ? s.planSpacing
@@ -1645,7 +1774,7 @@ function checkHourTransitions() {
 }
 
 // ── Session controls ──────────────────────────────────────────
-const CONFIG_IDS = ['drinkOz','drinkAbv','bacEnd','drinkPreset','profileSelect','weight','units','sex','saveProfileName','saveProfileBtn','saveDrinkName','saveDrinkBtn'];
+const CONFIG_IDS = ['drinkOz','drinkAbv','bacEnd','drinkPreset','profileSelect','weight','units','sex','saveProfileName','saveProfileBtn','saveDrinkName','saveDrinkBtn','foodState'];
 
 function activateSessionUI() {
   CONFIG_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = true; });
@@ -1662,6 +1791,7 @@ function startSession() {
   ag             = getAlcGrams();
   bacEnd         = parseFloat(document.getElementById('bacEnd').value);
   durationMinutes = Number(document.getElementById('duration').value);
+  foodState      = document.getElementById('foodState').value;
   sessionActive  = true;
   sessionComplete = false;
   sessionStartTs = Date.now();
@@ -1696,6 +1826,8 @@ function startSession() {
 function resetSessionToPlanning() {
   sessionActive = false;
   sessionComplete = false;
+  foodState = '';
+  document.getElementById('foodState').value = '';
   clearInterval(clockInterval);
   clearSavedSession();
   sessionStartTs = null;
@@ -1808,23 +1940,13 @@ document.getElementById('duration').addEventListener('input', function() {
     update();
   }
 });
-['weight','sex','drinkOz','drinkAbv','bacEnd'].forEach(id => {
+['weight','sex','drinkOz','drinkAbv','bacEnd','foodState'].forEach(id => {
   const el = document.getElementById(id);
   if (el) { el.addEventListener('input', update); el.addEventListener('change', update); }
 });
 
 
-// ── Fasted toggle / preset ────────────────────────────────────
-let fasted = false;
-function toggleFasted() {
-  fasted = !fasted;
-  const box = document.getElementById('fastedBox'), warn = document.getElementById('fastedWarning');
-  document.getElementById('fastedToggle').setAttribute('aria-pressed', String(fasted));
-  box.style.background  = fasted ? 'var(--amber)' : 'transparent';
-  box.style.borderColor = fasted ? 'var(--amber)' : 'var(--muted)';
-  box.textContent       = fasted ? '✓' : '';
-  warn.style.display    = fasted ? 'block' : 'none';
-}
+// ── Presets ───────────────────────────────────────────────────
 function applyPreset() {
   const val = document.getElementById('drinkPreset').value;
   if (!val || val === 'custom') return;

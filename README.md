@@ -8,8 +8,8 @@ Open the hosted app at [seeholmes.github.io/Goldilocks](https://seeholmes.github
 
 - **Zone** (`goldilocks-zone.html`) builds an hourly plan intended to stay within a selected BAC range and replans from logged drinks.
 - **Pace** (`goldilocks-cruise.html`) spaces drinks across a session toward a selected ending BAC, with session length selectable in 15-minute increments. The legacy filename is retained for bookmark compatibility.
-- **Calibration** (`goldilocks-training.html`) records timed breathalyzer readings and saves a calibrated profile after a validated regression.
-- **History** (`goldilocks-history.html`) shows summaries of completed Zone and Pace sessions stored on the current device.
+- **Calibration** (`goldilocks-training.html`) uses validated declining breathalyzer curves to calibrate elimination rate, summarizes measured-session evidence for BAC per standard drink, and exposes deliberate expert overrides.
+- **History** (`goldilocks-history.html`) shows completed Zone and Pace sessions stored on the current device and can attach optional measured BAC evidence.
 
 `index.html` is Mission Control and links to all four modes.
 
@@ -30,7 +30,7 @@ The only external runtime dependency is Google Fonts. User data stays in same-or
 | `goldilocks_training_history` | Last 20 completed calibration sessions |
 | `goldilocks_session_history` | Last 50 completed Zone and Pace session summaries |
 
-Session records are validated and expire after their mode-specific recovery window. Zone keeps unresolved hourly logs distinct from an explicit zero, and both planners retain a finished-session summary before the record expires.
+Session records are validated and expire after their mode-specific recovery window. Zone keeps unresolved hourly logs distinct from an explicit zero, and both planners retain a finished-session summary before the record expires. Planner sessions require a food-state context (`empty`, `light`, or `meal`); an optional protocol-confirmed breathalyzer reading and its timestamp can be attached at completion or later in History.
 
 ## Local development
 

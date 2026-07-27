@@ -8,10 +8,14 @@
   'use strict';
 
   const STORAGE_KEY = 'goldilocks_session_history';
-  const VERSION = 1;
+  const VERSION = 2;
+  const LEGACY_VERSION = 1;
   const MAX_ENTRIES = 50;
   const MODES = new Set(['zone', 'pace']);
   const REASONS = new Set(['manual', 'elapsed']);
+  const FOOD_STATES = new Set(['empty', 'light', 'meal', 'unknown']);
+  const MEASUREMENT_WINDOW_MS = 4 * 60 * 60 * 1000;
+  const MIN_REFINEMENT_SESSIONS = 3;
 
   function isRecord(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -55,13 +59,65 @@
     };
   }
 
+  function normalizeOptionalNumber(value, min, max) {
+    if (value === null || value === undefined) return null;
+    return finiteInRange(value, min, max) ? value : null;
+  }
+
+  function getMeasurementEligibility(record, measurement) {
+    if (!measurement.protocolFollowed) return { eligible: false, reason: 'protocol-not-confirmed' };
+    if (record.foodState === 'unknown') return { eligible: false, reason: 'food-state-unknown' };
+    if (!finiteInRange(record.modelRisePerStd, 0.001, 0.2)
+        || !finiteInRange(record.modelMetabPerHr, 0.001, 0.05)) {
+      return { eligible: false, reason: 'model-snapshot-unavailable' };
+    }
+    if (!finiteInRange(record.standardDrinks, 0.05, 200)) {
+      return { eligible: false, reason: 'no-standard-drinks' };
+    }
+    if (measurement.value === 0) return { eligible: false, reason: 'zero-reading' };
+    if (measurement.estimatedBac === 0) return { eligible: false, reason: 'estimate-at-floor' };
+    return { eligible: true, reason: null };
+  }
+
+  function normalizeMeasurement(record, measurement) {
+    if (measurement === null || measurement === undefined) return null;
+    if (!isRecord(measurement)
+        || !finiteInRange(measurement.value, 0, 1)
+        || !finiteInRange(measurement.measuredAt, record.completedAt, record.completedAt + MEASUREMENT_WINDOW_MS)
+        || typeof measurement.protocolFollowed !== 'boolean'
+        || !finiteInRange(measurement.estimatedBac, 0, 2)) return null;
+    const normalized = {
+      value: measurement.value,
+      measuredAt: measurement.measuredAt,
+      protocolFollowed: measurement.protocolFollowed,
+      estimatedBac: measurement.estimatedBac,
+      eligibleForRefinement: false,
+      eligibilityReason: null,
+    };
+    const eligibility = getMeasurementEligibility(record, normalized);
+    normalized.eligibleForRefinement = eligibility.eligible;
+    normalized.eligibilityReason = eligibility.reason;
+    return normalized;
+  }
+
   function normalizeRecord(record) {
-    if (!isRecord(record) || record.version !== VERSION || !MODES.has(record.mode)) return null;
+    if (!isRecord(record)
+        || ![LEGACY_VERSION, VERSION].includes(record.version)
+        || !MODES.has(record.mode)) return null;
     const id = safeText(record.id, 80);
     const profileName = safeText(record.profileName, 40);
     const completionReason = REASONS.has(record.completionReason) ? record.completionReason : null;
     const detail = normalizeDetail(record.mode, record.detail);
-    if (!id || !profileName || !completionReason || !detail) return null;
+    const foodState = record.version === LEGACY_VERSION
+      ? 'unknown'
+      : FOOD_STATES.has(record.foodState) ? record.foodState : null;
+    const modelRisePerStd = record.version === LEGACY_VERSION
+      ? null
+      : normalizeOptionalNumber(record.modelRisePerStd, 0.001, 0.2);
+    const modelMetabPerHr = record.version === LEGACY_VERSION
+      ? null
+      : normalizeOptionalNumber(record.modelMetabPerHr, 0.001, 0.05);
+    if (!id || !profileName || !completionReason || !detail || !foodState) return null;
     if (!finiteInRange(record.startedAt, 0, Number.MAX_SAFE_INTEGER)
         || !finiteInRange(record.completedAt, record.startedAt, Number.MAX_SAFE_INTEGER)
         || !integerInRange(record.durationMinutes, 15, 24 * 60)
@@ -75,7 +131,7 @@
         || !finiteInRange(record.finalBac, 0, 2)
         || !finiteInRange(record.peakBac, 0, 2)) return null;
 
-    return {
+    const normalized = {
       version: VERSION,
       id,
       mode: record.mode,
@@ -91,8 +147,13 @@
       finalBac: record.finalBac,
       peakBac: record.peakBac,
       completionReason,
+      foodState,
+      modelRisePerStd,
+      modelMetabPerHr,
       detail,
     };
+    normalized.measurement = normalizeMeasurement(normalized, record.measurement);
+    return normalized;
   }
 
   function sanitize(value) {
@@ -141,10 +202,121 @@
     return write(storage, []);
   }
 
+  function setFoodState(storage, id, foodState) {
+    if (!FOOD_STATES.has(foodState) || foodState === 'unknown') {
+      throw new RangeError('food state is invalid');
+    }
+    const records = read(storage);
+    const index = records.findIndex(record => record.id === id);
+    if (index < 0) throw new RangeError('session history record was not found');
+    records[index] = { ...records[index], foodState };
+    return write(storage, records);
+  }
+
+  function setMeasurement(storage, id, measurement) {
+    const records = read(storage);
+    const index = records.findIndex(record => record.id === id);
+    if (index < 0) throw new RangeError('session history record was not found');
+    if (measurement === null) {
+      records[index] = { ...records[index], measurement: null };
+      return write(storage, records);
+    }
+    const record = records[index];
+    const measuredAt = Number.isFinite(measurement?.measuredAt)
+      && measurement.measuredAt < record.completedAt
+      && record.completedAt - measurement.measuredAt < 1000
+      ? record.completedAt
+      : measurement?.measuredAt;
+    if (!isRecord(measurement)
+        || !finiteInRange(measurement.value, 0, 1)
+        || !finiteInRange(
+          measuredAt,
+          record.completedAt,
+          record.completedAt + MEASUREMENT_WINDOW_MS
+        )
+        || typeof measurement.protocolFollowed !== 'boolean') {
+      throw new RangeError('BAC measurement is invalid');
+    }
+    const elapsedHours = (measuredAt - record.completedAt) / 3600000;
+    const estimatedBac = record.modelMetabPerHr === null
+      ? record.finalBac
+      : Math.max(0, record.finalBac - record.modelMetabPerHr * elapsedHours);
+    records[index] = {
+      ...record,
+      measurement: {
+        value: measurement.value,
+        measuredAt,
+        protocolFollowed: measurement.protocolFollowed,
+        estimatedBac,
+      },
+    };
+    return write(storage, records);
+  }
+
+  function median(values) {
+    if (!values.length) return null;
+    const sorted = values.slice().sort((left, right) => left - right);
+    const middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  }
+
+  function calculateRiseEvidence(records, profileName) {
+    const normalizedName = safeText(profileName, 40)?.toLowerCase();
+    if (!normalizedName) throw new RangeError('profile name is invalid');
+    const evidence = sanitize(records)
+      .filter(record => record.profileName.toLowerCase() === normalizedName
+        && record.measurement?.eligibleForRefinement)
+      .map(record => {
+        const error = record.measurement.value - record.measurement.estimatedBac;
+        const candidateRise = record.modelRisePerStd + error / record.standardDrinks;
+        if (!finiteInRange(candidateRise, 0.001, 0.1)) return null;
+        return {
+          id: record.id,
+          foodState: record.foodState,
+          error,
+          absoluteError: Math.abs(error),
+          candidateRise,
+        };
+      })
+      .filter(Boolean);
+    const eligibleCount = evidence.length;
+    const candidateRisePerStd = median(evidence.map(item => item.candidateRise));
+    const meanError = eligibleCount
+      ? evidence.reduce((sum, item) => sum + item.error, 0) / eligibleCount
+      : null;
+    const meanAbsoluteError = eligibleCount
+      ? evidence.reduce((sum, item) => sum + item.absoluteError, 0) / eligibleCount
+      : null;
+    const byFoodState = {};
+    for (const foodState of ['empty', 'light', 'meal']) {
+      const matches = evidence.filter(item => item.foodState === foodState);
+      byFoodState[foodState] = {
+        count: matches.length,
+        meanError: matches.length
+          ? matches.reduce((sum, item) => sum + item.error, 0) / matches.length
+          : null,
+      };
+    }
+    return {
+      eligibleCount,
+      minimumRequired: MIN_REFINEMENT_SESSIONS,
+      candidateRisePerStd,
+      suggestedRisePerStd: eligibleCount >= MIN_REFINEMENT_SESSIONS ? candidateRisePerStd : null,
+      meanError,
+      meanAbsoluteError,
+      confidence: eligibleCount >= 8 ? 'high' : eligibleCount >= 5 ? 'medium' : eligibleCount >= 3 ? 'low' : 'insufficient',
+      byFoodState,
+    };
+  }
+
   return Object.freeze({
     STORAGE_KEY,
     VERSION,
+    LEGACY_VERSION,
     MAX_ENTRIES,
+    FOOD_STATES,
+    MEASUREMENT_WINDOW_MS,
+    MIN_REFINEMENT_SESSIONS,
     normalizeRecord,
     sanitize,
     read,
@@ -152,5 +324,8 @@
     save,
     remove,
     clear,
+    setFoodState,
+    setMeasurement,
+    calculateRiseEvidence,
   });
 }));

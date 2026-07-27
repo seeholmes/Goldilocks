@@ -119,6 +119,79 @@
   margin-top: 8px;
 }
 
+.measurement-card {
+  background: var(--deep);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.measurement-card-title {
+  color: var(--text);
+  font-family: 'Anybody', sans-serif;
+  font-size: 17px;
+  font-weight: 400;
+}
+
+.measurement-card-copy,
+.measurement-status {
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.65;
+  margin-top: 5px;
+}
+
+.measurement-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.measurement-field-label {
+  color: var(--muted);
+  display: block;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.measurement-check {
+  align-items: flex-start;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  font-size: 9px;
+  gap: 8px;
+  line-height: 1.55;
+  margin-top: 10px;
+}
+
+.measurement-check input {
+  accent-color: var(--accent);
+  margin-top: 2px;
+}
+
+.measurement-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.measurement-actions .session-action-btn {
+  flex: 1;
+}
+
+.measurement-status.saved {
+  color: var(--green);
+}
+
+.measurement-status.ineligible {
+  color: var(--amber);
+}
+
 .review-grid,
 .session-stats,
 .completion-grid {
@@ -322,6 +395,10 @@
   }
 
   .session-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .measurement-grid {
     grid-template-columns: 1fr;
   }
 
