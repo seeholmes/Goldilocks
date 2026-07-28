@@ -10,12 +10,15 @@ All notable user-facing changes to Goldilocks are documented here.
 - Added shared user selection, creation, and deletion to Calibration, with body settings and calibration results synchronized across all modules.
 - Added required food-state context to planner and calibration sessions, plus optional timestamped, protocol-confirmed breathalyzer readings on completed planner sessions.
 - Added session-evidence summaries and expert BAC-per-standard-drink controls to Calibration, including suggestion, manual override, and baseline reset actions.
+- Added a side-by-side planned-model versus session-implied BAC-per-standard-drink comparison to History.
+- Added optional next-day recovery ratings to historical sessions, with personal warnings when a plan or active session meets or exceeds a prior Apollo 13 or Event Horizon outcome.
 
 ### Changed
 
 - Replaced the shared ringed-planet drink marker with a native bear emoji, including a clear outline after a drink is logged.
 - Combined duration, Zone range or Pace ending reference, projection, metrics, and Start into a single Plan Tuner card in both planners.
 - Calibration now treats declining readings as the source of elimination-rate calibration. Observed rising BAC remains evidence, and eligible historical measurements produce suggestions that are never applied automatically.
+- Next-day recovery ratings remain subjective context: they can produce conservative warnings but never alter calibration or make plans more permissive.
 
 ### Fixed
 

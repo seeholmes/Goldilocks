@@ -406,6 +406,7 @@
     </div>
     <p class="session-caution" id="reviewPace">—</p>
     <p class="session-caution">The selected range is a planning preference, not a safety threshold. Never drive after drinking.</p>
+    <p class="recovery-warning" id="planRecoveryWarning" role="status" hidden></p>
     <button class="start-btn plan-tuner-start" id="startBtn" onclick="startSession()">Start Zone Session</button>
   </section>
 
@@ -423,6 +424,7 @@
       <div class="session-stat"><div class="session-stat-value" id="activeLogged">0</div><div class="session-stat-label">Drinks logged</div></div>
     </div>
     <p class="session-caution">BAC values are estimates. The selected range is not a safety threshold.</p>
+    <p class="recovery-warning" id="activeRecoveryWarning" role="status" hidden></p>
     <div class="session-actions">
       <button type="button" class="session-action-btn primary drink-log-action" id="logOneBtn" onclick="logOneDrink()">Log one drink</button>
       <button type="button" class="session-action-btn" id="undoLogBtn" onclick="undoLastLog()" disabled>Undo last change</button>
@@ -946,7 +948,27 @@ function clearPreStartReview() {
   ['reviewStart','reviewEnd','reviewDuration','reviewEndingBac']
     .forEach(id => { document.getElementById(id).textContent = '—'; });
   document.getElementById('reviewPace').textContent = 'Adjust the settings above to create a review.';
+  document.getElementById('planRecoveryWarning').hidden = true;
   GoldilocksTrajectory.clear(document.getElementById('reviewTrajectory'));
+}
+
+function renderRecoveryWarning(elementId, standardDrinks, peakBac, context) {
+  const element = document.getElementById(elementId);
+  const warning = GoldilocksSessionHistory.findRecoveryWarning(
+    GoldilocksSessionHistory.read(localStorage),
+    profile?.name,
+    standardDrinks,
+    peakBac
+  );
+  element.hidden = !warning;
+  if (!warning) {
+    element.textContent = '';
+    return;
+  }
+  element.textContent =
+    `Past recovery warning · ${context} meets or exceeds a past session with ${warning.standardDrinks.toFixed(1)} standard drinks `
+    + `or an estimated peak of ${warning.peakBac.toFixed(3)}. You rated the next day `
+    + `“${warning.recoveryRating} — ${warning.title} · ${warning.summary}.” Consider reducing the plan; this rating never makes plans more permissive.`;
 }
 
 function renderPreStartReview() {
@@ -976,6 +998,7 @@ function renderPreStartReview() {
   document.getElementById('reviewPace').textContent = averageMinutes === null
     ? 'No drinks are currently planned.'
     : `Average planned pace: about one drink every ${averageMinutes} minutes. See the hourly plan for the actual distribution.`;
+  renderRecoveryWarning('planRecoveryWarning', total * ag / STD_DRINK_G, peak, 'This plan');
 }
 
 function refreshPlanningPreview() {
@@ -1303,6 +1326,7 @@ function renderActiveSessionPanel() {
   document.getElementById('activeLiveBac').textContent = unresolvedHours.length ? '—*' : liveBac.toFixed(3);
   document.getElementById('activeProjectedEnd').textContent = unresolvedHours.length ? '—*' : projectedEnd.toFixed(3);
   document.getElementById('activeLogged').textContent = String(logged);
+  renderRecoveryWarning('activeRecoveryWarning', logged * ag / STD_DRINK_G, liveBac, 'Your current session');
 
   const logButton = document.getElementById('logOneBtn');
   const hasEarlierGap = throughHour >= 0 && unresolvedHours.some(hour => hour < throughHour);

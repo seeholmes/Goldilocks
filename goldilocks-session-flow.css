@@ -192,6 +192,21 @@
   color: var(--amber);
 }
 
+.recovery-warning {
+  background: color-mix(in srgb, var(--danger) 8%, var(--deep));
+  border: 1px solid color-mix(in srgb, var(--danger) 48%, var(--border));
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 9px;
+  line-height: 1.65;
+  margin-top: 10px;
+  padding: 10px 12px;
+}
+
+.recovery-warning[hidden] {
+  display: none;
+}
+
 .review-grid,
 .session-stats,
 .completion-grid {

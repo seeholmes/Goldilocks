@@ -493,6 +493,30 @@ test('Mission Control exposes shared local Zone and Pace history', () => {
   }
 });
 
+test('History exposes session-implied BAC and optional next-day recovery context', () => {
+  const history = read('goldilocks-history.html');
+  const historyStore = read('goldilocks-session-history.js');
+  assert.match(history, /Planned model BAC \/ standard drink/);
+  assert.match(history, /Session-implied BAC \/ standard drink/);
+  assert.match(history, /Next-day recovery rating/);
+  for (const label of ['All Systems Go','Rough Ascent','Apollo 13','Event Horizon']) {
+    assert.match(historyStore, new RegExp(label));
+  }
+  assert.match(history, /setRecoveryRating/);
+  assert.match(history, /never changes BAC calibration/);
+});
+
+test('Zone and Pace use negative recovery outcomes only for conservative warnings', () => {
+  for (const page of ['goldilocks-zone.html','goldilocks-cruise.html']) {
+    const html = read(page);
+    for (const id of ['planRecoveryWarning','activeRecoveryWarning']) {
+      assert.match(openingTagWithId(html, id), /\bhidden\b/);
+    }
+    assert.match(html, /findRecoveryWarning/);
+    assert.match(html, /never makes plans more permissive/);
+  }
+});
+
 test('Zone and Pace share the native bear drink control without gamified drink rewards', () => {
   const zone = read('goldilocks-zone.html');
   const pace = read('goldilocks-cruise.html');

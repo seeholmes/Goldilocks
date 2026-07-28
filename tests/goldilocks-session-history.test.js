@@ -141,13 +141,21 @@ test('removes individual records and clears history', () => {
   assert.deepEqual(history.read(storage), []);
 });
 
-test('migrates version-one summaries with unknown evidence fields', () => {
+test('migrates older summaries with safe evidence and recovery defaults', () => {
   const normalized = history.normalizeRecord(zoneRecord());
   assert.equal(normalized.version, history.VERSION);
   assert.equal(normalized.foodState, 'unknown');
   assert.equal(normalized.modelRisePerStd, null);
   assert.equal(normalized.modelMetabPerHr, null);
   assert.equal(normalized.measurement, null);
+  assert.equal(normalized.recoveryRating, null);
+  assert.equal(normalized.recoveryRatedAt, null);
+
+  const evidence = history.normalizeRecord(evidenceRecord(0));
+  assert.equal(evidence.version, history.VERSION);
+  assert.equal(evidence.foodState, 'meal');
+  assert.equal(evidence.modelRisePerStd, 0.02);
+  assert.equal(evidence.recoveryRating, null);
 });
 
 test('adds food state and a qualifying timed BAC measurement', () => {
@@ -164,6 +172,7 @@ test('adds food state and a qualifying timed BAC measurement', () => {
   assert.equal(updated.measurement.value, 0.044);
   assert.equal(updated.measurement.estimatedBac, 0.04);
   assert.equal(updated.measurement.eligibleForRefinement, true);
+  assert.ok(Math.abs(history.getSessionImpliedRise(updated) - 0.022) < 1e-12);
 
   history.setMeasurement(storage, record.id, {
     value: 0.045,
@@ -180,6 +189,32 @@ test('adds food state and a qualifying timed BAC measurement', () => {
     measuredAt: record.completedAt + history.MEASUREMENT_WINDOW_MS + 1,
     protocolFollowed: true,
   }), /measurement/);
+});
+
+test('stores an optional next-day recovery rating and finds conservative warnings', () => {
+  const storage = new MemoryStorage();
+  const manageable = evidenceRecord(0, { standardDrinks: 1.5, peakBac: 0.04 });
+  const bad = evidenceRecord(1, { standardDrinks: 2.5, peakBac: 0.055 });
+  const terrible = evidenceRecord(2, { standardDrinks: 3, peakBac: 0.06 });
+  history.save(storage, manageable);
+  history.save(storage, bad);
+  history.save(storage, terrible);
+  history.setRecoveryRating(storage, manageable.id, 2, manageable.completedAt + 12 * 3600000);
+  history.setRecoveryRating(storage, bad.id, 3, bad.completedAt + 12 * 3600000);
+  history.setRecoveryRating(storage, terrible.id, 4, terrible.completedAt + 12 * 3600000);
+
+  const records = history.read(storage);
+  assert.equal(records.find(record => record.id === terrible.id).recoveryRating, 4);
+  assert.equal(history.findRecoveryWarning(records, 'expert', 2, 0.04), null);
+
+  const warning = history.findRecoveryWarning(records, 'Expert', 3, 0.05);
+  assert.equal(warning.recoveryRating, 4);
+  assert.equal(warning.title, 'Event Horizon');
+  assert.equal(warning.summary, 'Terrible');
+
+  history.setRecoveryRating(storage, terrible.id, null);
+  assert.equal(history.read(storage).find(record => record.id === terrible.id).recoveryRating, null);
+  assert.throws(() => history.setRecoveryRating(storage, bad.id, 5), /recovery rating/);
 });
 
 test('keeps non-qualifying measurements for comparison without using them as evidence', () => {

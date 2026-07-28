@@ -8,14 +8,21 @@
   'use strict';
 
   const STORAGE_KEY = 'goldilocks_session_history';
-  const VERSION = 2;
+  const VERSION = 3;
   const LEGACY_VERSION = 1;
+  const EVIDENCE_VERSION = 2;
   const MAX_ENTRIES = 50;
   const MODES = new Set(['zone', 'pace']);
   const REASONS = new Set(['manual', 'elapsed']);
   const FOOD_STATES = new Set(['empty', 'light', 'meal', 'unknown']);
   const MEASUREMENT_WINDOW_MS = 4 * 60 * 60 * 1000;
   const MIN_REFINEMENT_SESSIONS = 3;
+  const RECOVERY_LEVELS = Object.freeze({
+    1: Object.freeze({ title: 'All Systems Go', summary: 'Great' }),
+    2: Object.freeze({ title: 'Rough Ascent', summary: 'Manageable' }),
+    3: Object.freeze({ title: 'Apollo 13', summary: 'Bad' }),
+    4: Object.freeze({ title: 'Event Horizon', summary: 'Terrible' }),
+  });
 
   function isRecord(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -102,19 +109,19 @@
 
   function normalizeRecord(record) {
     if (!isRecord(record)
-        || ![LEGACY_VERSION, VERSION].includes(record.version)
+        || ![LEGACY_VERSION, EVIDENCE_VERSION, VERSION].includes(record.version)
         || !MODES.has(record.mode)) return null;
     const id = safeText(record.id, 80);
     const profileName = safeText(record.profileName, 40);
     const completionReason = REASONS.has(record.completionReason) ? record.completionReason : null;
     const detail = normalizeDetail(record.mode, record.detail);
-    const foodState = record.version === LEGACY_VERSION
+    const foodState = record.version < EVIDENCE_VERSION
       ? 'unknown'
       : FOOD_STATES.has(record.foodState) ? record.foodState : null;
-    const modelRisePerStd = record.version === LEGACY_VERSION
+    const modelRisePerStd = record.version < EVIDENCE_VERSION
       ? null
       : normalizeOptionalNumber(record.modelRisePerStd, 0.001, 0.2);
-    const modelMetabPerHr = record.version === LEGACY_VERSION
+    const modelMetabPerHr = record.version < EVIDENCE_VERSION
       ? null
       : normalizeOptionalNumber(record.modelMetabPerHr, 0.001, 0.05);
     if (!id || !profileName || !completionReason || !detail || !foodState) return null;
@@ -153,6 +160,14 @@
       detail,
     };
     normalized.measurement = normalizeMeasurement(normalized, record.measurement);
+    const recoveryRating = record.version >= VERSION && integerInRange(record.recoveryRating, 1, 4)
+      ? record.recoveryRating
+      : null;
+    const recoveryRatedAt = recoveryRating
+      ? normalizeOptionalNumber(record.recoveryRatedAt, record.completedAt, Number.MAX_SAFE_INTEGER)
+      : null;
+    normalized.recoveryRating = recoveryRatedAt === null ? null : recoveryRating;
+    normalized.recoveryRatedAt = recoveryRatedAt;
     return normalized;
   }
 
@@ -253,6 +268,38 @@
     return write(storage, records);
   }
 
+  function setRecoveryRating(storage, id, recoveryRating, recoveryRatedAt = Date.now()) {
+    const records = read(storage);
+    const index = records.findIndex(record => record.id === id);
+    if (index < 0) throw new RangeError('session history record was not found');
+    if (recoveryRating === null) {
+      records[index] = {
+        ...records[index],
+        recoveryRating: null,
+        recoveryRatedAt: null,
+      };
+      return write(storage, records);
+    }
+    if (!integerInRange(recoveryRating, 1, 4)
+        || !finiteInRange(recoveryRatedAt, records[index].completedAt, Number.MAX_SAFE_INTEGER)) {
+      throw new RangeError('next-day recovery rating is invalid');
+    }
+    records[index] = {
+      ...records[index],
+      recoveryRating,
+      recoveryRatedAt,
+    };
+    return write(storage, records);
+  }
+
+  function getSessionImpliedRise(record) {
+    const normalized = normalizeRecord(record);
+    if (!normalized?.measurement?.eligibleForRefinement) return null;
+    const error = normalized.measurement.value - normalized.measurement.estimatedBac;
+    const impliedRise = normalized.modelRisePerStd + error / normalized.standardDrinks;
+    return finiteInRange(impliedRise, 0.001, 0.1) ? impliedRise : null;
+  }
+
   function median(values) {
     if (!values.length) return null;
     const sorted = values.slice().sort((left, right) => left - right);
@@ -268,8 +315,8 @@
         && record.measurement?.eligibleForRefinement)
       .map(record => {
         const error = record.measurement.value - record.measurement.estimatedBac;
-        const candidateRise = record.modelRisePerStd + error / record.standardDrinks;
-        if (!finiteInRange(candidateRise, 0.001, 0.1)) return null;
+        const candidateRise = getSessionImpliedRise(record);
+        if (candidateRise === null) return null;
         return {
           id: record.id,
           foodState: record.foodState,
@@ -309,14 +356,43 @@
     };
   }
 
+  function findRecoveryWarning(records, profileName, standardDrinks, peakBac) {
+    const normalizedName = safeText(profileName, 40)?.toLowerCase();
+    if (!normalizedName) return null;
+    const comparableStandardDrinks = finiteInRange(standardDrinks, 0, 200) ? standardDrinks : 0;
+    const comparablePeakBac = finiteInRange(peakBac, 0, 2) ? peakBac : 0;
+    const matches = sanitize(records)
+      .filter(record => record.profileName.toLowerCase() === normalizedName
+        && integerInRange(record.recoveryRating, 3, 4)
+        && ((record.standardDrinks > 0 && comparableStandardDrinks >= record.standardDrinks)
+          || (record.peakBac > 0 && comparablePeakBac >= record.peakBac)))
+      .sort((left, right) => right.recoveryRating - left.recoveryRating
+        || left.standardDrinks - right.standardDrinks
+        || left.peakBac - right.peakBac
+        || right.completedAt - left.completedAt);
+    if (!matches.length) return null;
+    const match = matches[0];
+    return {
+      id: match.id,
+      recoveryRating: match.recoveryRating,
+      title: RECOVERY_LEVELS[match.recoveryRating].title,
+      summary: RECOVERY_LEVELS[match.recoveryRating].summary,
+      standardDrinks: match.standardDrinks,
+      peakBac: match.peakBac,
+      completedAt: match.completedAt,
+    };
+  }
+
   return Object.freeze({
     STORAGE_KEY,
     VERSION,
     LEGACY_VERSION,
+    EVIDENCE_VERSION,
     MAX_ENTRIES,
     FOOD_STATES,
     MEASUREMENT_WINDOW_MS,
     MIN_REFINEMENT_SESSIONS,
+    RECOVERY_LEVELS,
     normalizeRecord,
     sanitize,
     read,
@@ -326,6 +402,9 @@
     clear,
     setFoodState,
     setMeasurement,
+    setRecoveryRating,
+    getSessionImpliedRise,
     calculateRiseEvidence,
+    findRecoveryWarning,
   });
 }));

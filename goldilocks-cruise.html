@@ -376,6 +376,7 @@
       <div class="review-item"><div class="review-value" id="summaryPeak">—</div><div class="review-label">Estimated peak BAC</div></div>
     </div>
     <p class="session-caution">Planning reference only — not a safety threshold. Estimates vary, and no BAC level guarantees safety.</p>
+    <p class="recovery-warning" id="planRecoveryWarning" role="status" hidden></p>
     <button class="start-btn plan-tuner-start" id="startBtn" onclick="startSession()">Start Pace Session</button>
   </section>
 
@@ -393,6 +394,7 @@
       <div class="session-stat"><div class="session-stat-value" id="activeLoggedCount">0</div><div class="session-stat-label">Drinks logged</div></div>
     </div>
     <p class="session-caution">Estimates use only the drinks you log. The planning reference is not a safety threshold.</p>
+    <p class="recovery-warning" id="activeRecoveryWarning" role="status" hidden></p>
     <div class="session-actions">
       <button type="button" class="session-action-btn primary drink-log-action" id="logNowBtn" onclick="logNextDrinkNow()">Log drink now</button>
       <button type="button" class="session-action-btn" id="undoLatestBtn" onclick="undoLatestDrink()">Undo latest</button>
@@ -877,6 +879,25 @@ function updateReviewTimes(previewStart = Date.now()) {
   document.getElementById('reviewDuration').textContent = formatDuration(durationMinutes);
 }
 
+function renderRecoveryWarning(elementId, standardDrinks, peakBac, context) {
+  const element = document.getElementById(elementId);
+  const warning = GoldilocksSessionHistory.findRecoveryWarning(
+    GoldilocksSessionHistory.read(localStorage),
+    profile?.name,
+    standardDrinks,
+    peakBac
+  );
+  element.hidden = !warning;
+  if (!warning) {
+    element.textContent = '';
+    return;
+  }
+  element.textContent =
+    `Past recovery warning · ${context} meets or exceeds a past session with ${warning.standardDrinks.toFixed(1)} standard drinks `
+    + `or an estimated peak of ${warning.peakBac.toFixed(3)}. You rated the next day `
+    + `“${warning.recoveryRating} — ${warning.title} · ${warning.summary}.” Consider reducing the plan; this rating never makes plans more permissive.`;
+}
+
 function renderPreStartReview(result, previewStart, trace) {
   updateReviewTimes(previewStart);
   const peak = Math.max(0, ...trace);
@@ -897,6 +918,7 @@ function renderPreStartReview(result, previewStart, trace) {
     target: bacEnd,
     caption: 'The line connects period-end model estimates. Bears show planned drink times; absorption is not modeled. The ending reference is not a safety threshold.',
   });
+  renderRecoveryWarning('planRecoveryWarning', result.n * ag / STD_DRINK_G, peak, 'This plan');
 }
 
 function setSessionFlowState(state) {
@@ -1015,6 +1037,7 @@ function renderActiveSession() {
   document.getElementById('activeCurrentBac').textContent = currentBac.toFixed(3);
   document.getElementById('activeProjectedBac').textContent = projectedBac.toFixed(3);
   document.getElementById('activeLoggedCount').textContent = String(loggedCount);
+  renderRecoveryWarning('activeRecoveryWarning', loggedCount * ag / STD_DRINK_G, currentBac, 'Your current session');
   const logNowButton = document.getElementById('logNowBtn');
   logNowButton.disabled = nextIndex < 0;
   GoldilocksDrinkWaypoint.decorateButton(logNowButton, nextIndex < 0 ? 'No drinks remaining' : 'Log drink now', nextIndex < 0 ? 'inactive' : 'ready');

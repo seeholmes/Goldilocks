@@ -58,6 +58,16 @@
   .record-value { font-family:'Anybody',sans-serif; font-size:17px; font-weight:400; overflow-wrap:anywhere; }
   .record-label { color:var(--muted); font-size:8px; letter-spacing:0.08em; line-height:1.35; margin-top:3px; text-transform:uppercase; }
   .record-detail { color:var(--muted); font-size:9px; line-height:1.65; margin-top:12px; }
+  .model-comparison { background:var(--deep); border:1px solid var(--border); border-radius:8px; display:grid; grid-template-columns:1fr 1fr; margin-top:10px; overflow:hidden; }
+  .model-comparison-cell { min-width:0; padding:11px 12px; }
+  .model-comparison-cell + .model-comparison-cell { border-left:1px solid var(--border); }
+  .model-comparison-value { font-family:'Anybody',sans-serif; font-size:20px; }
+  .model-comparison-label { color:var(--muted); font-size:8px; letter-spacing:0.08em; line-height:1.45; margin-top:3px; text-transform:uppercase; }
+  .model-comparison-delta { color:var(--record-accent); font-size:8px; margin-top:4px; }
+  .recovery-panel { align-items:flex-end; background:color-mix(in srgb,var(--record-accent) 5%,var(--deep)); border:1px solid color-mix(in srgb,var(--record-accent) 30%,var(--border)); border-radius:8px; display:grid; gap:9px; grid-template-columns:1fr minmax(220px,0.9fr) auto; margin-top:10px; padding:11px 12px; }
+  .recovery-title { color:var(--record-accent); font-size:9px; letter-spacing:0.08em; text-transform:uppercase; }
+  .recovery-copy { color:var(--muted); font-size:8px; line-height:1.55; margin-top:3px; }
+  .recovery-save { background:transparent; border:1px solid var(--record-accent); border-radius:7px; color:var(--record-accent); cursor:pointer; font:inherit; font-size:9px; padding:9px 11px; white-space:nowrap; }
   .evidence-editor { background:var(--deep); border:1px solid var(--border); border-radius:8px; margin-top:12px; padding:0 12px 12px; }
   .evidence-editor summary { color:var(--record-accent); cursor:pointer; font-size:9px; letter-spacing:0.08em; padding:11px 0; text-transform:uppercase; }
   .evidence-grid { display:grid; grid-template-columns:0.85fr 0.7fr 1.3fr; gap:8px; }
@@ -80,6 +90,9 @@
     .hero { padding-top:32px; }
     .history-toolbar { align-items:flex-start; flex-direction:column; }
     .record-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .model-comparison { grid-template-columns:1fr; }
+    .model-comparison-cell + .model-comparison-cell { border-left:0; border-top:1px solid var(--border); }
+    .recovery-panel { align-items:stretch; grid-template-columns:1fr; }
     .evidence-grid { grid-template-columns:1fr; }
   }
   @media(prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none !important; animation:none !important; } }
@@ -159,6 +172,11 @@ function formatFoodState(value) {
     meal: 'Meal',
     unknown: 'Unknown',
   }[value] || 'Unknown';
+}
+
+function formatRecoveryRating(value) {
+  const level = GoldilocksSessionHistory.RECOVERY_LEVELS[value];
+  return level ? `${value} — ${level.title}` : '—';
 }
 
 function toLocalDateTimeValue(timestamp) {
@@ -310,6 +328,51 @@ function createEvidenceEditor(record) {
   return details;
 }
 
+function createRecoveryEditor(record) {
+  const panel = document.createElement('div');
+  panel.className = 'recovery-panel';
+  const intro = document.createElement('div');
+  const title = document.createElement('div');
+  title.className = 'recovery-title';
+  title.textContent = 'Next-day recovery';
+  const copy = document.createElement('p');
+  copy.className = 'recovery-copy';
+  copy.textContent = 'How did you feel the next day? Optional subjective context; it never changes BAC calibration.';
+  intro.append(title, copy);
+
+  const select = document.createElement('select');
+  select.className = 'evidence-control';
+  select.setAttribute('aria-label', 'Next-day recovery rating');
+  const emptyOption = document.createElement('option');
+  emptyOption.value = '';
+  emptyOption.textContent = '— not rated —';
+  select.appendChild(emptyOption);
+  Object.entries(GoldilocksSessionHistory.RECOVERY_LEVELS).forEach(([value, level]) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = `${value} — ${level.title} · ${level.summary}`;
+    select.appendChild(option);
+  });
+  select.value = record.recoveryRating ? String(record.recoveryRating) : '';
+
+  const save = document.createElement('button');
+  save.type = 'button';
+  save.className = 'recovery-save';
+  save.textContent = record.recoveryRating ? 'Update rating' : 'Save rating';
+  save.addEventListener('click', () => {
+    try {
+      GoldilocksSessionHistory.setRecoveryRating(
+        localStorage,
+        record.id,
+        select.value ? Number(select.value) : null
+      );
+      renderHistory();
+    } catch (error) {}
+  });
+  panel.append(intro, select, save);
+  return panel;
+}
+
 function createRecordCard(record) {
   const card = document.createElement('article');
   card.className = `history-card ${record.mode}`;
@@ -339,6 +402,36 @@ function createRecordCard(record) {
   addStat(document, grid, record.peakBac.toFixed(3), 'Estimated peak');
   addStat(document, grid, formatFoodState(record.foodState), 'Food state');
   addStat(document, grid, record.measurement ? record.measurement.value.toFixed(3) : '—', 'Measured BAC');
+  addStat(document, grid, formatRecoveryRating(record.recoveryRating), 'Next-day recovery');
+
+  const impliedRise = GoldilocksSessionHistory.getSessionImpliedRise(record);
+  const comparisonPanel = document.createElement('div');
+  comparisonPanel.className = 'model-comparison';
+  comparisonPanel.setAttribute('aria-label', 'BAC per standard drink comparison');
+  const modelCell = document.createElement('div');
+  modelCell.className = 'model-comparison-cell';
+  const modelValue = document.createElement('div');
+  modelValue.className = 'model-comparison-value';
+  modelValue.textContent = Number.isFinite(record.modelRisePerStd) ? record.modelRisePerStd.toFixed(4) : '—';
+  const modelLabel = document.createElement('div');
+  modelLabel.className = 'model-comparison-label';
+  modelLabel.textContent = 'Planned model BAC / standard drink';
+  modelCell.append(modelValue, modelLabel);
+  const impliedCell = document.createElement('div');
+  impliedCell.className = 'model-comparison-cell';
+  const impliedValue = document.createElement('div');
+  impliedValue.className = 'model-comparison-value';
+  impliedValue.textContent = Number.isFinite(impliedRise) ? impliedRise.toFixed(4) : '—';
+  const impliedLabel = document.createElement('div');
+  impliedLabel.className = 'model-comparison-label';
+  impliedLabel.textContent = 'Session-implied BAC / standard drink';
+  const impliedDelta = document.createElement('div');
+  impliedDelta.className = 'model-comparison-delta';
+  impliedDelta.textContent = Number.isFinite(impliedRise) && Number.isFinite(record.modelRisePerStd)
+    ? `${impliedRise >= record.modelRisePerStd ? '+' : ''}${((impliedRise / record.modelRisePerStd - 1) * 100).toFixed(1)}% vs model`
+    : 'Requires an eligible measured BAC';
+  impliedCell.append(impliedValue, impliedLabel, impliedDelta);
+  comparisonPanel.append(modelCell, impliedCell);
 
   const detail = document.createElement('p');
   detail.className = 'record-detail';
@@ -350,7 +443,7 @@ function createRecordCard(record) {
     ? ` · measurement ${record.measurement.value >= record.measurement.estimatedBac ? '+' : ''}${(record.measurement.value - record.measurement.estimatedBac).toFixed(3)} vs model at measurement time`
     : '';
   detail.textContent = `${drink} · ${record.standardDrinks.toFixed(1)} standard drinks · ${plan} · ${record.completionReason === 'elapsed' ? 'scheduled time elapsed' : 'finished manually'} · profile ${record.profileName}${comparison}`;
-  card.append(head, grid, detail, createEvidenceEditor(record));
+  card.append(head, grid, comparisonPanel, detail, createRecoveryEditor(record), createEvidenceEditor(record));
   return card;
 }
 
