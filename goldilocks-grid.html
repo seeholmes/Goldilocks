@@ -34,13 +34,6 @@
   }
   .mode-title { color:var(--grid); font-family:'Anybody',sans-serif; font-size:25px; font-weight:600; margin-top:6px; }
   .tagline,.version { color:var(--muted); font-size:9px; letter-spacing:.17em; margin-top:5px; text-transform:uppercase; }
-  .top-links { align-items:center; display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:14px; }
-  .top-link {
-    border:1px solid var(--border); border-radius:100px; color:var(--muted);
-    font-size:8px; letter-spacing:.1em; padding:6px 11px; text-decoration:none; text-transform:uppercase;
-  }
-  .theme-control { align-items:center; display:flex; gap:7px; }
-  .theme-swatch { border-radius:50%; cursor:pointer; height:25px; padding:0; width:25px; }
   .panel {
     background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
     margin-bottom:14px; padding:20px;
@@ -145,11 +138,16 @@
     <div class="mode-title">Grid</div>
     <div class="tagline">any drink · any time</div>
     <div class="version">v1.1.0</div>
-    <div class="top-links">
-      <a class="top-link" href="index.html">← Mission Control</a>
-      <a class="top-link" href="goldilocks-settings.html">⚙ Settings &amp; Data</a>
-      <div class="theme-control"><span class="tagline">Theme</span><div id="themePicker"></div></div>
-    </div>
+    <nav class="page-nav" aria-label="App navigation">
+      <a class="page-nav__link" href="index.html">
+        <span class="page-nav__icon" aria-hidden="true">←</span>
+        <span class="page-nav__copy"><span class="page-nav__title">Mission Control</span><span class="page-nav__meta">Choose a mode</span></span>
+      </a>
+      <a class="page-nav__link" href="goldilocks-settings.html">
+        <span class="page-nav__icon" aria-hidden="true">⚙</span>
+        <span class="page-nav__copy"><span class="page-nav__title">Settings &amp; Data</span><span class="page-nav__meta">Theme · backup · restore</span></span>
+      </a>
+    </nav>
   </header>
 
   <main>
@@ -355,7 +353,7 @@
 <script>
 'use strict';
 
-GoldilocksTheme.init({ mode:'grid', pickerId:'themePicker' });
+GoldilocksTheme.init({ mode:'grid' });
 
 const BUILTIN_PROFILE = {
   name:'seeholmes',

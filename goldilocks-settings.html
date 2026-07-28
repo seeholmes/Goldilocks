@@ -44,12 +44,6 @@
   .logo-sub { color:var(--gold); font-family:'Anybody',sans-serif; font-size:24px; font-weight:600; margin-top:2px; }
   .tagline { color:var(--muted); font-size:9px; letter-spacing:0.16em; margin-top:5px; text-transform:uppercase; }
   .version { color:var(--muted); font-size:8px; letter-spacing:0.12em; margin-top:5px; text-transform:uppercase; }
-  .back-link {
-    border:1px solid var(--border); border-radius:100px; color:var(--muted); display:inline-block;
-    font-size:9px; letter-spacing:0.12em; margin-top:11px; padding:5px 14px; text-decoration:none;
-    text-transform:uppercase; transition:border-color 0.2s,color 0.2s;
-  }
-  .back-link:hover { border-color:var(--gold); color:var(--gold); }
   main { display:grid; gap:12px; }
   .card {
     background:var(--surface); border:1px solid var(--border); border-radius:12px;
@@ -155,7 +149,12 @@
     <div class="logo-sub">Settings &amp; Data</div>
     <div class="tagline">protect and manage this device</div>
     <div class="version">v1.1.0</div>
-    <a class="back-link" href="index.html">← Mission Control</a>
+    <nav class="page-nav page-nav--single" aria-label="App navigation">
+      <a class="page-nav__link" href="index.html">
+        <span class="page-nav__icon" aria-hidden="true">←</span>
+        <span class="page-nav__copy"><span class="page-nav__title">Mission Control</span><span class="page-nav__meta">Return to mode selection</span></span>
+      </a>
+    </nav>
   </header>
 
   <main>

@@ -438,7 +438,7 @@ test('planner food-state controls are required context and do not alter estimate
   }
 });
 
-test('all pages use the shared theme catalog and animated icon system', () => {
+test('all pages use the shared theme catalog while Settings exclusively owns theme selection', () => {
   for (const page of pages) {
     const html = read(page);
     assert.match(
@@ -451,8 +451,11 @@ test('all pages use the shared theme catalog and animated icon system', () => {
       /<link\s+rel="stylesheet"\s+href="goldilocks-icons\.css">/i,
       `${page} must load goldilocks-icons.css`
     );
-    assert.match(html, /id="themePicker"/i, `${page} must expose the shared theme picker`);
     assert.doesNotMatch(html, /\bconst\s+THEMES\s*=/, `${page} must not duplicate the theme catalog`);
+  }
+  assert.match(read('goldilocks-settings.html'), /id="themePicker"/i);
+  for (const page of pages.filter(page => page !== 'goldilocks-settings.html')) {
+    assert.doesNotMatch(read(page), /id="themePicker"/i, `${page} must route theme changes through Settings`);
   }
 
   const iconCss = read('goldilocks-icons.css');
@@ -471,6 +474,49 @@ test('all pages use the shared theme catalog and animated icon system', () => {
   for (const [page, className] of Object.entries(expectedIcons)) {
     assert.match(read(page), new RegExp(className));
   }
+});
+
+test('large touch-friendly navigation replaces the old header pills', () => {
+  const landing = read('index.html');
+  assert.match(landing, /<nav class="page-nav page-nav--single" aria-label="App navigation">/);
+  assert.match(landing, /class="page-nav__title">Settings &amp; Data/);
+
+  for (const page of [
+    'goldilocks-zone.html',
+    'goldilocks-cruise.html',
+    'goldilocks-grid.html',
+    'goldilocks-training.html',
+    'goldilocks-history.html',
+  ]) {
+    const html = read(page);
+    assert.match(html, /<nav class="page-nav" aria-label="App navigation">/);
+    assert.match(html, /class="page-nav__title">Mission Control/);
+    assert.match(html, /class="page-nav__title">Settings &amp; Data/);
+  }
+
+  const settings = read('goldilocks-settings.html');
+  assert.match(settings, /<nav class="page-nav page-nav--single" aria-label="App navigation">/);
+  assert.match(settings, /class="page-nav__title">Mission Control/);
+
+  const sharedCss = read('goldilocks-icons.css');
+  assert.match(sharedCss, /\.page-nav__link\s*\{[\s\S]*min-height:52px/);
+});
+
+test('Mission Control keeps every mode icon gently animated without hover', () => {
+  const landing = read('index.html');
+  for (const mode of ['zone', 'pace', 'grid', 'training', 'history']) {
+    assert.match(
+      landing,
+      new RegExp(`class="mode-glyph mode-glyph--${mode} is-animated"`),
+      `${mode} must opt into continuous Mission Control animation`
+    );
+  }
+  const iconCss = read('goldilocks-icons.css');
+  assert.match(iconCss, /\.mode-glyph\.is-animated \.grid-glyph/);
+  assert.match(iconCss, /glyph-grid-pulse/);
+  assert.match(iconCss, /\.mode-glyph\.is-animated \.glyph-history-hand/);
+  assert.match(iconCss, /glyph-clock-tick/);
+  assert.match(iconCss, /prefers-reduced-motion\s*:\s*reduce[\s\S]*\.mode-glyph \*::before/i);
 });
 
 test('Mission Control exposes shared local Zone, Pace, and Grid history', () => {
@@ -554,6 +600,7 @@ test('Settings & Data exposes full-device backup, preview, restore, and erasure 
     'index.html',
     'goldilocks-zone.html',
     'goldilocks-cruise.html',
+    'goldilocks-grid.html',
     'goldilocks-training.html',
     'goldilocks-history.html',
   ]) {

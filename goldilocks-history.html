@@ -27,13 +27,6 @@
   .logo-sub { font-family:'Anybody',sans-serif; font-size:28px; font-weight:600; color:var(--accent); margin-top:6px; }
   .version { font-size:8px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin-top:4px; }
   .tagline { color:var(--muted); margin-top:5px; font-size:9px; letter-spacing:0.16em; text-transform:uppercase; }
-  .back-link { display:inline-block; margin-top:10px; color:var(--muted); text-decoration:none; border:1px solid var(--border); border-radius:100px; padding:5px 14px; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; }
-  .back-link:hover { color:var(--accent); border-color:var(--accent); }
-  .theme-row { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:14px; }
-  .theme-label { color:var(--muted); font-size:8px; letter-spacing:0.12em; text-transform:uppercase; }
-  .theme-picker { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
-  .theme-swatch { width:28px; height:28px; border-radius:50%; cursor:pointer; flex-shrink:0; padding:0; }
-
   .history-toolbar { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:16px 18px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); }
   .history-count { font-family:'Anybody',sans-serif; font-size:20px; font-weight:400; }
   .history-context { color:var(--muted); font-size:9px; line-height:1.5; margin-top:3px; }
@@ -124,12 +117,16 @@
     <div class="logo-sub">Session History</div>
     <div class="tagline">completed Zone, Pace, and Grid sessions</div>
     <div class="version">v1.1.0</div>
-    <a class="back-link" href="index.html">← Mission Control</a>
-    <a class="settings-link" href="goldilocks-settings.html"><span aria-hidden="true">⚙</span> Settings &amp; Data</a>
-    <div class="theme-row">
-      <span class="theme-label" id="themePickerLabel">Theme</span>
-      <div class="theme-picker" id="themePicker" role="group" aria-labelledby="themePickerLabel"></div>
-    </div>
+    <nav class="page-nav" aria-label="App navigation">
+      <a class="page-nav__link" href="index.html">
+        <span class="page-nav__icon" aria-hidden="true">←</span>
+        <span class="page-nav__copy"><span class="page-nav__title">Mission Control</span><span class="page-nav__meta">Choose a mode</span></span>
+      </a>
+      <a class="page-nav__link" href="goldilocks-settings.html">
+        <span class="page-nav__icon" aria-hidden="true">⚙</span>
+        <span class="page-nav__copy"><span class="page-nav__title">Settings &amp; Data</span><span class="page-nav__meta">Theme · backup · restore</span></span>
+      </a>
+    </nav>
   </header>
 
   <main>
@@ -156,7 +153,7 @@
 <script src="goldilocks-core.js"></script>
 <script src="goldilocks-session-history.js"></script>
 <script>
-GoldilocksTheme.init({ mode:'history', pickerId:'themePicker' });
+GoldilocksTheme.init({ mode:'history' });
 
 let activeFilter = 'all';
 const DEFAULT_MODEL_PROFILE = Object.freeze({

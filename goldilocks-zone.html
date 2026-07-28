@@ -169,9 +169,7 @@
   .form-error.visible { display:block; }
   [aria-invalid="true"] { outline:2px solid rgba(255,90,90,0.55); outline-offset:-2px; }
   .start-btn:disabled { cursor:not-allowed; opacity:0.45; box-shadow:none; }
-  .theme-swatch { width:28px; height:28px; border-radius:50%; cursor:pointer; flex-shrink:0; transition:transform 0.15s; padding:0; }
-  .theme-swatch:hover { transform:scale(1.2); }
-  .theme-swatch:focus-visible, .slot:focus-visible, .clear-hour-btn:focus-visible { outline:2px solid var(--gold); outline-offset:2px; }
+  .slot:focus-visible, .clear-hour-btn:focus-visible { outline:2px solid var(--gold); outline-offset:2px; }
   .range-caution { color:var(--muted); font-size:9px; line-height:1.65; margin-top:10px; }
   .range-caution strong { color:var(--amber); font-weight:400; }
   .reconcile-summary { color:var(--muted); font-size:9px; line-height:1.6; margin-top:6px; }
@@ -226,12 +224,16 @@
     <div class="logo-sub">Zone</div>
     <div class="tagline">not too much · not too little · <em>just right</em></div>
     <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-top:4px">v1.1.0</div>
-    <a href="index.html" style="display:inline-block;margin-top:10px;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:4px 14px;transition:all 0.2s" onmouseover="this.style.color='var(--gold)';this.style.borderColor='rgba(245,200,66,0.4)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">← Mission Control</a>
-    <a class="settings-link" href="goldilocks-settings.html"><span aria-hidden="true">⚙</span> Settings &amp; Data</a>
-    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px">
-      <span id="themePickerLabel" style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted)">Theme</span>
-      <div id="themePicker" role="group" aria-labelledby="themePickerLabel" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"></div>
-    </div>
+    <nav class="page-nav" aria-label="App navigation">
+      <a class="page-nav__link" href="index.html">
+        <span class="page-nav__icon" aria-hidden="true">←</span>
+        <span class="page-nav__copy"><span class="page-nav__title">Mission Control</span><span class="page-nav__meta">Choose a mode</span></span>
+      </a>
+      <a class="page-nav__link" href="goldilocks-settings.html">
+        <span class="page-nav__icon" aria-hidden="true">⚙</span>
+        <span class="page-nav__copy"><span class="page-nav__title">Settings &amp; Data</span><span class="page-nav__meta">Theme · backup · restore</span></span>
+      </a>
+    </nav>
   </header>
 
   <!-- ── Profile selector ── -->
@@ -2035,7 +2037,7 @@ function loadCalibratedProfiles() {
 
 // ── Theme system ──────────────────────────────────────────────
 function initTheme() {
-  GoldilocksTheme.init({ mode:'zone', pickerId:'themePicker' });
+  GoldilocksTheme.init({ mode:'zone' });
 }
 
 // ── Init ──────────────────────────────────────────────────────

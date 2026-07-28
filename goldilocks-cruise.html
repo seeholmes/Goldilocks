@@ -157,9 +157,7 @@
   .form-error.visible { display:block; }
   [aria-invalid="true"] { outline:2px solid rgba(255,90,90,0.55); outline-offset:-2px; }
   .start-btn:disabled { cursor:not-allowed; opacity:0.45; box-shadow:none; }
-  .theme-swatch { width:28px; height:28px; border-radius:50%; cursor:pointer; flex-shrink:0; transition:transform 0.15s; padding:0; }
-  .theme-swatch:hover { transform:scale(1.2); }
-  .theme-swatch:focus-visible, .dte.tappable:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
+  .dte.tappable:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
   @media(max-width:360px) {
     .container { padding:0 10px; }
     .card { padding:16px 14px; }
@@ -209,12 +207,16 @@
     <div class="logo-sub">Pace</div>
     <div class="tagline">plan your pace · <em>adjust as you go</em></div>
     <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-top:4px">v1.1.0</div>
-    <a href="index.html" style="display:inline-block;margin-top:10px;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:4px 14px;transition:all 0.2s" onmouseover="this.style.color='var(--blue)';this.style.borderColor='rgba(126,184,255,0.4)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">← Mission Control</a>
-    <a class="settings-link" href="goldilocks-settings.html"><span aria-hidden="true">⚙</span> Settings &amp; Data</a>
-    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px">
-      <span id="themePickerLabel" style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted)">Theme</span>
-      <div id="themePicker" role="group" aria-labelledby="themePickerLabel" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"></div>
-    </div>
+    <nav class="page-nav" aria-label="App navigation">
+      <a class="page-nav__link" href="index.html">
+        <span class="page-nav__icon" aria-hidden="true">←</span>
+        <span class="page-nav__copy"><span class="page-nav__title">Mission Control</span><span class="page-nav__meta">Choose a mode</span></span>
+      </a>
+      <a class="page-nav__link" href="goldilocks-settings.html">
+        <span class="page-nav__icon" aria-hidden="true">⚙</span>
+        <span class="page-nav__copy"><span class="page-nav__title">Settings &amp; Data</span><span class="page-nav__meta">Theme · backup · restore</span></span>
+      </a>
+    </nav>
   </header>
 
   <div id="setupFlow" class="setup-flow">
@@ -2151,7 +2153,7 @@ function saveCustomProfile() {
 
 // ── Theme system (shared with zone.html) ──────────────────────
 function initTheme() {
-  GoldilocksTheme.init({ mode:'pace', pickerId:'themePicker' });
+  GoldilocksTheme.init({ mode:'pace' });
 }
 
 // ── Init ──────────────────────────────────────────────────────

@@ -20,6 +20,7 @@ All notable user-facing changes to Goldilocks are documented here.
 
 ### Changed
 
+- Centralized theme selection in Settings & Data and replaced the compact header links with larger touch-friendly Mission Control and Settings navigation cards.
 - Replaced the shared ringed-planet drink marker with a native bear emoji, including a clear outline after a drink is logged.
 - Combined duration, Zone range or Pace ending reference, projection, metrics, and Start into a single Plan Tuner card in both planners.
 - Calibration now treats declining readings as the source of elimination-rate calibration. Observed rising BAC remains evidence, and eligible historical measurements produce suggestions that are never applied automatically.

@@ -75,12 +75,6 @@
   }
   .tagline { color:var(--muted); margin-top:8px; font-size:10px; letter-spacing:0.2em; text-transform:uppercase; }
   .version { font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin-top:6px; }
-  .theme-control { display:flex; align-items:center; justify-content:center; gap:9px; margin-top:16px; }
-  .theme-label { font-size:8px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); }
-  .theme-picker { display:flex; gap:7px; align-items:center; }
-  .theme-swatch { width:28px; height:28px; border-radius:50%; cursor:pointer; flex-shrink:0; transition:transform 0.15s; padding:0; }
-  .theme-swatch:hover { transform:scale(1.12); }
-
   .data-card {
     align-items:center; background:linear-gradient(135deg,rgba(245,200,66,0.06),rgba(126,184,255,0.025));
     border:1px solid color-mix(in srgb,var(--gold) 28%,var(--border)); border-radius:12px;
@@ -199,11 +193,12 @@
     </div>
     <p class="tagline">mission control</p>
     <p class="version">v1.1.0</p>
-    <div class="theme-control">
-      <span class="theme-label" id="themeLabel">Theme</span>
-      <div class="theme-picker" id="themePicker" role="group" aria-labelledby="themeLabel"></div>
-    </div>
-    <a class="settings-link" href="goldilocks-settings.html"><span aria-hidden="true">⚙</span> Settings &amp; Data</a>
+    <nav class="page-nav page-nav--single" aria-label="App navigation">
+      <a class="page-nav__link" href="goldilocks-settings.html">
+        <span class="page-nav__icon" aria-hidden="true">⚙</span>
+        <span class="page-nav__copy"><span class="page-nav__title">Settings &amp; Data</span><span class="page-nav__meta">Theme · backup · restore</span></span>
+      </a>
+    </nav>
   </header>
 
   <main>
@@ -225,7 +220,7 @@
     <nav class="mode-grid" aria-labelledby="mission-heading">
       <a class="mode-card zone" data-mode-card="zone" href="goldilocks-zone.html">
         <div class="mode-card-top">
-          <span class="mode-glyph mode-glyph--zone" aria-hidden="true">
+          <span class="mode-glyph mode-glyph--zone is-animated" aria-hidden="true">
             <svg class="mode-glyph__svg" viewBox="0 0 44 44" focusable="false">
               <circle class="glyph-line glyph-bound" cx="22" cy="22" r="15"/>
               <circle class="glyph-line glyph-bound" cx="22" cy="22" r="10.5"/>
@@ -251,7 +246,7 @@
 
       <a class="mode-card pace" data-mode-card="pace" href="goldilocks-cruise.html">
         <div class="mode-card-top">
-          <span class="mode-glyph mode-glyph--pace" aria-hidden="true">
+          <span class="mode-glyph mode-glyph--pace is-animated" aria-hidden="true">
             <svg class="mode-glyph__svg" viewBox="0 0 44 44" focusable="false">
               <path class="glyph-line glyph-track" d="M7.5 28.5C12.5 12.5 31.5 12.5 36.5 28.5"/>
               <circle class="glyph-pace-node" style="--i:0" cx="8.5" cy="26.5" r="2"/>
@@ -277,7 +272,7 @@
 
       <a class="mode-card grid" data-mode-card="grid" href="goldilocks-grid.html">
         <div class="mode-card-top">
-          <span class="mode-glyph mode-glyph--grid" aria-hidden="true">
+          <span class="mode-glyph mode-glyph--grid is-animated" aria-hidden="true">
             <span class="grid-glyph"><span class="grid-glyph__node"></span><span class="grid-glyph__node"></span></span>
           </span>
           <span class="mode-card-actions">
@@ -297,7 +292,7 @@
 
       <a class="mode-card training" data-mode-card="training" href="goldilocks-training.html">
         <div class="mode-card-top">
-          <span class="mode-glyph mode-glyph--training" aria-hidden="true">
+          <span class="mode-glyph mode-glyph--training is-animated" aria-hidden="true">
             <svg class="mode-glyph__svg" viewBox="0 0 44 44" focusable="false">
               <path class="glyph-line" d="M18 7v9.5l-7.3 14.4A4 4 0 0 0 14.4 37h15.2a4 4 0 0 0 3.7-6.1L26 16.5V7"/>
               <path class="glyph-line" d="M16 7h12"/>
@@ -326,10 +321,10 @@
 
       <a class="mode-card history" data-mode-card="history" href="goldilocks-history.html">
         <div class="mode-card-top">
-          <span class="mode-glyph mode-glyph--history" aria-hidden="true">
+          <span class="mode-glyph mode-glyph--history is-animated" aria-hidden="true">
             <svg class="mode-glyph__svg" viewBox="0 0 44 44" focusable="false">
               <circle class="glyph-line glyph-bound" cx="22" cy="22" r="14"/>
-              <path class="glyph-line" d="M22 12v10l6 4"/>
+              <path class="glyph-line glyph-history-hand" d="M22 12v10l6 4"/>
               <path class="glyph-line glyph-ticks" d="M8 12h7M8 17h5"/>
               <circle class="glyph-fill" cx="34" cy="11" r="2"/>
             </svg>
@@ -360,7 +355,7 @@
 <script src="goldilocks-session-history.js"></script>
 <script src="goldilocks-backup.js"></script>
 <script>
-GoldilocksTheme.init({ mode:'mission', pickerId:'themePicker' });
+GoldilocksTheme.init({ mode:'mission' });
 
 const RESUME_REFRESH_MS = 60000;
 
