@@ -67,6 +67,43 @@ function paceRecord(overrides = {}) {
   };
 }
 
+function gridRecord(overrides = {}) {
+  const startedAt = 1_700_200_000_000;
+  const completedAt = startedAt + 75 * 60000;
+  const beerStandardDrinks = 12 * 0.05 / 0.6;
+  const cocktailStandardDrinks = 8 * 0.12 / 0.6;
+  return {
+    version: history.VERSION,
+    id: `grid-${startedAt}`,
+    mode: 'grid',
+    startedAt,
+    completedAt,
+    durationMinutes: 75,
+    profileName: 'seeholmes',
+    drinkOz: null,
+    drinkAbv: null,
+    plannedDrinks: 0,
+    loggedDrinks: 2,
+    standardDrinks: beerStandardDrinks + cocktailStandardDrinks,
+    finalBac: 0.033,
+    peakBac: 0.044,
+    completionReason: 'manual',
+    foodState: 'meal',
+    modelRisePerStd: 0.02,
+    modelMetabPerHr: 0.015,
+    measurement: null,
+    detail: {
+      type: 'grid',
+      bacAlert: 0.06,
+      drinkEvents: [
+        { id:'grid-1', name:'Beer', oz:12, abv:5, standardDrinks:beerStandardDrinks, loggedAt:startedAt + 5 * 60000 },
+        { id:'grid-2', name:'Cocktail', oz:8, abv:12, standardDrinks:cocktailStandardDrinks, loggedAt:startedAt + 40 * 60000 },
+      ],
+    },
+    ...overrides,
+  };
+}
+
 function evidenceRecord(index, overrides = {}) {
   const startedAt = 1_701_000_000_000 + index * 24 * 3600000;
   return paceRecord({
@@ -105,6 +142,23 @@ test('saves Zone and Pace summaries newest-first and deduplicates session ids', 
   assert.equal(records.length, 2);
   assert.equal(records[0].mode, 'pace');
   assert.equal(records[1].loggedDrinks, 3);
+});
+
+test('saves Grid summaries with exact mixed-drink events and optional alert context', () => {
+  const storage = new MemoryStorage();
+  history.save(storage, gridRecord());
+  const [record] = history.read(storage);
+  assert.equal(record.mode, 'grid');
+  assert.equal(record.drinkOz, null);
+  assert.equal(record.plannedDrinks, 0);
+  assert.equal(record.detail.bacAlert, 0.06);
+  assert.deepEqual(record.detail.drinkEvents.map(event => event.name), ['Beer', 'Cocktail']);
+  assert.throws(() => history.save(storage, gridRecord({
+    loggedDrinks: 1,
+  })), /invalid/);
+  assert.throws(() => history.save(storage, gridRecord({
+    detail: { ...gridRecord().detail, drinkEvents: [{ ...gridRecord().detail.drinkEvents[0], loggedAt: gridRecord().completedAt + 1 }] },
+  })), /invalid/);
 });
 
 test('filters malformed records, corrupt JSON, duplicates, and excess entries', () => {
@@ -158,6 +212,15 @@ test('migrates older summaries with safe evidence and recovery defaults', () => 
   assert.equal(evidence.modelRisePerStd, 0.02);
   assert.equal(evidence.modelSnapshotSource, 'session');
   assert.equal(evidence.recoveryRating, null);
+
+  const recovery = history.normalizeRecord({
+    ...evidenceRecord(1),
+    version: history.RECOVERY_VERSION,
+    recoveryRating: 3,
+    recoveryRatedAt: evidenceRecord(1).completedAt + 12 * 3600000,
+  });
+  assert.equal(recovery.version, history.VERSION);
+  assert.equal(recovery.recoveryRating, 3);
 });
 
 test('backfills missing legacy model snapshots and recomputes measured-BAC comparisons', () => {

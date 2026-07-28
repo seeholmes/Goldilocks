@@ -261,6 +261,7 @@
     <div class="tagline">calibrate your curve · <em>own your data</em></div>
     <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-top:4px">v1.1.0</div>
     <a class="back-link" href="index.html">← Mission Control</a>
+    <a class="settings-link" href="goldilocks-settings.html"><span aria-hidden="true">⚙</span> Settings &amp; Data</a>
     <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px">
       <span id="themeLabel" style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted)">Theme</span>
       <div id="themePicker" role="group" aria-labelledby="themeLabel" style="display:flex;gap:6px;align-items:center"></div>
@@ -602,6 +603,7 @@ const R_FEMALE         = 0.55;
 const STORAGE_KEY      = 'goldilocks_training_session';
 const PROFILES_KEY     = 'goldilocks_profiles';
 const HISTORY_KEY      = 'goldilocks_training_history';
+const CALIBRATION_HISTORY_MAX = 500;
 const SESSION_MAX_MIN  = 130;
 const COMPLETED_SESSION_MAX_MIN = 24 * 60;
 const MIN_READING_GAP_MIN = 20;
@@ -1586,7 +1588,7 @@ function saveSessionToHistory(profileName, results) {
     readings:   readings.length,
     foodState,
   });
-  history = history.slice(0, 20); // keep last 20
+  history = history.slice(0, CALIBRATION_HISTORY_MAX);
   try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch(e) {}
 }
 
@@ -1663,7 +1665,7 @@ function readHistory() {
         foodState: ['empty','light','meal'].includes(item.foodState)
           ? item.foodState
           : item.fasted ? 'empty' : 'light',
-      })).slice(0, 20)
+      })).slice(0, CALIBRATION_HISTORY_MAX)
       : [];
   } catch(e) {
     return [];

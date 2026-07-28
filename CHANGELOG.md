@@ -6,12 +6,17 @@ All notable user-facing changes to Goldilocks are documented here.
 
 ### Added
 
+- Added Grid, a freeform “any drink, any time” session mode with mixed-drink presets, exact and backdated timestamps, current and highest modeled BAC, an optional warning-only personal BAC alert, edit/delete/undo, explicit finish, and Mission Control recovery.
+- Added completed Grid sessions to History with exact per-drink logs, model-versus-measurement evidence, and next-day recovery ratings and warnings.
+- Included active Grid sessions and completed Grid history in full-device JSON backups.
 - Added a projected BAC trajectory to the Zone and Pace plan reviews, with planned drink timing shown separately from the period-end model estimates.
 - Added shared user selection, creation, and deletion to Calibration, with body settings and calibration results synchronized across all modules.
 - Added required food-state context to planner and calibration sessions, plus optional timestamped, protocol-confirmed breathalyzer readings on completed planner sessions.
 - Added session-evidence summaries and expert BAC-per-standard-drink controls to Calibration, including suggestion, manual override, and baseline reset actions.
 - Added a side-by-side planned-model versus session-implied BAC-per-standard-drink comparison to History.
 - Added optional next-day recovery ratings to historical sessions, with personal warnings when a plan or active session meets or exceeds a prior Apollo 13 or Event Horizon outcome.
+- Added Settings & Data with complete JSON export, mobile file sharing, validated restore preview, transactional replacement, and deliberate full-device erasure.
+- Added a persistent Settings & Data shortcut across Mission Control, Zone, Pace, Grid, Calibration, and History.
 
 ### Changed
 
@@ -19,6 +24,7 @@ All notable user-facing changes to Goldilocks are documented here.
 - Combined duration, Zone range or Pace ending reference, projection, metrics, and Start into a single Plan Tuner card in both planners.
 - Calibration now treats declining readings as the source of elimination-rate calibration. Observed rising BAC remains evidence, and eligible historical measurements produce suggestions that are never applied automatically.
 - Next-day recovery ratings remain subjective context: they can produce conservative warnings but never alter calibration or make plans more permissive.
+- Increased retained planner history from 50 to 1,000 sessions and Calibration history from 20 to 500 sessions so backups preserve a much longer record.
 
 ### Fixed
 

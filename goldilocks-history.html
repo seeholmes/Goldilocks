@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Review completed Goldilocks Zone and Pace session summaries stored on this device.">
+<meta name="description" content="Review completed Goldilocks Zone, Pace, and Grid session summaries stored on this device.">
 <meta name="theme-color" content="#08090d">
 <title>Goldilocks — Session History</title>
 <link rel="icon" href="favicon-32.png">
@@ -17,7 +17,7 @@
   :root {
     --space:#08090d; --deep:#0e1018; --surface:#13151f; --border:#1e2130;
     --text:#e8e0cc; --muted:#aaa3bb; --gold:#f5c842; --gold2:#e8a020;
-    --blue:#7eb8ff; --green:#52e09c; --amber:#ff8c3a; --danger:#ff5a5a;
+    --blue:#7eb8ff; --grid:#c49aff; --green:#52e09c; --amber:#ff8c3a; --danger:#ff5a5a;
     --accent:var(--amber); --accent2:var(--gold); --radius:10px;
   }
   * { box-sizing:border-box; margin:0; padding:0; }
@@ -48,6 +48,7 @@
   .history-card { --record-accent:var(--accent); position:relative; overflow:hidden; background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--record-accent); border-radius:var(--radius); padding:18px 18px 16px; }
   .history-card.zone { --record-accent:var(--gold); }
   .history-card.pace { --record-accent:var(--blue); }
+  .history-card.grid { --record-accent:var(--grid); }
   .record-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
   .record-mode { color:var(--record-accent); font-size:9px; letter-spacing:0.14em; text-transform:uppercase; }
   .record-date { font-family:'Anybody',sans-serif; font-size:20px; font-weight:400; margin-top:4px; }
@@ -58,6 +59,12 @@
   .record-value { font-family:'Anybody',sans-serif; font-size:17px; font-weight:400; overflow-wrap:anywhere; }
   .record-label { color:var(--muted); font-size:8px; letter-spacing:0.08em; line-height:1.35; margin-top:3px; text-transform:uppercase; }
   .record-detail { color:var(--muted); font-size:9px; line-height:1.65; margin-top:12px; }
+  .grid-event-log { background:var(--deep); border:1px solid var(--border); border-radius:8px; margin-top:12px; padding:0 12px 10px; }
+  .grid-event-log summary { color:var(--record-accent); cursor:pointer; font-size:9px; letter-spacing:.08em; padding:11px 0; text-transform:uppercase; }
+  .grid-event-row { align-items:start; border-top:1px solid var(--border); display:grid; gap:10px; grid-template-columns:130px 1fr auto; padding:9px 0; }
+  .grid-event-time { color:var(--record-accent); font-size:8px; }
+  .grid-event-name { color:var(--text); font-size:9px; }
+  .grid-event-detail { color:var(--muted); font-size:8px; text-align:right; }
   .model-comparison { background:var(--deep); border:1px solid var(--border); border-radius:8px; display:grid; grid-template-columns:1fr 1fr; margin-top:10px; overflow:hidden; }
   .model-comparison-cell { min-width:0; padding:11px 12px; }
   .model-comparison-cell + .model-comparison-cell { border-left:1px solid var(--border); }
@@ -94,6 +101,8 @@
     .model-comparison-cell + .model-comparison-cell { border-left:0; border-top:1px solid var(--border); }
     .recovery-panel { align-items:stretch; grid-template-columns:1fr; }
     .evidence-grid { grid-template-columns:1fr; }
+    .grid-event-row { grid-template-columns:1fr; gap:4px; }
+    .grid-event-detail { text-align:left; }
   }
   @media(prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none !important; animation:none !important; } }
 </style>
@@ -113,9 +122,10 @@
       </svg>
     </span>
     <div class="logo-sub">Session History</div>
-    <div class="tagline">completed Zone and Pace sessions</div>
+    <div class="tagline">completed Zone, Pace, and Grid sessions</div>
     <div class="version">v1.1.0</div>
     <a class="back-link" href="index.html">← Mission Control</a>
+    <a class="settings-link" href="goldilocks-settings.html"><span aria-hidden="true">⚙</span> Settings &amp; Data</a>
     <div class="theme-row">
       <span class="theme-label" id="themePickerLabel">Theme</span>
       <div class="theme-picker" id="themePicker" role="group" aria-labelledby="themePickerLabel"></div>
@@ -135,6 +145,7 @@
       <button type="button" class="filter-btn" data-filter="all" aria-pressed="true">All</button>
       <button type="button" class="filter-btn" data-filter="zone" aria-pressed="false">Zone</button>
       <button type="button" class="filter-btn" data-filter="pace" aria-pressed="false">Pace</button>
+      <button type="button" class="filter-btn" data-filter="grid" aria-pressed="false">Grid</button>
     </div>
 
     <div class="history-list" id="historyList" aria-live="polite"></div>
@@ -233,6 +244,10 @@ function formatRecoveryRating(value) {
   return level ? `${value} — ${level.title}` : '—';
 }
 
+function formatMode(mode) {
+  return { zone:'Zone', pace:'Pace', grid:'Grid' }[mode] || mode;
+}
+
 function toLocalDateTimeValue(timestamp) {
   const date = new Date(timestamp - new Date(timestamp).getTimezoneOffset() * 60000);
   return date.toISOString().slice(0, 19);
@@ -252,9 +267,41 @@ function addStat(documentRef, grid, value, label) {
 }
 
 function deleteRecord(record) {
-  if (!confirm(`Delete this ${record.mode === 'zone' ? 'Zone' : 'Pace'} session from history?`)) return;
+  if (!confirm(`Delete this ${formatMode(record.mode)} session from history?`)) return;
   try { GoldilocksSessionHistory.remove(localStorage, record.id); } catch (error) { return; }
   renderHistory();
+}
+
+function createGridEventLog(record) {
+  if (record.mode !== 'grid') return null;
+  const details = document.createElement('details');
+  details.className = 'grid-event-log';
+  const summary = document.createElement('summary');
+  summary.textContent = `View exact drink log (${record.detail.drinkEvents.length})`;
+  details.appendChild(summary);
+  if (!record.detail.drinkEvents.length) {
+    const empty = document.createElement('div');
+    empty.className = 'record-detail';
+    empty.textContent = 'No drinks were logged in this Grid.';
+    details.appendChild(empty);
+    return details;
+  }
+  record.detail.drinkEvents.forEach(event => {
+    const row = document.createElement('div');
+    row.className = 'grid-event-row';
+    const time = document.createElement('div');
+    time.className = 'grid-event-time';
+    time.textContent = formatDate(event.loggedAt);
+    const name = document.createElement('div');
+    name.className = 'grid-event-name';
+    name.textContent = event.name;
+    const eventDetail = document.createElement('div');
+    eventDetail.className = 'grid-event-detail';
+    eventDetail.textContent = `${formatNumber(event.oz)} oz · ${formatNumber(event.abv)}% · ${event.standardDrinks.toFixed(2)} standard`;
+    row.append(time,name,eventDetail);
+    details.appendChild(row);
+  });
+  return details;
 }
 
 function createEvidenceEditor(record) {
@@ -435,7 +482,7 @@ function createRecordCard(record) {
   const heading = document.createElement('div');
   const mode = document.createElement('div');
   mode.className = 'record-mode';
-  mode.textContent = record.mode === 'zone' ? 'Zone session' : 'Pace session';
+  mode.textContent = `${formatMode(record.mode)} session`;
   const date = document.createElement('h3');
   date.className = 'record-date';
   date.textContent = formatDate(record.startedAt);
@@ -450,7 +497,12 @@ function createRecordCard(record) {
 
   const grid = document.createElement('div');
   grid.className = 'record-grid';
-  addStat(document, grid, `${record.loggedDrinks} / ${record.plannedDrinks}`, 'Logged / planned');
+  addStat(
+    document,
+    grid,
+    record.mode === 'grid' ? String(record.loggedDrinks) : `${record.loggedDrinks} / ${record.plannedDrinks}`,
+    record.mode === 'grid' ? 'Drinks logged' : 'Logged / planned'
+  );
   addStat(document, grid, formatDuration((record.completedAt - record.startedAt) / 60000), 'Elapsed');
   addStat(document, grid, record.finalBac.toFixed(3), 'Estimate at finish');
   addStat(document, grid, record.peakBac.toFixed(3), 'Estimated peak');
@@ -495,15 +547,22 @@ function createRecordCard(record) {
 
   const detail = document.createElement('p');
   detail.className = 'record-detail';
-  const drink = `${formatNumber(record.drinkOz)} oz at ${formatNumber(record.drinkAbv)}% ABV`;
+  const drink = record.mode === 'grid'
+    ? `${record.loggedDrinks} mixed ${record.loggedDrinks === 1 ? 'drink' : 'drinks'}`
+    : `${formatNumber(record.drinkOz)} oz at ${formatNumber(record.drinkAbv)}% ABV`;
   const plan = record.mode === 'zone'
     ? `planning range ${record.detail.targetMin.toFixed(3)}–${record.detail.targetMax.toFixed(3)} · ${record.detail.matchedPeriods} modeled ${record.detail.matchedPeriods === 1 ? 'period' : 'periods'} in range`
-    : `planning reference ${record.detail.targetEnd.toFixed(3)} · initial end projection ${record.detail.initialProjectedEnd.toFixed(3)}`;
+    : record.mode === 'pace'
+      ? `planning reference ${record.detail.targetEnd.toFixed(3)} · initial end projection ${record.detail.initialProjectedEnd.toFixed(3)}`
+      : `freeform exact-time log · ${record.detail.bacAlert === null ? 'no personal BAC alert' : `personal BAC alert ${record.detail.bacAlert.toFixed(3)}`}`;
   const comparison = record.measurement
     ? ` · measurement ${record.measurement.value >= record.measurement.estimatedBac ? '+' : ''}${(record.measurement.value - record.measurement.estimatedBac).toFixed(3)} vs model at measurement time`
     : '';
   detail.textContent = `${drink} · ${record.standardDrinks.toFixed(1)} standard drinks · ${plan} · ${record.completionReason === 'elapsed' ? 'scheduled time elapsed' : 'finished manually'} · profile ${record.profileName}${comparison}`;
-  card.append(head, grid, comparisonPanel, detail, createRecoveryEditor(record), createEvidenceEditor(record));
+  const gridEventLog = createGridEventLog(record);
+  card.append(head, grid, comparisonPanel, detail);
+  if (gridEventLog) card.appendChild(gridEventLog);
+  card.append(createRecoveryEditor(record), createEvidenceEditor(record));
   return card;
 }
 
@@ -521,9 +580,9 @@ function renderHistory() {
     const empty = document.createElement('div');
     empty.className = 'empty-state';
     const title = document.createElement('strong');
-    title.textContent = records.length ? `No saved ${activeFilter === 'zone' ? 'Zone' : 'Pace'} sessions` : 'Your completed sessions will appear here';
+    title.textContent = records.length ? `No saved ${formatMode(activeFilter)} sessions` : 'Your completed sessions will appear here';
     const copy = document.createElement('span');
-    copy.textContent = records.length ? 'Choose another filter to review your saved sessions.' : 'Finish a Zone or Pace session to save its summary on this device.';
+    copy.textContent = records.length ? 'Choose another filter to review your saved sessions.' : 'Finish a Zone, Pace, or Grid session to save its summary on this device.';
     empty.append(title, copy);
     list.appendChild(empty);
     return;
@@ -540,7 +599,7 @@ document.querySelectorAll('[data-filter]').forEach(button => {
 });
 
 document.getElementById('clearHistoryBtn').addEventListener('click', () => {
-  if (!confirm('Clear every saved Zone and Pace session from this device?')) return;
+  if (!confirm('Clear every saved Zone, Pace, and Grid session from this device?')) return;
   try { GoldilocksSessionHistory.clear(localStorage); } catch (error) { return; }
   renderHistory();
 });

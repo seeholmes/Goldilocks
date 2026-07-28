@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Log any drink at any time with a live, personalized BAC estimate.">
+<meta name="theme-color" content="#08090d">
+<title>Goldilocks — Grid</title>
+<link rel="icon" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260722-astronaut">
+<link rel="manifest" href="manifest.json?v=20260722-astronaut">
+<link rel="stylesheet" href="goldilocks-icons.css">
+<link href="https://fonts.googleapis.com/css2?family=Anybody:wght@200;400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="goldilocks-theme.js"></script>
+<script>GoldilocksTheme.bootstrap('grid');</script>
+<style>
+  :root {
+    --space:#08090d; --deep:#0e1018; --surface:#13151f; --border:#1e2130;
+    --text:#e8e0cc; --muted:#aaa3bb; --grid:#c49aff; --grid2:#9a72df;
+    --green:#52e09c; --amber:#ff8c3a; --danger:#ff5a5a; --radius:10px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    background:var(--space); color:var(--text); font-family:'Space Mono',monospace;
+    min-height:100vh; padding:0 0 80px; font-size:12px;
+  }
+  .container { max-width:720px; margin:0 auto; padding:0 16px; }
+  .hero { padding:36px 0 26px; text-align:center; }
+  .hero .mode-glyph { margin-bottom:10px; }
+  .logo {
+    font-family:'Anybody',sans-serif; font-size:40px; font-weight:800;
+    background:linear-gradient(135deg,var(--logo-a,#c49aff),var(--logo-b,#9a72df),var(--logo-c,#7eb8ff));
+    background-clip:text; -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .mode-title { color:var(--grid); font-family:'Anybody',sans-serif; font-size:25px; font-weight:600; margin-top:6px; }
+  .tagline,.version { color:var(--muted); font-size:9px; letter-spacing:.17em; margin-top:5px; text-transform:uppercase; }
+  .top-links { align-items:center; display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:14px; }
+  .top-link {
+    border:1px solid var(--border); border-radius:100px; color:var(--muted);
+    font-size:8px; letter-spacing:.1em; padding:6px 11px; text-decoration:none; text-transform:uppercase;
+  }
+  .theme-control { align-items:center; display:flex; gap:7px; }
+  .theme-swatch { border-radius:50%; cursor:pointer; height:25px; padding:0; width:25px; }
+  .panel {
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    margin-bottom:14px; padding:20px;
+  }
+  .panel[hidden], [hidden] { display:none !important; }
+  .panel-kicker { color:var(--grid); font-size:8px; letter-spacing:.16em; text-transform:uppercase; }
+  h2 { font-family:'Anybody',sans-serif; font-size:23px; font-weight:600; margin:5px 0 16px; }
+  h3 { font-family:'Anybody',sans-serif; font-size:17px; font-weight:600; }
+  .field { margin-bottom:14px; }
+  .field:last-child { margin-bottom:0; }
+  .field-label { color:var(--muted); display:block; font-size:8px; letter-spacing:.11em; margin-bottom:6px; text-transform:uppercase; }
+  input,select,button { font:inherit; }
+  input,select {
+    background:var(--deep); border:1px solid var(--border); border-radius:8px; color:var(--text);
+    min-height:42px; padding:9px 11px; width:100%;
+  }
+  input:focus,select:focus { border-color:var(--grid); outline:2px solid color-mix(in srgb,var(--grid) 35%,transparent); outline-offset:1px; }
+  .field-row { display:grid; gap:10px; grid-template-columns:1fr 1fr; }
+  .field-row.three { grid-template-columns:1.2fr .7fr .7fr; }
+  .help { color:var(--muted); font-size:9px; line-height:1.65; margin-top:6px; }
+  .notice {
+    background:color-mix(in srgb,var(--grid) 7%,var(--deep)); border:1px solid color-mix(in srgb,var(--grid) 30%,var(--border));
+    border-radius:8px; color:var(--muted); font-size:9px; line-height:1.65; margin:14px 0; padding:11px 12px;
+  }
+  .notice strong { color:var(--grid); }
+  .error { color:var(--danger); font-size:9px; line-height:1.6; margin-top:10px; }
+  .primary,.secondary,.danger-btn,.small-btn {
+    border-radius:8px; cursor:pointer; font-weight:700; letter-spacing:.08em; min-height:42px;
+    padding:10px 14px; text-transform:uppercase;
+  }
+  .primary { background:var(--grid); border:1px solid var(--grid); color:var(--space); width:100%; }
+  .secondary { background:transparent; border:1px solid var(--grid); color:var(--grid); }
+  .danger-btn { background:transparent; border:1px solid var(--danger); color:var(--danger); }
+  .small-btn { background:transparent; border:1px solid var(--border); color:var(--muted); min-height:34px; padding:6px 10px; }
+  button:disabled { cursor:not-allowed; opacity:.42; }
+  button:focus-visible,a:focus-visible { outline:3px solid var(--grid); outline-offset:3px; }
+  .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .actions > * { flex:1 1 150px; }
+  .metrics { display:grid; gap:8px; grid-template-columns:repeat(4,1fr); }
+  .metric { background:var(--deep); border:1px solid var(--border); border-radius:9px; min-width:0; padding:12px; }
+  .metric-label { color:var(--muted); font-size:7px; letter-spacing:.09em; text-transform:uppercase; }
+  .metric-value { color:var(--grid); font-family:'Anybody',sans-serif; font-size:24px; font-weight:600; margin-top:3px; }
+  .metric-unit { color:var(--muted); font-size:8px; }
+  .alert-state { border:1px solid var(--border); border-radius:9px; color:var(--muted); line-height:1.65; margin-top:10px; padding:10px 12px; }
+  .alert-state.approaching { border-color:var(--amber); color:var(--amber); }
+  .alert-state.over,.alert-state.crossed { border-color:var(--danger); color:var(--danger); }
+  .recovery-warning { border:1px solid var(--amber); border-radius:9px; color:var(--amber); line-height:1.65; margin-top:10px; padding:10px 12px; }
+  .event-list { display:grid; gap:8px; margin-top:12px; }
+  .empty-log { border:1px dashed var(--border); border-radius:9px; color:var(--muted); line-height:1.7; padding:18px; text-align:center; }
+  .event {
+    align-items:center; background:var(--deep); border:1px solid var(--border); border-radius:9px;
+    display:grid; gap:10px; grid-template-columns:auto 1fr auto; padding:11px;
+  }
+  .event-time { color:var(--grid); font-size:9px; min-width:64px; }
+  .event-name { color:var(--text); font-weight:700; }
+  .event-detail { color:var(--muted); font-size:8px; line-height:1.55; margin-top:2px; }
+  .event-actions { display:flex; gap:5px; }
+  .event-actions button { background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--muted); cursor:pointer; font-size:8px; padding:6px; }
+  .time-row { align-items:end; display:grid; gap:8px; grid-template-columns:1fr auto; }
+  .time-row .small-btn { margin-bottom:0; }
+  .summary-grid { display:grid; gap:8px; grid-template-columns:repeat(3,1fr); }
+  .summary-item { background:var(--deep); border:1px solid var(--border); border-radius:8px; padding:12px; }
+  .summary-item span { color:var(--muted); display:block; font-size:7px; letter-spacing:.08em; text-transform:uppercase; }
+  .summary-item strong { color:var(--grid); display:block; font-family:'Anybody',sans-serif; font-size:21px; margin-top:3px; }
+  .measurement-status { color:var(--muted); font-size:9px; line-height:1.65; margin-top:10px; }
+  .measurement-status.saved { color:var(--green); }
+  .measurement-status.ineligible { color:var(--amber); }
+  .protocol { align-items:flex-start; display:flex; gap:9px; margin-top:10px; }
+  .protocol input { flex:0 0 auto; min-height:0; margin-top:2px; width:auto; }
+  .protocol label { color:var(--muted); font-size:9px; line-height:1.6; }
+  dialog {
+    background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text);
+    margin:auto; max-width:430px; padding:20px; width:calc(100% - 32px);
+  }
+  dialog::backdrop { background:rgba(0,0,0,.7); }
+  dialog p { color:var(--muted); line-height:1.7; margin-top:8px; }
+  .disclaimer { color:var(--muted); font-size:9px; line-height:1.8; margin-top:24px; text-align:center; }
+  @media(max-width:620px) {
+    .metrics { grid-template-columns:1fr 1fr; }
+    .field-row,.field-row.three { grid-template-columns:1fr; }
+  }
+  @media(max-width:430px) {
+    .panel { padding:17px; }
+    .event { grid-template-columns:1fr auto; }
+    .event-time { grid-column:1/-1; }
+    .summary-grid { grid-template-columns:1fr 1fr; }
+  }
+  @media(prefers-reduced-motion:reduce) {
+    *,*::before,*::after { animation:none !important; scroll-behavior:auto !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header class="hero">
+    <div class="brand-lockup">
+      <h1 class="logo logo--original" aria-label="Goldilocks"><span class="brand-art-crop" aria-hidden="true"><img class="brand-original-art" src="goldilocks-original-lockup.jpg?v=20260722-og" alt=""></span></h1>
+    </div>
+    <span class="mode-glyph mode-glyph--grid" aria-hidden="true">
+      <span class="grid-glyph"><span class="grid-glyph__node"></span><span class="grid-glyph__node"></span></span>
+    </span>
+    <div class="mode-title">Grid</div>
+    <div class="tagline">any drink · any time</div>
+    <div class="version">v1.1.0</div>
+    <div class="top-links">
+      <a class="top-link" href="index.html">← Mission Control</a>
+      <a class="top-link" href="goldilocks-settings.html">⚙ Settings &amp; Data</a>
+      <div class="theme-control"><span class="tagline">Theme</span><div id="themePicker"></div></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel" id="setupPanel">
+      <div class="panel-kicker">Freeform session</div>
+      <h2>Start your Grid</h2>
+
+      <div class="field">
+        <label class="field-label" for="profileSelect">BAC profile</label>
+        <select id="profileSelect"></select>
+      </div>
+
+      <div id="customProfileFields" hidden>
+        <div class="field-row three">
+          <div class="field">
+            <label class="field-label" for="weight">Weight</label>
+            <input id="weight" type="number" value="160" min="80" max="500" step="1">
+          </div>
+          <div class="field">
+            <label class="field-label" for="units">Units</label>
+            <select id="units"><option value="imperial">lb</option><option value="metric">kg</option></select>
+          </div>
+          <div class="field">
+            <label class="field-label" for="sex">Body model</label>
+            <select id="sex"><option value="male">Male</option><option value="female">Female</option></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="foodState">Food state at session start</label>
+        <select id="foodState" required>
+          <option value="">Choose one…</option>
+          <option value="empty">Empty — no recent meal</option>
+          <option value="light">Light — snack or small meal</option>
+          <option value="meal">Meal — substantial recent meal</option>
+        </select>
+        <p class="help">Required because food state helps make later measurement and recovery comparisons useful.</p>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label" for="sessionStart">Session began</label>
+          <input id="sessionStart" type="datetime-local" step="1" required>
+          <p class="help">Defaults to now. You can backdate up to 24 hours.</p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="bacAlert">Personal BAC alert · optional</label>
+          <input id="bacAlert" type="number" min="0.010" max="0.250" step="0.005" placeholder="e.g. 0.060">
+          <p class="help">A notice only—not a safe limit and never permission to drive.</p>
+        </div>
+      </div>
+
+      <div class="notice"><strong>No plan to follow.</strong> Grid records the drink and exact time you enter, then updates your personal model. It does not recommend another drink.</div>
+      <button class="primary" id="startButton" type="button">Start Grid</button>
+      <p class="error" id="setupError" role="alert"></p>
+    </section>
+
+    <div id="activeView" hidden>
+      <section class="panel">
+        <div class="panel-kicker">Live model · <span id="activeProfile"></span></div>
+        <h2>Current Grid</h2>
+        <div class="metrics">
+          <div class="metric"><div class="metric-label">Current model BAC</div><div class="metric-value" id="currentBac">0.000</div><div class="metric-unit">estimate</div></div>
+          <div class="metric"><div class="metric-label">Highest so far</div><div class="metric-value" id="peakBac">0.000</div><div class="metric-unit">modeled BAC</div></div>
+          <div class="metric"><div class="metric-label">Standard drinks</div><div class="metric-value" id="standardDrinks">0.0</div><div class="metric-unit">US standard</div></div>
+          <div class="metric"><div class="metric-label">Elapsed</div><div class="metric-value" id="elapsed">0m</div><div class="metric-unit">24h maximum</div></div>
+        </div>
+        <div class="alert-state" id="alertState">No personal BAC alert set.</div>
+        <div class="notice" id="gridWindowNotice" hidden><strong>24-hour window elapsed.</strong> Backdate any missing drinks within the session window, then finish to save the Grid.</div>
+        <div class="recovery-warning" id="recoveryWarning" hidden></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-kicker">Log an event</div>
+        <h2>What did you drink?</h2>
+        <div class="field">
+          <label class="field-label" for="drinkPreset">Drink</label>
+          <select id="drinkPreset"></select>
+        </div>
+        <div id="oneOffFields" hidden>
+          <div class="field">
+            <label class="field-label" for="drinkName">Drink name</label>
+            <input id="drinkName" maxlength="40" placeholder="e.g. IPA">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="drinkOz">Serving size · oz</label>
+              <input id="drinkOz" type="number" min="1" max="64" step="0.1" value="12">
+            </div>
+            <div class="field">
+              <label class="field-label" for="drinkAbv">Alcohol · ABV %</label>
+              <input id="drinkAbv" type="number" min="0.5" max="100" step="0.1" value="5">
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="drinkTime">Exact drink time</label>
+          <div class="time-row">
+            <input id="drinkTime" type="datetime-local" step="1">
+            <button class="small-btn" id="useNowButton" type="button">Use now</button>
+          </div>
+          <p class="help">Backdate a drink when needed. Grid recalculates the entire timeline in chronological order.</p>
+        </div>
+        <button class="primary" id="logButton" type="button">Log drink</button>
+        <p class="error" id="logError" role="alert"></p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-kicker">Exact event log</div>
+        <h2>Drinks in this Grid</h2>
+        <div class="event-list" id="eventList"></div>
+        <div class="actions">
+          <button class="secondary" id="undoButton" type="button" disabled>Undo last change</button>
+          <button class="secondary" id="finishButton" type="button">Finish session</button>
+          <button class="danger-btn" id="discardButton" type="button">Discard</button>
+        </div>
+      </section>
+    </div>
+
+    <div id="completeView" hidden>
+      <section class="panel">
+        <div class="panel-kicker">Grid complete</div>
+        <h2>Session summary</h2>
+        <div class="summary-grid">
+          <div class="summary-item"><span>Drinks logged</span><strong id="completeDrinks">0</strong></div>
+          <div class="summary-item"><span>Standard drinks</span><strong id="completeStd">0.0</strong></div>
+          <div class="summary-item"><span>Final model BAC</span><strong id="completeFinal">0.000</strong></div>
+          <div class="summary-item"><span>Highest model BAC</span><strong id="completePeak">0.000</strong></div>
+          <div class="summary-item"><span>Duration</span><strong id="completeDuration">0m</strong></div>
+          <div class="summary-item"><span>Food state</span><strong id="completeFood">—</strong></div>
+        </div>
+        <div class="actions">
+          <a class="secondary" href="goldilocks-history.html" style="display:grid;place-items:center;text-decoration:none">Open History</a>
+          <button class="primary" id="newGridButton" type="button">Start another Grid</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-kicker">Optional evidence</div>
+        <h2>Add actual BAC</h2>
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label" for="measuredBac">Measured BAC</label>
+            <input id="measuredBac" type="number" min="0" max="1" step="0.001" placeholder="0.000">
+          </div>
+          <div class="field">
+            <label class="field-label" for="measuredAt">Measurement time</label>
+            <input id="measuredAt" type="datetime-local" step="1">
+          </div>
+        </div>
+        <div class="protocol">
+          <input id="measurementProtocol" type="checkbox">
+          <label for="measurementProtocol">I followed my breathalyzer’s waiting and testing protocol. Only confirmed readings with a known food state feed session evidence.</label>
+        </div>
+        <div class="actions">
+          <button class="secondary" id="saveMeasurementButton" type="button">Save measurement</button>
+          <button class="small-btn" id="clearMeasurementButton" type="button" hidden>Remove measurement</button>
+        </div>
+        <p class="measurement-status" id="measurementStatus">Measurements can be recorded at session end or within four hours.</p>
+      </section>
+    </div>
+
+    <p class="disclaimer">⚠ For harm reduction only · BAC estimates vary and can be wrong · The personal alert is not a safety threshold · Never drive</p>
+  </main>
+</div>
+
+<dialog id="editDialog">
+  <form method="dialog" id="editForm">
+    <h3>Edit logged drink</h3>
+    <input id="editEventId" type="hidden" aria-label="Drink event ID">
+    <div class="field" style="margin-top:14px"><label class="field-label" for="editName">Name</label><input id="editName" maxlength="40"></div>
+    <div class="field-row">
+      <div class="field"><label class="field-label" for="editOz">Serving · oz</label><input id="editOz" type="number" min="1" max="64" step=".1"></div>
+      <div class="field"><label class="field-label" for="editAbv">ABV %</label><input id="editAbv" type="number" min=".5" max="100" step=".1"></div>
+    </div>
+    <div class="field"><label class="field-label" for="editTime">Exact time</label><input id="editTime" type="datetime-local" step="1"></div>
+    <p class="error" id="editError" role="alert"></p>
+    <div class="actions"><button class="small-btn" id="cancelEditButton" type="button">Cancel</button><button class="secondary" id="saveEditButton" value="default">Save changes</button></div>
+  </form>
+</dialog>
+
+<dialog id="finishDialog">
+  <form method="dialog">
+    <h3>Finish this Grid?</h3>
+    <p>The exact drink log and model summary will be saved to History. You can add an actual BAC now or later.</p>
+    <div class="actions"><button class="small-btn" value="cancel">Keep logging</button><button class="secondary" id="confirmFinishButton" value="default">Finish &amp; save</button></div>
+  </form>
+</dialog>
+
+<dialog id="discardDialog">
+  <form method="dialog">
+    <h3>Discard this Grid?</h3>
+    <p>This permanently removes the active Grid and its event log. Completed History is not affected.</p>
+    <div class="actions"><button class="small-btn" value="cancel">Cancel</button><button class="danger-btn" id="confirmDiscardButton" value="default">Discard permanently</button></div>
+  </form>
+</dialog>
+
+<script src="goldilocks-presets.js"></script>
+<script src="goldilocks-core.js"></script>
+<script src="goldilocks-session-history.js"></script>
+<script src="goldilocks-grid.js"></script>
+<script>
+'use strict';
+
+GoldilocksTheme.init({ mode:'grid', pickerId:'themePicker' });
+
+const BUILTIN_PROFILE = {
+  name:'seeholmes',
+  weightKg:185 * 0.453592,
+  r:0.68,
+  risePerStd:0.02,
+  metab:0.015,
+  useWidmark:false,
+};
+const BUILTIN_DRINKS = [
+  { value:'beer', name:'Beer', oz:12, abv:5 },
+  { value:'wine', name:'Wine', oz:5, abv:12 },
+  { value:'shot', name:'Shot', oz:1.5, abv:40 },
+];
+const FOOD_LABELS = { empty:'Empty', light:'Light', meal:'Meal' };
+const REFRESH_MS = 30000;
+let profiles = Object.create(null);
+let drinkChoices = new Map();
+let session = null;
+let refreshTimer = null;
+
+function safeStoredProfiles() {
+  let value = {};
+  try { value = JSON.parse(localStorage.getItem('goldilocks_profiles') || '{}'); } catch (error) {}
+  const safe = Object.create(null);
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return safe;
+  Object.entries(value).forEach(([name,candidate]) => {
+    if (name !== 'custom' && GoldilocksGrid.isValidProfile(candidate) && candidate.name === name) safe[name] = { ...candidate };
+  });
+  return safe;
+}
+
+function loadProfiles() {
+  profiles = Object.create(null);
+  profiles.seeholmes = { ...BUILTIN_PROFILE };
+  Object.assign(profiles, safeStoredProfiles());
+  const select = document.getElementById('profileSelect');
+  select.replaceChildren();
+  Object.keys(profiles).sort((a,b) => a === 'seeholmes' ? -1 : b === 'seeholmes' ? 1 : a.localeCompare(b)).forEach(name => {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    select.appendChild(option);
+  });
+  const custom = document.createElement('option');
+  custom.value = 'custom';
+  custom.textContent = 'Custom body model';
+  select.appendChild(custom);
+  select.value = 'seeholmes';
+  updateCustomProfileVisibility();
+}
+
+function updateCustomProfileVisibility() {
+  document.getElementById('customProfileFields').hidden = document.getElementById('profileSelect').value !== 'custom';
+}
+
+function updateUnits() {
+  const metric = document.getElementById('units').value === 'metric';
+  const input = document.getElementById('weight');
+  const previous = input.dataset.units || 'imperial';
+  const value = Number(input.value);
+  if (Number.isFinite(value) && previous !== document.getElementById('units').value) {
+    input.value = metric ? (value * 0.453592).toFixed(1) : (value / 0.453592).toFixed(0);
+  }
+  input.dataset.units = document.getElementById('units').value;
+  input.min = metric ? '36.3' : '80';
+  input.max = metric ? '226.8' : '500';
+  input.step = metric ? '.1' : '1';
+}
+
+function selectedProfile() {
+  const selected = document.getElementById('profileSelect').value;
+  if (selected !== 'custom') return profiles[selected] ? { ...profiles[selected] } : null;
+  const units = document.getElementById('units').value;
+  const weight = Number(document.getElementById('weight').value);
+  const weightKg = units === 'imperial' ? weight * 0.453592 : weight;
+  return {
+    name:'custom',
+    weightKg,
+    r:document.getElementById('sex').value === 'male' ? 0.68 : 0.55,
+    risePerStd:null,
+    metab:0.015,
+    useWidmark:true,
+  };
+}
+
+function loadDrinks() {
+  drinkChoices = new Map();
+  BUILTIN_DRINKS.forEach(drink => drinkChoices.set(drink.value, drink));
+  Object.entries(GoldilocksPresets.read(localStorage)).forEach(([name,drink],index) => {
+    drinkChoices.set(`saved-${index}`, { name, oz:drink.oz, abv:drink.abv });
+  });
+  const select = document.getElementById('drinkPreset');
+  select.replaceChildren();
+  drinkChoices.forEach((drink,value) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = `${drink.name} · ${drink.oz} oz · ${drink.abv}%`;
+    select.appendChild(option);
+  });
+  const oneOff = document.createElement('option');
+  oneOff.value = 'one-off';
+  oneOff.textContent = 'One-off / mixed drink…';
+  select.appendChild(oneOff);
+  select.value = 'beer';
+  updateDrinkFields();
+}
+
+function updateDrinkFields() {
+  document.getElementById('oneOffFields').hidden = document.getElementById('drinkPreset').value !== 'one-off';
+}
+
+function toLocalValue(timestamp) {
+  const date = new Date(timestamp - new Date(timestamp).getTimezoneOffset() * 60000);
+  return date.toISOString().slice(0,19);
+}
+
+function fromLocalValue(value) {
+  return value ? new Date(value).getTime() : NaN;
+}
+
+function setNow(inputId) {
+  document.getElementById(inputId).value = toLocalValue(Date.now());
+}
+
+function formatClock(timestamp) {
+  return new Intl.DateTimeFormat(undefined,{ hour:'numeric', minute:'2-digit' }).format(new Date(timestamp));
+}
+
+function formatDateTime(timestamp) {
+  return new Intl.DateTimeFormat(undefined,{ dateStyle:'medium', timeStyle:'short' }).format(new Date(timestamp));
+}
+
+function formatElapsed(milliseconds) {
+  const minutes = Math.max(0,Math.floor(milliseconds / 60000));
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return hours ? `${hours}h ${remainder}m` : `${remainder}m`;
+}
+
+function saveSession() {
+  if (!session) return;
+  localStorage.setItem(GoldilocksGrid.STORAGE_KEY, JSON.stringify(session));
+}
+
+function saveUndoSnapshot() {
+  session.undoEvents = session.drinkEvents.map(event => ({ ...event }));
+}
+
+function createEventId() {
+  return typeof globalThis.crypto?.randomUUID === 'function'
+    ? globalThis.crypto.randomUUID()
+    : `grid-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;
+}
+
+function readDrinkForm() {
+  const selection = document.getElementById('drinkPreset').value;
+  if (selection !== 'one-off') {
+    const drink = drinkChoices.get(selection);
+    return drink ? { ...drink } : null;
+  }
+  return {
+    name:document.getElementById('drinkName').value.trim(),
+    oz:Number(document.getElementById('drinkOz').value),
+    abv:Number(document.getElementById('drinkAbv').value),
+  };
+}
+
+function validateEventInput(drink, loggedAt, isEdit = false) {
+  if (!drink
+      || !drink.name
+      || drink.name.length > 40
+      || ['__proto__','prototype','constructor'].includes(drink.name.toLowerCase())
+      || /[\u0000-\u001f\u007f]/.test(drink.name)) return 'Enter a valid drink name between 1 and 40 characters.';
+  if (!Number.isFinite(drink.oz) || drink.oz < 1 || drink.oz > 64) return 'Serving size must be between 1 and 64 oz.';
+  if (!Number.isFinite(drink.abv) || drink.abv < .5 || drink.abv > 100) return 'ABV must be between 0.5% and 100%.';
+  if (!Number.isFinite(loggedAt) || loggedAt < session.sessionStartTs) return 'Drink time cannot be before this Grid began.';
+  if (loggedAt > Date.now()) return 'Drink time cannot be in the future.';
+  if (loggedAt > session.sessionStartTs + GoldilocksGrid.MAX_SESSION_MS) return 'Drink time must fall within this 24-hour Grid.';
+  if (!isEdit && session.drinkEvents.length >= GoldilocksGrid.MAX_EVENTS) return 'This Grid has reached its 200-event limit.';
+  return '';
+}
+
+function getMetrics(at = null) {
+  if (!session) return null;
+  const target = at ?? session.completedAt ?? Math.min(Date.now(), session.sessionStartTs + GoldilocksGrid.MAX_SESSION_MS);
+  return GoldilocksGrid.calculate(session.drinkEvents,session.sessionStartTs,target,session.profile);
+}
+
+function renderAlert(metrics) {
+  const element = document.getElementById('alertState');
+  const alert = GoldilocksGrid.getAlertState(metrics,session.bacAlert);
+  element.className = `alert-state ${alert.state}`;
+  const copy = {
+    none:'No personal BAC alert set.',
+    below:`Below your personal ${alert.threshold?.toFixed(3)} alert. This is a notice—not a safe limit.`,
+    approaching:`Approaching your personal ${alert.threshold?.toFixed(3)} alert. Consider pausing and reassessing.`,
+    over:`Current model is at or above your personal ${alert.threshold?.toFixed(3)} alert. Stop and reassess; never drive.`,
+    crossed:`Your model crossed ${alert.threshold?.toFixed(3)} earlier. Current estimate has since fallen.`,
+  };
+  element.textContent = copy[alert.state];
+}
+
+function renderRecoveryWarning(metrics) {
+  const element = document.getElementById('recoveryWarning');
+  const warning = GoldilocksSessionHistory.findRecoveryWarning(
+    GoldilocksSessionHistory.read(localStorage),
+    session.profileName,
+    metrics.totalStandardDrinks,
+    metrics.peakBac
+  );
+  element.hidden = !warning;
+  if (warning) {
+    element.textContent = `Next-day heads-up: a comparable past session was rated ${warning.recoveryRating} — ${warning.title} (${warning.summary}).`;
+  }
+}
+
+function renderEvents() {
+  const list = document.getElementById('eventList');
+  list.replaceChildren();
+  if (!session.drinkEvents.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-log';
+    empty.textContent = 'No drinks logged yet. Add any drink when it happens—or backdate one to its exact time.';
+    list.appendChild(empty);
+    return;
+  }
+  session.drinkEvents.slice().sort((a,b) => b.loggedAt - a.loggedAt).forEach(event => {
+    const row = document.createElement('div');
+    row.className = 'event';
+    const time = document.createElement('div');
+    time.className = 'event-time';
+    time.textContent = formatClock(event.loggedAt);
+    time.title = formatDateTime(event.loggedAt);
+    const copy = document.createElement('div');
+    const name = document.createElement('div');
+    name.className = 'event-name';
+    name.textContent = event.name;
+    const detail = document.createElement('div');
+    detail.className = 'event-detail';
+    detail.textContent = `${event.oz} oz · ${event.abv}% ABV · ${event.standardDrinks.toFixed(2)} standard`;
+    copy.append(name,detail);
+    const actions = document.createElement('div');
+    actions.className = 'event-actions';
+    const edit = document.createElement('button');
+    edit.type = 'button'; edit.textContent = 'Edit'; edit.addEventListener('click',() => openEdit(event.id));
+    const remove = document.createElement('button');
+    remove.type = 'button'; remove.textContent = 'Delete'; remove.addEventListener('click',() => deleteEvent(event.id));
+    actions.append(edit,remove);
+    row.append(time,copy,actions);
+    list.appendChild(row);
+  });
+}
+
+function renderActive() {
+  if (!session || session.sessionComplete) return;
+  const metrics = getMetrics();
+  const windowEnded = Date.now() >= session.sessionStartTs + GoldilocksGrid.MAX_SESSION_MS;
+  document.getElementById('activeProfile').textContent = session.profileName;
+  document.getElementById('currentBac').textContent = metrics.currentBac.toFixed(3);
+  document.getElementById('peakBac').textContent = metrics.peakBac.toFixed(3);
+  document.getElementById('standardDrinks').textContent = metrics.totalStandardDrinks.toFixed(1);
+  document.getElementById('elapsed').textContent = formatElapsed(Math.min(Date.now() - session.sessionStartTs,GoldilocksGrid.MAX_SESSION_MS));
+  document.getElementById('gridWindowNotice').hidden = !windowEnded;
+  document.getElementById('undoButton').disabled = !session.undoEvents;
+  renderAlert(metrics);
+  renderRecoveryWarning(metrics);
+  renderEvents();
+}
+
+function renderComplete() {
+  const metrics = getMetrics(session.completedAt);
+  document.getElementById('completeDrinks').textContent = session.drinkEvents.length;
+  document.getElementById('completeStd').textContent = metrics.totalStandardDrinks.toFixed(1);
+  document.getElementById('completeFinal').textContent = metrics.currentBac.toFixed(3);
+  document.getElementById('completePeak').textContent = metrics.peakBac.toFixed(3);
+  document.getElementById('completeDuration').textContent = formatElapsed(session.completedAt - session.sessionStartTs);
+  document.getElementById('completeFood').textContent = FOOD_LABELS[session.foodState] || '—';
+  renderMeasurementEditor();
+}
+
+function showView() {
+  document.getElementById('setupPanel').hidden = !!session;
+  document.getElementById('activeView').hidden = !session || session.sessionComplete;
+  document.getElementById('completeView').hidden = !session || !session.sessionComplete;
+  clearInterval(refreshTimer);
+  refreshTimer = null;
+  if (session?.sessionComplete) renderComplete();
+  else if (session) {
+    renderActive();
+    refreshTimer = setInterval(renderActive,REFRESH_MS);
+  }
+}
+
+function startGrid() {
+  const error = document.getElementById('setupError');
+  error.textContent = '';
+  const profile = selectedProfile();
+  const foodState = document.getElementById('foodState').value;
+  const startedAt = fromLocalValue(document.getElementById('sessionStart').value);
+  const alertRaw = document.getElementById('bacAlert').value.trim();
+  const bacAlert = alertRaw === '' ? null : Number(alertRaw);
+  if (!GoldilocksGrid.isValidProfile(profile)) {
+    error.textContent = 'Choose a valid profile and body model.';
+    return;
+  }
+  if (!['empty','light','meal'].includes(foodState)) {
+    error.textContent = 'Choose the food state at session start.';
+    return;
+  }
+  if (!Number.isFinite(startedAt) || startedAt > Date.now() + GoldilocksGrid.FUTURE_TOLERANCE_MS || startedAt < Date.now() - GoldilocksGrid.MAX_SESSION_MS) {
+    error.textContent = 'Session start must be now or within the last 24 hours.';
+    return;
+  }
+  if (alertRaw !== '' && GoldilocksGrid.normalizeAlertBac(bacAlert) === null) {
+    error.textContent = 'Personal BAC alert must be between 0.010 and 0.250.';
+    return;
+  }
+  session = {
+    version:GoldilocksGrid.VERSION,
+    sessionStartTs:startedAt,
+    completedAt:null,
+    sessionComplete:false,
+    profileName:profile.name,
+    profile,
+    foodState,
+    bacAlert,
+    drinkEvents:[],
+    undoEvents:null,
+  };
+  saveSession();
+  setNow('drinkTime');
+  showView();
+}
+
+function logDrink() {
+  const error = document.getElementById('logError');
+  error.textContent = '';
+  const drink = readDrinkForm();
+  const loggedAt = fromLocalValue(document.getElementById('drinkTime').value);
+  const problem = validateEventInput(drink,loggedAt);
+  if (problem) {
+    error.textContent = problem;
+    return;
+  }
+  saveUndoSnapshot();
+  session.drinkEvents.push({
+    id:createEventId(),
+    name:drink.name,
+    oz:drink.oz,
+    abv:drink.abv,
+    loggedAt,
+    standardDrinks:GoldilocksGrid.standardDrinks(drink.oz,drink.abv),
+  });
+  session.drinkEvents.sort((a,b) => a.loggedAt - b.loggedAt || a.id.localeCompare(b.id));
+  saveSession();
+  setNow('drinkTime');
+  if (document.getElementById('drinkPreset').value === 'one-off') document.getElementById('drinkName').value = '';
+  renderActive();
+}
+
+function openEdit(id) {
+  const event = session.drinkEvents.find(item => item.id === id);
+  if (!event) return;
+  document.getElementById('editEventId').value = id;
+  document.getElementById('editName').value = event.name;
+  document.getElementById('editOz').value = event.oz;
+  document.getElementById('editAbv').value = event.abv;
+  document.getElementById('editTime').value = toLocalValue(event.loggedAt);
+  document.getElementById('editError').textContent = '';
+  document.getElementById('editDialog').showModal();
+}
+
+function saveEdit(event) {
+  event.preventDefault();
+  const id = document.getElementById('editEventId').value;
+  const original = session.drinkEvents.find(item => item.id === id);
+  const drink = {
+    name:document.getElementById('editName').value.trim(),
+    oz:Number(document.getElementById('editOz').value),
+    abv:Number(document.getElementById('editAbv').value),
+  };
+  const loggedAt = fromLocalValue(document.getElementById('editTime').value);
+  const problem = validateEventInput(drink,loggedAt,true);
+  if (!original || problem) {
+    document.getElementById('editError').textContent = problem || 'That drink is no longer in this Grid.';
+    return;
+  }
+  saveUndoSnapshot();
+  Object.assign(original,drink,{ loggedAt, standardDrinks:GoldilocksGrid.standardDrinks(drink.oz,drink.abv) });
+  session.drinkEvents.sort((a,b) => a.loggedAt - b.loggedAt || a.id.localeCompare(b.id));
+  saveSession();
+  document.getElementById('editDialog').close();
+  renderActive();
+}
+
+function deleteEvent(id) {
+  const target = session.drinkEvents.find(item => item.id === id);
+  if (!target || !confirm(`Delete "${target.name}" at ${formatClock(target.loggedAt)}?`)) return;
+  saveUndoSnapshot();
+  session.drinkEvents = session.drinkEvents.filter(item => item.id !== id);
+  saveSession();
+  renderActive();
+}
+
+function undoChange() {
+  if (!session?.undoEvents) return;
+  const current = session.drinkEvents;
+  session.drinkEvents = session.undoEvents;
+  session.undoEvents = current;
+  saveSession();
+  renderActive();
+}
+
+function historyDuration(startedAt,completedAt) {
+  return Math.min(1440,Math.max(15,Math.ceil((completedAt - startedAt) / (15 * 60000)) * 15));
+}
+
+function saveHistory(completionReason) {
+  const metrics = getMetrics(session.completedAt);
+  GoldilocksSessionHistory.save(localStorage,{
+    version:GoldilocksSessionHistory.VERSION,
+    id:`grid-${session.sessionStartTs}`,
+    mode:'grid',
+    startedAt:session.sessionStartTs,
+    completedAt:session.completedAt,
+    durationMinutes:historyDuration(session.sessionStartTs,session.completedAt),
+    profileName:session.profileName,
+    drinkOz:null,
+    drinkAbv:null,
+    plannedDrinks:0,
+    loggedDrinks:session.drinkEvents.length,
+    standardDrinks:metrics.totalStandardDrinks,
+    finalBac:metrics.currentBac,
+    peakBac:metrics.peakBac,
+    completionReason,
+    foodState:session.foodState,
+    modelRisePerStd:metrics.risePerStd,
+    modelMetabPerHr:metrics.metabPerHr,
+    measurement:null,
+    detail:{
+      type:'grid',
+      bacAlert:session.bacAlert,
+      drinkEvents:session.drinkEvents.map(event => ({ ...event })),
+    },
+  });
+}
+
+function finishSession(timestamp = Date.now(),reason = 'manual') {
+  if (!session || session.sessionComplete) return;
+  const sessionLimit = session.sessionStartTs + GoldilocksGrid.MAX_SESSION_MS;
+  session.completedAt = Math.max(session.sessionStartTs,Math.min(timestamp,sessionLimit));
+  const completionReason = session.completedAt >= sessionLimit - 1000 ? 'elapsed' : reason;
+  session.sessionComplete = true;
+  session.undoEvents = null;
+  saveSession();
+  try { saveHistory(completionReason); } catch (error) {
+    session.sessionComplete = false;
+    session.completedAt = null;
+    saveSession();
+    document.getElementById('logError').textContent = 'Grid could not save this session. Your active log was preserved.';
+    return;
+  }
+  showView();
+}
+
+function discardSession() {
+  clearInterval(refreshTimer);
+  session = null;
+  localStorage.removeItem(GoldilocksGrid.STORAGE_KEY);
+  resetSetup();
+  showView();
+}
+
+function resetSetup() {
+  document.getElementById('foodState').value = '';
+  document.getElementById('bacAlert').value = '';
+  setNow('sessionStart');
+}
+
+function currentHistoryRecord() {
+  return GoldilocksSessionHistory.read(localStorage).find(record => record.id === `grid-${session.sessionStartTs}`) || null;
+}
+
+function measurementReasonText(reason) {
+  const messages = {
+    'protocol-not-confirmed':'Saved for reference, but not used as calibration evidence because protocol was not confirmed.',
+    'food-state-unknown':'Saved for reference, but the food state is unknown.',
+    'model-snapshot-unavailable':'Saved for reference, but the session model snapshot is unavailable.',
+    'no-standard-drinks':'Saved for reference, but no alcohol was logged.',
+    'zero-reading':'Saved for reference. A zero reading is not used to refine BAC-per-drink.',
+    'estimate-at-floor':'Saved for reference. The model was already at zero, so this reading cannot refine BAC-per-drink.',
+  };
+  return messages[reason] || 'Saved for reference, but not eligible for session evidence.';
+}
+
+function renderMeasurementEditor() {
+  const record = currentHistoryRecord();
+  const status = document.getElementById('measurementStatus');
+  const clear = document.getElementById('clearMeasurementButton');
+  if (!record?.measurement) {
+    document.getElementById('measuredBac').value = '';
+    document.getElementById('measuredAt').value = toLocalValue(session.completedAt);
+    document.getElementById('measurementProtocol').checked = false;
+    clear.hidden = true;
+    status.className = 'measurement-status';
+    status.textContent = 'Measurements can be recorded at session end or within four hours.';
+    return;
+  }
+  document.getElementById('measuredBac').value = record.measurement.value.toFixed(3);
+  document.getElementById('measuredAt').value = toLocalValue(record.measurement.measuredAt);
+  document.getElementById('measurementProtocol').checked = record.measurement.protocolFollowed;
+  clear.hidden = false;
+  status.className = `measurement-status ${record.measurement.eligibleForRefinement ? 'saved' : 'ineligible'}`;
+  status.textContent = record.measurement.eligibleForRefinement
+    ? `Saved · model ${record.measurement.estimatedBac.toFixed(3)} vs measured ${record.measurement.value.toFixed(3)} · eligible for session evidence.`
+    : measurementReasonText(record.measurement.eligibilityReason);
+}
+
+function saveMeasurement() {
+  const status = document.getElementById('measurementStatus');
+  const rawValue = document.getElementById('measuredBac').value.trim();
+  try {
+    GoldilocksSessionHistory.setMeasurement(localStorage,`grid-${session.sessionStartTs}`,{
+      value:rawValue === '' ? NaN : Number(rawValue),
+      measuredAt:fromLocalValue(document.getElementById('measuredAt').value),
+      protocolFollowed:document.getElementById('measurementProtocol').checked,
+    });
+    renderMeasurementEditor();
+  } catch (error) {
+    status.className = 'measurement-status ineligible';
+    status.textContent = 'Enter a BAC from 0.000 to 1.000 and a time within four hours after finishing.';
+  }
+}
+
+function clearMeasurement() {
+  try {
+    GoldilocksSessionHistory.setMeasurement(localStorage,`grid-${session.sessionStartTs}`,null);
+    renderMeasurementEditor();
+  } catch (error) {}
+}
+
+function startAnother() {
+  session = null;
+  localStorage.removeItem(GoldilocksGrid.STORAGE_KEY);
+  resetSetup();
+  showView();
+}
+
+function restoreSession() {
+  let raw = null;
+  try { raw = JSON.parse(localStorage.getItem(GoldilocksGrid.STORAGE_KEY) || 'null'); } catch (error) {}
+  const restored = GoldilocksGrid.normalizeSession(raw,Date.now());
+  if (!restored) {
+    if (raw) localStorage.removeItem(GoldilocksGrid.STORAGE_KEY);
+    return;
+  }
+  const expiresAt = restored.sessionComplete
+    ? restored.completedAt + GoldilocksGrid.COMPLETE_RETENTION_MS
+    : restored.sessionStartTs + GoldilocksGrid.MAX_SESSION_MS + GoldilocksGrid.COMPLETE_RETENTION_MS;
+  if (Date.now() > expiresAt) {
+    localStorage.removeItem(GoldilocksGrid.STORAGE_KEY);
+    return;
+  }
+  session = restored;
+}
+
+document.getElementById('profileSelect').addEventListener('change',updateCustomProfileVisibility);
+document.getElementById('units').addEventListener('change',updateUnits);
+document.getElementById('drinkPreset').addEventListener('change',updateDrinkFields);
+document.getElementById('startButton').addEventListener('click',startGrid);
+document.getElementById('logButton').addEventListener('click',logDrink);
+document.getElementById('useNowButton').addEventListener('click',() => setNow('drinkTime'));
+document.getElementById('undoButton').addEventListener('click',undoChange);
+document.getElementById('finishButton').addEventListener('click',() => document.getElementById('finishDialog').showModal());
+document.getElementById('discardButton').addEventListener('click',() => document.getElementById('discardDialog').showModal());
+document.getElementById('confirmFinishButton').addEventListener('click',event => { event.preventDefault(); document.getElementById('finishDialog').close(); finishSession(); });
+document.getElementById('confirmDiscardButton').addEventListener('click',event => { event.preventDefault(); document.getElementById('discardDialog').close(); discardSession(); });
+document.getElementById('editForm').addEventListener('submit',saveEdit);
+document.getElementById('cancelEditButton').addEventListener('click',() => document.getElementById('editDialog').close());
+document.getElementById('saveMeasurementButton').addEventListener('click',saveMeasurement);
+document.getElementById('clearMeasurementButton').addEventListener('click',clearMeasurement);
+document.getElementById('newGridButton').addEventListener('click',startAnother);
+
+loadProfiles();
+loadDrinks();
+updateUnits();
+setNow('sessionStart');
+setNow('drinkTime');
+restoreSession();
+showView();
+</script>
+</body>
+</html>

@@ -24,6 +24,7 @@
     --gold:#f5c842;
     --gold2:#e8a020;
     --blue:#7eb8ff;
+    --grid:#c49aff;
     --green:#52e09c;
     --amber:#ff8c3a;
     --radius:10px;
@@ -80,6 +81,18 @@
   .theme-swatch { width:28px; height:28px; border-radius:50%; cursor:pointer; flex-shrink:0; transition:transform 0.15s; padding:0; }
   .theme-swatch:hover { transform:scale(1.12); }
 
+  .data-card {
+    align-items:center; background:linear-gradient(135deg,rgba(245,200,66,0.06),rgba(126,184,255,0.025));
+    border:1px solid color-mix(in srgb,var(--gold) 28%,var(--border)); border-radius:12px;
+    display:flex; gap:16px; justify-content:space-between; margin-bottom:20px; padding:14px 16px;
+  }
+  .data-kicker { color:var(--gold); font-size:8px; letter-spacing:0.14em; text-transform:uppercase; }
+  .data-copy { color:var(--muted); font-size:9px; line-height:1.6; margin-top:3px; }
+  .data-action {
+    border:1px solid var(--gold); border-radius:8px; color:var(--gold); flex-shrink:0;
+    font-size:8px; letter-spacing:0.08em; padding:8px 11px; text-decoration:none; text-transform:uppercase;
+  }
+
   .mission-label { font-size:9px; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); text-align:center; margin-bottom:18px; }
 
   .resume-section {
@@ -110,6 +123,7 @@
   }
   .resume-link[data-mode="zone"] { --resume-accent:var(--gold); }
   .resume-link[data-mode="pace"] { --resume-accent:var(--blue); }
+  .resume-link[data-mode="grid"] { --resume-accent:var(--grid); }
   .resume-link[data-mode="training"] { --resume-accent:var(--green); }
   .resume-link:hover { transform:translateY(-1px); border-color:var(--resume-accent); box-shadow:0 8px 24px color-mix(in srgb,var(--resume-accent) 13%,transparent); }
   .resume-link:focus-visible { outline:3px solid var(--resume-accent); outline-offset:3px; }
@@ -159,6 +173,7 @@
 
   .mode-card.zone { --card-accent:var(--gold); --card-glow:rgba(245,200,66,0.05); --card-shadow:rgba(245,200,66,0.12); }
   .mode-card.pace { --card-accent:var(--blue); --card-glow:rgba(126,184,255,0.05); --card-shadow:rgba(126,184,255,0.12); }
+  .mode-card.grid { --card-accent:var(--grid); --card-glow:rgba(196,154,255,0.05); --card-shadow:rgba(196,154,255,0.12); }
   .mode-card.training { --card-accent:var(--green); --card-glow:rgba(82,224,156,0.05); --card-shadow:rgba(82,224,156,0.12); }
   .mode-card.history { --card-accent:var(--history); --card-glow:rgba(255,140,58,0.05); --card-shadow:rgba(255,140,58,0.12); }
 
@@ -169,6 +184,7 @@
     .logo { font-size:39px; }
     .mode-card { padding:20px; }
     .resume-action { display:none; }
+    .data-card { align-items:flex-start; flex-direction:column; }
   }
   @media(prefers-reduced-motion:reduce) {
     *,*::before,*::after { animation-duration:0.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; transition-duration:0.01ms !important; }
@@ -187,6 +203,7 @@
       <span class="theme-label" id="themeLabel">Theme</span>
       <div class="theme-picker" id="themePicker" role="group" aria-labelledby="themeLabel"></div>
     </div>
+    <a class="settings-link" href="goldilocks-settings.html"><span aria-hidden="true">⚙</span> Settings &amp; Data</a>
   </header>
 
   <main>
@@ -194,6 +211,14 @@
       <div class="resume-kicker">Continue where you left off</div>
       <h2 class="resume-title" id="resumeHeading">Resume your session</h2>
       <div class="resume-list" id="resumeList"></div>
+    </section>
+
+    <section class="data-card" aria-labelledby="dataBackupHeading">
+      <div>
+        <div class="data-kicker" id="dataBackupHeading">Stored on this device</div>
+        <div class="data-copy" id="backupState">No cloud sync · export one private file containing your complete Goldilocks data.</div>
+      </div>
+      <a class="data-action" href="goldilocks-settings.html">Back up &amp; manage</a>
     </section>
 
     <h2 class="mission-label" id="mission-heading">Choose what you want to do</h2>
@@ -250,6 +275,26 @@
         </div>
       </a>
 
+      <a class="mode-card grid" data-mode-card="grid" href="goldilocks-grid.html">
+        <div class="mode-card-top">
+          <span class="mode-glyph mode-glyph--grid" aria-hidden="true">
+            <span class="grid-glyph"><span class="grid-glyph__node"></span><span class="grid-glyph__node"></span></span>
+          </span>
+          <span class="mode-card-actions">
+            <span class="mode-status" data-mode-status="grid" hidden>Session active</span>
+            <span class="mode-arrow" aria-hidden="true">→</span>
+          </span>
+        </div>
+        <h3 class="mode-name">Grid</h3>
+        <div class="mode-sub">Any drink · any time</div>
+        <div class="mode-desc">Launch a freeform session, log mixed drinks at exact times, and watch current and highest modeled BAC without following a preset plan.</div>
+        <div class="mode-chips">
+          <span class="chip lit">Freeform log</span>
+          <span class="chip lit">Exact timestamps</span>
+          <span class="chip">Optional BAC alert</span>
+        </div>
+      </a>
+
       <a class="mode-card training" data-mode-card="training" href="goldilocks-training.html">
         <div class="mode-card-top">
           <span class="mode-glyph mode-glyph--training" aria-hidden="true">
@@ -295,12 +340,12 @@
         </div>
         <h3 class="mode-name">History</h3>
         <div class="mode-sub">Review completed sessions</div>
-        <div class="mode-desc">Review model-versus-measurement evidence and record how you felt the next day after completed Zone and Pace sessions.</div>
+        <div class="mode-desc">Review model-versus-measurement evidence, exact Grid drink logs, and how you felt the next day.</div>
         <div class="mode-state" id="historyState">No completed sessions saved yet</div>
         <div class="mode-chips">
-          <span class="chip lit">Zone + Pace</span>
+          <span class="chip lit">Zone + Pace + Grid</span>
           <span class="chip lit">Local history</span>
-          <span class="chip">Up to 50 sessions</span>
+          <span class="chip">Portable backup</span>
         </div>
       </a>
     </nav>
@@ -310,8 +355,10 @@
 </div>
 
 <script src="goldilocks-core.js"></script>
+<script src="goldilocks-grid.js"></script>
 <script src="goldilocks-session-state.js?v=20260722-calibration"></script>
 <script src="goldilocks-session-history.js"></script>
+<script src="goldilocks-backup.js"></script>
 <script>
 GoldilocksTheme.init({ mode:'mission', pickerId:'themePicker' });
 
@@ -360,6 +407,14 @@ function describeResume(entry, now) {
         : ` · next check-in overdue by ${formatRemaining(now - entry.nextAt)}`
       : '';
     return `${entry.loggedDrinks} of ${entry.plannedDrinks} logged · ${formatRemaining(entry.endAt - now)} left${next}`;
+  }
+  if (entry.mode === 'grid') {
+    const drinks = `${entry.loggedDrinks} ${entry.loggedDrinks === 1 ? 'drink' : 'drinks'}`;
+    const standard = `${entry.totalStandardDrinks.toFixed(1)} standard`;
+    if (entry.state === 'scheduled') return `Starts ${formatClock(entry.startAt)} · freeform logging`;
+    if (entry.state === 'needs-finalize') return `24-hour window elapsed · ${drinks} · backdate missing events or finish`;
+    if (entry.state === 'complete') return `Finished · ${drinks} · ${standard} · review the summary`;
+    return `${drinks} · ${standard} · current model ${entry.currentBac.toFixed(3)} · ${formatDurationMinutes(entry.durationMinutes)} elapsed`;
   }
   if (entry.state === 'results-saved') return 'Results saved · review your calibrated profile';
   if (entry.state === 'results-unsaved') return 'Results ready · save your calibrated profile';
@@ -421,8 +476,16 @@ function updateHistoryStatus() {
     return;
   }
   const zoneCount = records.filter(record => record.mode === 'zone').length;
-  const paceCount = records.length - zoneCount;
-  label.textContent = `${records.length} saved ${records.length === 1 ? 'session' : 'sessions'} · ${zoneCount} Zone · ${paceCount} Pace`;
+  const paceCount = records.filter(record => record.mode === 'pace').length;
+  const gridCount = records.filter(record => record.mode === 'grid').length;
+  label.textContent = `${records.length} saved ${records.length === 1 ? 'session' : 'sessions'} · ${zoneCount} Zone · ${paceCount} Pace · ${gridCount} Grid`;
+}
+
+function updateBackupStatus() {
+  const exportedAt = GoldilocksBackup.getLastBackupAt(localStorage);
+  document.getElementById('backupState').textContent = exportedAt
+    ? `Last backup ${new Intl.DateTimeFormat(undefined, { dateStyle:'medium', timeStyle:'short' }).format(new Date(exportedAt))} · export again after important changes.`
+    : 'No cloud sync · export one private file containing your complete Goldilocks data.';
 }
 
 function updateMissionControl() {
@@ -465,13 +528,15 @@ function updateMissionControl() {
   section.hidden = sessions.length === 0;
   updateCalibrationStatus();
   updateHistoryStatus();
+  updateBackupStatus();
 }
 
 updateMissionControl();
 window.addEventListener('pageshow', updateMissionControl);
 window.addEventListener('storage', (event) => {
   if (Object.values(GoldilocksSessionState.KEYS).includes(event.key)
-      || event.key === GoldilocksSessionHistory.STORAGE_KEY) updateMissionControl();
+      || event.key === GoldilocksSessionHistory.STORAGE_KEY
+      || event.key === GoldilocksBackup.LAST_BACKUP_KEY) updateMissionControl();
 });
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) updateMissionControl();

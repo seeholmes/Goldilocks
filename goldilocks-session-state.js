@@ -1,19 +1,24 @@
 'use strict';
 
 (function initGoldilocksSessionState(root, factory) {
-  const api = factory();
+  const grid = typeof module === 'object' && module.exports
+    ? require('./goldilocks-grid.js')
+    : root?.GoldilocksGrid;
+  const api = factory(grid);
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.GoldilocksSessionState = api;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function buildGoldilocksSessionState() {
+})(typeof globalThis !== 'undefined' ? globalThis : this, function buildGoldilocksSessionState(grid) {
   const KEYS = Object.freeze({
     zone: 'goldilocks_v2_session',
     pace: 'goldilocks_cruise_session',
+    grid: 'goldilocks_grid_session',
     training: 'goldilocks_training_session',
     profiles: 'goldilocks_profiles',
   });
   const MODE_META = Object.freeze({
     zone: Object.freeze({ label: 'Zone', href: 'goldilocks-zone.html' }),
     pace: Object.freeze({ label: 'Pace', href: 'goldilocks-cruise.html' }),
+    grid: Object.freeze({ label: 'Grid', href: 'goldilocks-grid.html' }),
     training: Object.freeze({ label: 'Calibration', href: 'goldilocks-training.html' }),
   });
   const HOUR_MS = 60 * 60 * 1000;
@@ -398,6 +403,46 @@
     };
   }
 
+  function inspectGrid(value, now = Date.now()) {
+    const parsed = parseValue(value, 'grid');
+    if (parsed.result) return parsed.result;
+    if (!grid || typeof grid.normalizeSession !== 'function' || typeof grid.calculate !== 'function') {
+      return modeResult('grid', 'unavailable', 'model-unavailable');
+    }
+    const session = grid.normalizeSession(parsed.value, now);
+    if (!session) return modeResult('grid', 'corrupt', 'invalid-session');
+    const retentionEndAt = session.sessionComplete
+      ? session.completedAt + grid.COMPLETE_RETENTION_MS
+      : session.sessionStartTs + grid.MAX_SESSION_MS + grid.COMPLETE_RETENTION_MS;
+    if (now > retentionEndAt) return modeResult('grid', 'expired');
+    const endAt = session.completedAt ?? Math.min(now, session.sessionStartTs + grid.MAX_SESSION_MS);
+    let metrics;
+    try {
+      metrics = grid.calculate(session.drinkEvents, session.sessionStartTs, endAt, session.profile);
+    } catch (error) {
+      return modeResult('grid', 'corrupt', 'invalid-model');
+    }
+    return {
+      ...modeResult('grid', 'valid'),
+      state: session.sessionComplete
+        ? 'complete'
+        : now < session.sessionStartTs
+          ? 'scheduled'
+          : now >= session.sessionStartTs + grid.MAX_SESSION_MS
+            ? 'needs-finalize'
+            : 'active',
+      startAt: session.sessionStartTs,
+      endAt,
+      completedAt: session.completedAt,
+      durationMinutes: Math.max(0, Math.ceil((endAt - session.sessionStartTs) / MINUTE_MS)),
+      loggedDrinks: session.drinkEvents.length,
+      totalStandardDrinks: metrics.totalStandardDrinks,
+      currentBac: metrics.currentBac,
+      peakBac: metrics.peakBac,
+      bacAlert: session.bacAlert,
+    };
+  }
+
   function plausibleTraining(results, fasted, core) {
     if (!results || !core) return false;
     const finite = ['metabPerHr', 'risePerStd', 'bacAt45', 'r2', 'slope', 'intercept', 'stdDrinks']
@@ -529,15 +574,18 @@
   function inspectStorage(storage, now = Date.now(), core) {
     const zoneRaw = readKey(storage, KEYS.zone, 'zone');
     const paceRaw = readKey(storage, KEYS.pace, 'pace');
+    const gridRaw = readKey(storage, KEYS.grid, 'grid');
     const trainingRaw = readKey(storage, KEYS.training, 'training');
     const zone = zoneRaw.error || inspectZone(zoneRaw.value, now);
     const pace = paceRaw.error || inspectPace(paceRaw.value, now);
+    const gridSession = gridRaw.error || inspectGrid(gridRaw.value, now);
     const training = trainingRaw.error || inspectTraining(trainingRaw.value, now, core);
     return {
       zone,
       pace,
+      grid: gridSession,
       training,
-      valid: [zone, pace, training].filter((entry) => entry.health === 'valid'),
+      valid: [zone, pace, gridSession, training].filter((entry) => entry.health === 'valid'),
     };
   }
 
@@ -583,6 +631,7 @@
     MODE_META,
     inspectZone,
     inspectPace,
+    inspectGrid,
     inspectTraining,
     inspectStorage,
     inspectProfiles,

@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Back up, restore, and manage Goldilocks data stored on this device.">
+<meta name="theme-color" content="#08090d">
+<title>Goldilocks — Settings & Data</title>
+<link rel="icon" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260722-astronaut">
+<link rel="manifest" href="manifest.json?v=20260722-astronaut">
+<link rel="stylesheet" href="goldilocks-icons.css">
+<link href="https://fonts.googleapis.com/css2?family=Anybody:wght@200;400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="goldilocks-theme.js"></script>
+<script>GoldilocksTheme.bootstrap('mission');</script>
+<style>
+  :root {
+    --space:#08090d; --deep:#0e1018; --surface:#13151f; --border:#1e2130;
+    --text:#e8e0cc; --muted:#aaa3bb; --gold:#f5c842; --blue:#7eb8ff;
+    --green:#52e09c; --amber:#ff8c3a; --danger:#ff5a5a;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    background:var(--space); color:var(--text); font-family:'Space Mono',monospace;
+    font-size:12px; min-height:100vh; overflow-x:hidden; padding:0 0 80px; position:relative;
+  }
+  body::before {
+    background-image:
+      radial-gradient(1px 1px at 15% 20%,rgba(255,255,255,0.5) 0%,transparent 100%),
+      radial-gradient(1px 1px at 73% 35%,rgba(255,255,255,0.4) 0%,transparent 100%),
+      radial-gradient(1px 1px at 30% 88%,rgba(255,255,255,0.4) 0%,transparent 100%),
+      radial-gradient(2px 2px at 50% 30%,rgba(245,200,66,0.18) 0%,transparent 100%);
+    content:''; inset:0; pointer-events:none; position:fixed; z-index:0;
+  }
+  :root:not([data-theme="cosmos"]):not([data-theme="navy"]) body::before { opacity:0.25; }
+  .container { margin:0 auto; max-width:720px; padding:0 16px; position:relative; z-index:1; }
+  .hero { padding:42px 0 30px; text-align:center; }
+  .settings-mark {
+    align-items:center; background:color-mix(in srgb,var(--gold) 9%,var(--surface));
+    border:1px solid color-mix(in srgb,var(--gold) 40%,var(--border)); border-radius:12px;
+    color:var(--gold); display:inline-flex; font-size:24px; height:44px; justify-content:center;
+    margin:0 auto 8px; width:44px;
+  }
+  .logo-sub { color:var(--gold); font-family:'Anybody',sans-serif; font-size:24px; font-weight:600; margin-top:2px; }
+  .tagline { color:var(--muted); font-size:9px; letter-spacing:0.16em; margin-top:5px; text-transform:uppercase; }
+  .version { color:var(--muted); font-size:8px; letter-spacing:0.12em; margin-top:5px; text-transform:uppercase; }
+  .back-link {
+    border:1px solid var(--border); border-radius:100px; color:var(--muted); display:inline-block;
+    font-size:9px; letter-spacing:0.12em; margin-top:11px; padding:5px 14px; text-decoration:none;
+    text-transform:uppercase; transition:border-color 0.2s,color 0.2s;
+  }
+  .back-link:hover { border-color:var(--gold); color:var(--gold); }
+  main { display:grid; gap:12px; }
+  .card {
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    box-shadow:0 12px 36px rgba(0,0,0,0.1); padding:20px;
+  }
+  .card-heading { align-items:flex-start; display:flex; gap:12px; justify-content:space-between; }
+  .eyebrow { color:var(--gold); font-size:8px; letter-spacing:0.16em; text-transform:uppercase; }
+  h2 { font-family:'Anybody',sans-serif; font-size:22px; font-weight:600; margin-top:4px; }
+  .card-copy { color:var(--muted); font-size:10px; line-height:1.75; margin-top:7px; max-width:620px; }
+  .privacy-note {
+    background:color-mix(in srgb,var(--amber) 7%,var(--deep)); border:1px solid color-mix(in srgb,var(--amber) 28%,var(--border));
+    border-radius:8px; color:var(--muted); font-size:9px; line-height:1.65; margin-top:14px; padding:10px 12px;
+  }
+  .privacy-note strong { color:var(--amber); }
+  .summary-grid { display:grid; gap:8px; grid-template-columns:repeat(3,minmax(0,1fr)); margin-top:16px; }
+  .summary-cell { background:var(--deep); border:1px solid var(--border); border-radius:8px; min-width:0; padding:10px; }
+  .summary-value { color:var(--text); font-family:'Anybody',sans-serif; font-size:19px; overflow-wrap:anywhere; }
+  .summary-label { color:var(--muted); font-size:7px; letter-spacing:0.09em; line-height:1.4; margin-top:3px; text-transform:uppercase; }
+  .backup-meta { align-items:center; border-top:1px solid var(--border); display:flex; gap:12px; justify-content:space-between; margin-top:14px; padding-top:12px; }
+  .backup-meta-label { color:var(--muted); font-size:8px; letter-spacing:0.1em; text-transform:uppercase; }
+  .backup-meta-value { color:var(--gold); font-size:9px; margin-top:3px; }
+  .theme-row { align-items:center; display:flex; gap:12px; margin-top:15px; }
+  .theme-picker { align-items:center; display:flex; flex-wrap:wrap; gap:8px; }
+  .theme-swatch { border-radius:50%; cursor:pointer; flex-shrink:0; height:30px; padding:0; transition:transform 0.15s; width:30px; }
+  .theme-swatch:hover { transform:scale(1.1); }
+  .theme-name { color:var(--muted); font-size:9px; }
+  .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+  .action, .file-action {
+    align-items:center; background:transparent; border:1px solid var(--border); border-radius:8px;
+    color:var(--text); cursor:pointer; display:inline-flex; font:inherit; font-size:9px; justify-content:center;
+    letter-spacing:0.06em; min-height:40px; padding:10px 14px; text-decoration:none; text-transform:uppercase;
+    transition:background 0.18s,border-color 0.18s,color 0.18s,transform 0.18s;
+  }
+  .action:hover, .file-action:hover { border-color:var(--gold); color:var(--gold); transform:translateY(-1px); }
+  .action.primary { background:color-mix(in srgb,var(--gold) 10%,transparent); border-color:var(--gold); color:var(--gold); }
+  .action.danger { border-color:color-mix(in srgb,var(--danger) 65%,var(--border)); color:var(--danger); }
+  .action:disabled { cursor:not-allowed; opacity:0.4; transform:none; }
+  .visually-hidden {
+    clip:rect(0 0 0 0); clip-path:inset(50%); height:1px; overflow:hidden;
+    position:absolute; white-space:nowrap; width:1px;
+  }
+  .status { color:var(--muted); font-size:9px; line-height:1.6; margin-top:12px; min-height:1.6em; }
+  .status.success { color:var(--green); }
+  .status.error { color:var(--danger); }
+  .preview {
+    background:linear-gradient(135deg,color-mix(in srgb,var(--blue) 7%,var(--deep)),var(--deep));
+    border:1px solid color-mix(in srgb,var(--blue) 34%,var(--border)); border-radius:10px; margin-top:14px; padding:14px;
+  }
+  .preview[hidden] { display:none; }
+  .preview-title { color:var(--blue); font-family:'Anybody',sans-serif; font-size:17px; }
+  .preview-meta { color:var(--muted); font-size:8px; line-height:1.6; margin-top:3px; }
+  .preview-grid { display:grid; gap:6px; grid-template-columns:repeat(3,minmax(0,1fr)); margin-top:12px; }
+  .preview-item { background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:8px; }
+  .preview-count { color:var(--text); font-family:'Anybody',sans-serif; font-size:16px; }
+  .preview-label { color:var(--muted); font-size:7px; line-height:1.4; text-transform:uppercase; }
+  .manage-list { display:grid; gap:7px; margin-top:14px; }
+  .manage-link {
+    align-items:center; background:var(--deep); border:1px solid var(--border); border-radius:8px;
+    color:inherit; display:flex; gap:12px; justify-content:space-between; padding:11px 12px;
+    text-decoration:none; transition:border-color 0.18s,transform 0.18s;
+  }
+  .manage-link:hover { border-color:var(--gold); transform:translateY(-1px); }
+  .manage-name { color:var(--text); font-size:10px; }
+  .manage-desc { color:var(--muted); font-size:8px; line-height:1.5; margin-top:2px; }
+  .manage-arrow { color:var(--gold); font-size:16px; }
+  .danger-card { border-color:color-mix(in srgb,var(--danger) 32%,var(--border)); }
+  .danger-card .eyebrow { color:var(--danger); }
+  dialog {
+    background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text);
+    font-family:'Space Mono',monospace; left:50%; max-width:min(460px,calc(100vw - 32px));
+    padding:20px; position:fixed; top:50%; transform:translate(-50%,-50%); width:100%;
+  }
+  dialog::backdrop { background:rgba(0,0,0,0.72); backdrop-filter:blur(3px); }
+  .dialog-title { font-family:'Anybody',sans-serif; font-size:22px; }
+  .dialog-copy { color:var(--muted); font-size:10px; line-height:1.7; margin-top:8px; }
+  .dialog-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; margin-top:18px; }
+  .confirm-label { color:var(--muted); display:block; font-size:8px; letter-spacing:0.08em; margin-top:14px; text-transform:uppercase; }
+  .confirm-input {
+    background:var(--deep); border:1px solid var(--border); border-radius:7px; color:var(--text);
+    font:inherit; font-size:12px; margin-top:6px; padding:10px; width:100%;
+  }
+  :where(a,button,input):focus-visible { outline:3px solid var(--gold); outline-offset:3px; }
+  .disclaimer { color:var(--muted); font-size:9px; line-height:1.7; margin-top:20px; text-align:center; }
+  @media(max-width:560px) {
+    .hero { padding-top:32px; }
+    .card { padding:17px; }
+    .summary-grid, .preview-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .backup-meta { align-items:flex-start; flex-direction:column; }
+    .actions > * { flex:1 1 100%; }
+  }
+  @media(prefers-reduced-motion:reduce) {
+    *,*::before,*::after { animation:none !important; scroll-behavior:auto !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header class="hero">
+    <div class="brand-lockup">
+      <h1 class="logo logo--original" aria-label="Goldilocks"><span class="brand-art-crop" aria-hidden="true"><img class="brand-original-art" src="goldilocks-original-lockup.jpg?v=20260722-og" alt=""></span></h1>
+    </div>
+    <div class="settings-mark" aria-hidden="true">⚙</div>
+    <div class="logo-sub">Settings &amp; Data</div>
+    <div class="tagline">protect and manage this device</div>
+    <div class="version">v1.1.0</div>
+    <a class="back-link" href="index.html">← Mission Control</a>
+  </header>
+
+  <main>
+    <section class="card" aria-labelledby="deviceDataHeading">
+      <div class="eyebrow">This device</div>
+      <h2 id="deviceDataHeading">Your Goldilocks data</h2>
+      <p class="card-copy">Goldilocks has no account or cloud sync. Profiles, sessions, readings, custom drinks, and preferences live only in this browser until you export a backup.</p>
+      <div class="summary-grid" aria-label="Current device data summary">
+        <div class="summary-cell"><div class="summary-value" id="currentProfiles">0</div><div class="summary-label">Saved users</div></div>
+        <div class="summary-cell"><div class="summary-value" id="currentSessions">0</div><div class="summary-label">Planner sessions</div></div>
+        <div class="summary-cell"><div class="summary-value" id="currentMeasurements">0</div><div class="summary-label">BAC readings</div></div>
+        <div class="summary-cell"><div class="summary-value" id="currentCalibrations">0</div><div class="summary-label">Calibrations</div></div>
+        <div class="summary-cell"><div class="summary-value" id="currentDrinks">0</div><div class="summary-label">Custom drinks</div></div>
+        <div class="summary-cell"><div class="summary-value" id="currentActiveSessions">0</div><div class="summary-label">Saved session states</div></div>
+      </div>
+      <div class="backup-meta">
+        <div>
+          <div class="backup-meta-label">Last successful export</div>
+          <div class="backup-meta-value" id="lastBackupValue">Never backed up</div>
+        </div>
+        <div>
+          <div class="backup-meta-label">Last restore</div>
+          <div class="backup-meta-value" id="lastRestoreValue">No backup restored</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="appearanceHeading">
+      <div class="eyebrow">Appearance</div>
+      <h2 id="appearanceHeading">Theme</h2>
+      <div class="theme-row">
+        <div class="theme-picker" id="themePicker" role="group" aria-label="Theme"></div>
+        <div class="theme-name">Current: <span data-theme-name>Cosmos</span></div>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="backupHeading">
+      <div class="eyebrow">Backup &amp; restore</div>
+      <h2 id="backupHeading">One file, every saved detail</h2>
+      <p class="card-copy">The backup includes completed and resumable sessions, exact drink and measurement timestamps, users, calibration history, custom drinks, and your theme.</p>
+      <div class="privacy-note"><strong>Private, unencrypted file.</strong> A backup can contain body-profile and BAC information. Store it somewhere you trust.</div>
+      <div class="actions">
+        <button class="action primary" id="exportBackupBtn" type="button">Export full backup</button>
+        <label class="file-action" for="backupFileInput">Choose backup to restore</label>
+        <input class="visually-hidden" id="backupFileInput" type="file" accept=".json,application/json" aria-describedby="restoreHelp">
+      </div>
+      <p class="card-copy" id="restoreHelp">Nothing is replaced until the selected file passes validation and you confirm the restore.</p>
+      <div class="preview" id="restorePreview" hidden>
+        <div class="preview-title">Backup ready to restore</div>
+        <div class="preview-meta" id="previewMeta"></div>
+        <div class="preview-grid">
+          <div class="preview-item"><div class="preview-count" id="previewProfiles">0</div><div class="preview-label">Saved users</div></div>
+          <div class="preview-item"><div class="preview-count" id="previewSessions">0</div><div class="preview-label">Planner sessions</div></div>
+          <div class="preview-item"><div class="preview-count" id="previewMeasurements">0</div><div class="preview-label">BAC readings</div></div>
+          <div class="preview-item"><div class="preview-count" id="previewCalibrations">0</div><div class="preview-label">Calibrations</div></div>
+          <div class="preview-item"><div class="preview-count" id="previewDrinks">0</div><div class="preview-label">Custom drinks</div></div>
+          <div class="preview-item"><div class="preview-count" id="previewActiveSessions">0</div><div class="preview-label">Saved session states</div></div>
+        </div>
+        <div class="actions">
+          <button class="action primary" id="openRestoreDialogBtn" type="button">Review &amp; restore</button>
+        </div>
+      </div>
+      <p class="status" id="backupStatus" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="card" aria-labelledby="manageHeading">
+      <div class="eyebrow">Manage</div>
+      <h2 id="manageHeading">Your saved information</h2>
+      <div class="manage-list">
+        <a class="manage-link" href="goldilocks-history.html">
+          <span><span class="manage-name">Session history</span><span class="manage-desc">Review readings, recovery ratings, and model comparisons.</span></span>
+          <span class="manage-arrow" aria-hidden="true">→</span>
+        </a>
+        <a class="manage-link" href="goldilocks-training.html">
+          <span><span class="manage-name">Users &amp; Calibration</span><span class="manage-desc">Manage profiles, calibration evidence, and expert adjustments.</span></span>
+          <span class="manage-arrow" aria-hidden="true">→</span>
+        </a>
+        <a class="manage-link" href="goldilocks-zone.html">
+          <span><span class="manage-name">Custom drinks</span><span class="manage-desc">Add or remove shared drink presets from a planner.</span></span>
+          <span class="manage-arrow" aria-hidden="true">→</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="card danger-card" aria-labelledby="dangerHeading">
+      <div class="eyebrow">Danger zone</div>
+      <h2 id="dangerHeading">Erase this device</h2>
+      <p class="card-copy">Permanently remove every Goldilocks profile, session, reading, custom drink, calibration, and preference from this browser.</p>
+      <div class="actions">
+        <button class="action danger" id="openEraseDialogBtn" type="button">Erase all Goldilocks data</button>
+      </div>
+    </section>
+
+    <p class="disclaimer">Backups restore Goldilocks data only. They never change BAC calculations or make an estimate a safety threshold.</p>
+  </main>
+</div>
+
+<dialog id="restoreDialog" aria-labelledby="restoreDialogTitle">
+  <h2 class="dialog-title" id="restoreDialogTitle">Replace this device’s data?</h2>
+  <p class="dialog-copy" id="restoreDialogCopy">The current Goldilocks data in this browser will be replaced by the selected backup. Other websites and browser data are not affected.</p>
+  <div class="dialog-actions">
+    <button class="action" id="cancelRestoreBtn" type="button">Cancel</button>
+    <button class="action primary" id="confirmRestoreBtn" type="button">Replace &amp; restore</button>
+  </div>
+</dialog>
+
+<dialog id="eraseDialog" aria-labelledby="eraseDialogTitle">
+  <h2 class="dialog-title" id="eraseDialogTitle">Erase all Goldilocks data?</h2>
+  <p class="dialog-copy">This cannot be undone unless you already have a backup. Type <strong>ERASE</strong> to confirm.</p>
+  <label class="confirm-label" for="eraseConfirmInput">Confirmation</label>
+  <input class="confirm-input" id="eraseConfirmInput" type="text" autocomplete="off" spellcheck="false">
+  <div class="dialog-actions">
+    <button class="action" id="cancelEraseBtn" type="button">Cancel</button>
+    <button class="action danger" id="confirmEraseBtn" type="button" disabled>Erase permanently</button>
+  </div>
+</dialog>
+
+<script src="goldilocks-session-history.js"></script>
+<script src="goldilocks-presets.js"></script>
+<script src="goldilocks-backup.js"></script>
+<script>
+GoldilocksTheme.init({ mode:'mission', pickerId:'themePicker' });
+
+const APP_VERSION = '1.1.0';
+let pendingBackup = null;
+
+function formatDateTime(value) {
+  return new Intl.DateTimeFormat(undefined, { dateStyle:'medium', timeStyle:'short' }).format(new Date(value));
+}
+
+function setBackupStatus(message, tone = '') {
+  const status = document.getElementById('backupStatus');
+  status.className = `status ${tone}`.trim();
+  status.textContent = message;
+}
+
+function renderSummary(summary, prefix) {
+  document.getElementById(`${prefix}Profiles`).textContent = summary.profiles;
+  document.getElementById(`${prefix}Sessions`).textContent = summary.sessions;
+  document.getElementById(`${prefix}Measurements`).textContent = summary.measuredSessions;
+  document.getElementById(`${prefix}Calibrations`).textContent = summary.calibrationSessions;
+  document.getElementById(`${prefix}Drinks`).textContent = summary.drinks;
+  document.getElementById(`${prefix}ActiveSessions`).textContent = summary.activeSessions;
+}
+
+function updateCurrentSummary() {
+  try {
+    renderSummary(GoldilocksBackup.summarize(
+      GoldilocksBackup.create(localStorage, { appVersion:APP_VERSION })
+    ), 'current');
+  } catch (error) {
+    setBackupStatus('Some stored data could not be summarized. Export is unavailable until the data is valid.', 'error');
+  }
+  const lastBackup = GoldilocksBackup.getLastBackupAt(localStorage);
+  const lastRestore = GoldilocksBackup.getLastRestoreAt(localStorage);
+  document.getElementById('lastBackupValue').textContent =
+    lastBackup ? formatDateTime(lastBackup) : 'Never backed up';
+  document.getElementById('lastRestoreValue').textContent =
+    lastRestore ? formatDateTime(lastRestore) : 'No backup restored';
+}
+
+function backupFilename(exportedAt) {
+  const stamp = new Date(exportedAt).toISOString().slice(0, 16).replace('T', '-').replace(':', '');
+  return `goldilocks-backup-${stamp}.json`;
+}
+
+function downloadBackup(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function exportBackup() {
+  const button = document.getElementById('exportBackupBtn');
+  button.disabled = true;
+  setBackupStatus('Preparing your complete backup…');
+  try {
+    const documentData = GoldilocksBackup.create(localStorage, { appVersion:APP_VERSION });
+    const json = GoldilocksBackup.serialize(documentData);
+    const filename = backupFilename(documentData.exportedAt);
+    const blob = new Blob([json], { type:'application/json' });
+    const file = typeof File === 'function'
+      ? new File([blob], filename, { type:'application/json' })
+      : null;
+    const canShareFile = file
+      && typeof navigator.share === 'function'
+      && typeof navigator.canShare === 'function'
+      && navigator.canShare({ files:[file] });
+    if (canShareFile) {
+      await navigator.share({
+        files:[file],
+        title:'Goldilocks device backup',
+        text:'Full Goldilocks backup. Contains private session and profile data.',
+      });
+    } else {
+      downloadBackup(blob, filename);
+    }
+    GoldilocksBackup.markExported(localStorage, documentData.exportedAt);
+    updateCurrentSummary();
+    setBackupStatus(
+      canShareFile ? 'Backup handed to your device’s share/save sheet.' : `Backup downloaded as ${filename}.`,
+      'success'
+    );
+  } catch (error) {
+    if (error?.name === 'AbortError') setBackupStatus('Backup export canceled.');
+    else setBackupStatus('The backup could not be created. Your existing data was not changed.', 'error');
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function clearRestorePreview() {
+  pendingBackup = null;
+  document.getElementById('restorePreview').hidden = true;
+  document.getElementById('openRestoreDialogBtn').disabled = true;
+}
+
+async function previewBackupFile(event) {
+  clearRestorePreview();
+  setBackupStatus('');
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (file.size > GoldilocksBackup.MAX_BACKUP_BYTES) {
+    setBackupStatus('That file is larger than the supported Goldilocks backup limit.', 'error');
+    event.target.value = '';
+    return;
+  }
+  try {
+    pendingBackup = GoldilocksBackup.parse(await file.text());
+    const summary = GoldilocksBackup.summarize(pendingBackup);
+    renderSummary(summary, 'preview');
+    document.getElementById('previewMeta').textContent =
+      `Exported ${formatDateTime(summary.exportedAt)} · Goldilocks ${summary.appVersion} · ${summary.theme} theme`;
+    document.getElementById('restorePreview').hidden = false;
+    document.getElementById('openRestoreDialogBtn').disabled = false;
+    setBackupStatus('Backup validated. Review the counts before restoring.', 'success');
+  } catch (error) {
+    setBackupStatus(error?.message || 'That file is not a valid Goldilocks backup.', 'error');
+    event.target.value = '';
+  }
+}
+
+function openRestoreDialog() {
+  if (!pendingBackup) return;
+  const summary = GoldilocksBackup.summarize(pendingBackup);
+  document.getElementById('restoreDialogCopy').textContent =
+    `This will replace the Goldilocks data in this browser with ${summary.sessions} planner sessions, ${summary.calibrationSessions} calibrations, ${summary.profiles} saved users, and ${summary.drinks} custom drinks from the selected backup. Other websites and browser data are not affected.`;
+  document.getElementById('restoreDialog').showModal();
+}
+
+function restoreSelectedBackup() {
+  if (!pendingBackup) return;
+  const button = document.getElementById('confirmRestoreBtn');
+  button.disabled = true;
+  try {
+    GoldilocksBackup.restore(localStorage, pendingBackup);
+    document.getElementById('restoreDialog').close();
+    document.getElementById('backupFileInput').value = '';
+    clearRestorePreview();
+    GoldilocksTheme.apply(GoldilocksTheme.load(localStorage), { mode:'mission', persist:false });
+    updateCurrentSummary();
+    setBackupStatus('Restore complete. Resumable sessions are available from Mission Control.', 'success');
+  } catch (error) {
+    document.getElementById('restoreDialog').close();
+    setBackupStatus(error?.message || 'Restore failed. Your existing data was preserved.', 'error');
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function openEraseDialog() {
+  const input = document.getElementById('eraseConfirmInput');
+  input.value = '';
+  document.getElementById('confirmEraseBtn').disabled = true;
+  document.getElementById('eraseDialog').showModal();
+  input.focus();
+}
+
+function eraseAllData() {
+  if (document.getElementById('eraseConfirmInput').value !== 'ERASE') return;
+  try {
+    GoldilocksBackup.erase(localStorage);
+    document.getElementById('eraseDialog').close();
+    document.getElementById('backupFileInput').value = '';
+    clearRestorePreview();
+    GoldilocksTheme.apply(GoldilocksTheme.DEFAULT_THEME, { mode:'mission', persist:false });
+    updateCurrentSummary();
+    setBackupStatus('All Goldilocks data was erased from this browser.', 'success');
+  } catch (error) {
+    document.getElementById('eraseDialog').close();
+    setBackupStatus('Goldilocks could not erase all data from this browser.', 'error');
+  }
+}
+
+document.getElementById('exportBackupBtn').addEventListener('click', exportBackup);
+document.getElementById('backupFileInput').addEventListener('change', previewBackupFile);
+document.getElementById('openRestoreDialogBtn').addEventListener('click', openRestoreDialog);
+document.getElementById('cancelRestoreBtn').addEventListener('click', () => document.getElementById('restoreDialog').close());
+document.getElementById('confirmRestoreBtn').addEventListener('click', restoreSelectedBackup);
+document.getElementById('openEraseDialogBtn').addEventListener('click', openEraseDialog);
+document.getElementById('cancelEraseBtn').addEventListener('click', () => document.getElementById('eraseDialog').close());
+document.getElementById('confirmEraseBtn').addEventListener('click', eraseAllData);
+document.getElementById('eraseConfirmInput').addEventListener('input', event => {
+  document.getElementById('confirmEraseBtn').disabled = event.target.value !== 'ERASE';
+});
+window.addEventListener('storage', updateCurrentSummary);
+updateCurrentSummary();
+</script>
+</body>
+</html>

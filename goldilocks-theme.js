@@ -39,7 +39,7 @@
     }),
   });
 
-  const MODE_NAMES = new Set(['mission', 'zone', 'pace', 'training', 'history']);
+  const MODE_NAMES = new Set(['mission', 'zone', 'pace', 'grid', 'training', 'history']);
   const controllers = new WeakMap();
 
   function normalizeThemeId(id) {
@@ -57,6 +57,8 @@
     const zone2 = light ? '#654300' : '#e8a020';
     const pace = light ? '#245f9e' : '#7eb8ff';
     const pace2 = light ? '#325c98' : '#5a9aee';
+    const grid = light ? '#7048a8' : '#c49aff';
+    const grid2 = light ? '#5b388f' : '#9a72df';
     const training = light ? '#1f6b4f' : '#52e09c';
     const training2 = light ? '#245f9e' : '#7eb8ff';
     const history = light ? '#8a3f00' : '#ff8c3a';
@@ -70,7 +72,17 @@
         logo: light
           ? ['#245f9e', '#3a80d4', '#1f6b4f']
           : ['#7eb8ff', '#5a9aee', '#52e09c'],
-        zone, zone2, pace, pace2, training, training2, history, history2,
+        zone, zone2, pace, pace2, grid, grid2, training, training2, history, history2,
+      };
+    }
+    if (selectedMode === 'grid') {
+      return {
+        accent: grid,
+        accent2: grid2,
+        logo: light
+          ? ['#7048a8', '#5b388f', '#245f9e']
+          : ['#c49aff', '#9a72df', '#7eb8ff'],
+        zone, zone2, pace, pace2, grid, grid2, training, training2, history, history2,
       };
     }
     if (selectedMode === 'training') {
@@ -80,7 +92,7 @@
         logo: light
           ? ['#1f6b4f', '#245f9e', '#1f6b4f']
           : ['#52e09c', '#7eb8ff', '#52e09c'],
-        zone, zone2, pace, pace2, training, training2, history, history2,
+        zone, zone2, pace, pace2, grid, grid2, training, training2, history, history2,
       };
     }
     if (selectedMode === 'history') {
@@ -88,14 +100,14 @@
         accent: history,
         accent2: history2,
         logo: [...theme.logo],
-        zone, zone2, pace, pace2, training, training2, history, history2,
+        zone, zone2, pace, pace2, grid, grid2, training, training2, history, history2,
       };
     }
     return {
       accent: zone,
       accent2: zone2,
       logo: [...theme.logo],
-      zone, zone2, pace, pace2, training, training2, history, history2,
+      zone, zone2, pace, pace2, grid, grid2, training, training2, history, history2,
     };
   }
 
@@ -122,6 +134,8 @@
         '--gold2': colors.zone2,
         '--blue': colors.pace,
         '--blue2': colors.pace2,
+        '--grid': colors.grid,
+        '--grid2': colors.grid2,
         '--green': colors.training,
         '--history': colors.history,
         '--amber': theme.dark ? '#ff8c3a' : '#8a3f00',

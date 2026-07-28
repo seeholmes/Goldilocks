@@ -8,16 +8,19 @@
   'use strict';
 
   const STORAGE_KEY = 'goldilocks_session_history';
-  const VERSION = 3;
+  const VERSION = 4;
   const LEGACY_VERSION = 1;
   const EVIDENCE_VERSION = 2;
-  const MAX_ENTRIES = 50;
-  const MODES = new Set(['zone', 'pace']);
+  const RECOVERY_VERSION = 3;
+  const MAX_ENTRIES = 1000;
+  const MODES = new Set(['zone', 'pace', 'grid']);
   const REASONS = new Set(['manual', 'elapsed']);
   const FOOD_STATES = new Set(['empty', 'light', 'meal', 'unknown']);
   const MODEL_SNAPSHOT_SOURCES = new Set(['session', 'profile-backfill']);
   const MEASUREMENT_WINDOW_MS = 4 * 60 * 60 * 1000;
   const MIN_REFINEMENT_SESSIONS = 3;
+  const STD_DRINK_G = 0.6 * 29.5735 * 0.789;
+  const UNSAFE_TEXT = new Set(['__proto__', 'prototype', 'constructor']);
   const RECOVERY_LEVELS = Object.freeze({
     1: Object.freeze({ title: 'All Systems Go', summary: 'Great' }),
     2: Object.freeze({ title: 'Rough Ascent', summary: 'Manageable' }),
@@ -40,11 +43,14 @@
   function safeText(value, maxLength) {
     if (typeof value !== 'string') return null;
     const normalized = value.trim();
-    if (!normalized || normalized.length > maxLength || /[\u0000-\u001f\u007f]/.test(normalized)) return null;
+    if (!normalized
+        || normalized.length > maxLength
+        || UNSAFE_TEXT.has(normalized.toLowerCase())
+        || /[\u0000-\u001f\u007f]/.test(normalized)) return null;
     return normalized;
   }
 
-  function normalizeDetail(mode, detail) {
+  function normalizeDetail(mode, detail, record) {
     if (!isRecord(detail) || detail.type !== mode) return null;
     if (mode === 'zone') {
       if (!finiteInRange(detail.targetMin, 0, 1)
@@ -58,13 +64,45 @@
         matchedPeriods: detail.matchedPeriods,
       };
     }
-    if (!finiteInRange(detail.targetEnd, 0, 1)
-        || !finiteInRange(detail.initialProjectedEnd, 0, 2)) return null;
-    return {
-      type: 'pace',
-      targetEnd: detail.targetEnd,
-      initialProjectedEnd: detail.initialProjectedEnd,
-    };
+    if (mode === 'pace') {
+      if (!finiteInRange(detail.targetEnd, 0, 1)
+          || !finiteInRange(detail.initialProjectedEnd, 0, 2)) return null;
+      return {
+        type: 'pace',
+        targetEnd: detail.targetEnd,
+        initialProjectedEnd: detail.initialProjectedEnd,
+      };
+    }
+    if (!Array.isArray(detail.drinkEvents) || detail.drinkEvents.length > 200) return null;
+    const seen = new Set();
+    const drinkEvents = detail.drinkEvents.map(event => {
+      if (!isRecord(event)) return null;
+      const id = safeText(event.id, 80);
+      const name = safeText(event.name, 40);
+      const calculatedStandardDrinks = event.oz * (event.abv / 100) * 29.5735 * 0.789 / STD_DRINK_G;
+      if (!id || seen.has(id) || !name
+          || !finiteInRange(event.loggedAt, record.startedAt, record.completedAt)
+          || !finiteInRange(event.oz, 1, 64)
+          || !finiteInRange(event.abv, 0.5, 100)
+          || !finiteInRange(event.standardDrinks, 0.01, 100)
+          || Math.abs(event.standardDrinks - calculatedStandardDrinks) > 1e-9) return null;
+      seen.add(id);
+      return {
+        id,
+        name,
+        oz: event.oz,
+        abv: event.abv,
+        standardDrinks: event.standardDrinks,
+        loggedAt: event.loggedAt,
+      };
+    });
+    if (drinkEvents.some(event => event === null)) return null;
+    drinkEvents.sort((left, right) => left.loggedAt - right.loggedAt || left.id.localeCompare(right.id));
+    const bacAlert = detail.bacAlert === null || detail.bacAlert === undefined
+      ? null
+      : finiteInRange(detail.bacAlert, 0.01, 0.25) ? detail.bacAlert : undefined;
+    if (bacAlert === undefined) return null;
+    return { type: 'grid', bacAlert, drinkEvents };
   }
 
   function normalizeOptionalNumber(value, min, max) {
@@ -110,12 +148,12 @@
 
   function normalizeRecord(record) {
     if (!isRecord(record)
-        || ![LEGACY_VERSION, EVIDENCE_VERSION, VERSION].includes(record.version)
+        || ![LEGACY_VERSION, EVIDENCE_VERSION, RECOVERY_VERSION, VERSION].includes(record.version)
         || !MODES.has(record.mode)) return null;
     const id = safeText(record.id, 80);
     const profileName = safeText(record.profileName, 40);
     const completionReason = REASONS.has(record.completionReason) ? record.completionReason : null;
-    const detail = normalizeDetail(record.mode, record.detail);
+    const detail = normalizeDetail(record.mode, record.detail, record);
     const foodState = record.version < EVIDENCE_VERSION
       ? 'unknown'
       : FOOD_STATES.has(record.foodState) ? record.foodState : null;
@@ -136,13 +174,20 @@
         || !integerInRange(record.durationMinutes, 15, 24 * 60)
         || record.durationMinutes % 15 !== 0
         || record.completedAt > record.startedAt + record.durationMinutes * 60000 + 60000
-        || !finiteInRange(record.drinkOz, 1, 64)
-        || !finiteInRange(record.drinkAbv, 0.5, 100)
+        || (record.mode === 'grid'
+          ? record.drinkOz !== null || record.drinkAbv !== null
+          : !finiteInRange(record.drinkOz, 1, 64) || !finiteInRange(record.drinkAbv, 0.5, 100))
         || !integerInRange(record.plannedDrinks, 0, 100)
         || !integerInRange(record.loggedDrinks, 0, 100)
         || !finiteInRange(record.standardDrinks, 0, 200)
         || !finiteInRange(record.finalBac, 0, 2)
         || !finiteInRange(record.peakBac, 0, 2)) return null;
+    if (record.mode === 'grid') {
+      const detailStandardDrinks = detail.drinkEvents.reduce((sum, event) => sum + event.standardDrinks, 0);
+      if (record.plannedDrinks !== 0
+          || record.loggedDrinks !== detail.drinkEvents.length
+          || Math.abs(record.standardDrinks - detailStandardDrinks) > 0.01) return null;
+    }
 
     const normalized = {
       version: VERSION,
@@ -167,7 +212,7 @@
       detail,
     };
     normalized.measurement = normalizeMeasurement(normalized, record.measurement);
-    const recoveryRating = record.version >= VERSION && integerInRange(record.recoveryRating, 1, 4)
+    const recoveryRating = record.version >= RECOVERY_VERSION && integerInRange(record.recoveryRating, 1, 4)
       ? record.recoveryRating
       : null;
     const recoveryRatedAt = recoveryRating
@@ -444,6 +489,7 @@
     VERSION,
     LEGACY_VERSION,
     EVIDENCE_VERSION,
+    RECOVERY_VERSION,
     MAX_ENTRIES,
     FOOD_STATES,
     MEASUREMENT_WINDOW_MS,

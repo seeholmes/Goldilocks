@@ -11,12 +11,15 @@ const pages = [
   'index.html',
   'goldilocks-zone.html',
   'goldilocks-cruise.html',
+  'goldilocks-grid.html',
   'goldilocks-training.html',
   'goldilocks-history.html',
+  'goldilocks-settings.html',
 ];
 const modePages = [
   'goldilocks-zone.html',
   'goldilocks-cruise.html',
+  'goldilocks-grid.html',
   'goldilocks-training.html',
 ];
 
@@ -101,6 +104,7 @@ test('mode pages load the tested calculation core', () => {
       'bacPerDrink', 'simulateDuration', 'estimateLiveBac',
       'buildCruiseReplan',
     ],
+    'goldilocks-grid.html': [],
     'goldilocks-training.html': [
       'calculateCalibration', 'fitLine', 'widmarkRisePerStd',
     ],
@@ -460,6 +464,7 @@ test('all pages use the shared theme catalog and animated icon system', () => {
   const expectedIcons = {
     'goldilocks-zone.html': 'mode-glyph--zone',
     'goldilocks-cruise.html': 'mode-glyph--pace',
+    'goldilocks-grid.html': 'mode-glyph--grid',
     'goldilocks-training.html': 'mode-glyph--training',
     'goldilocks-history.html': 'mode-glyph--history',
   };
@@ -468,7 +473,7 @@ test('all pages use the shared theme catalog and animated icon system', () => {
   }
 });
 
-test('Mission Control exposes shared local Zone and Pace history', () => {
+test('Mission Control exposes shared local Zone, Pace, and Grid history', () => {
   const landing = read('index.html');
   const historyPage = read('goldilocks-history.html');
   assert.match(landing, /href="goldilocks-history\.html"/);
@@ -482,14 +487,77 @@ test('Mission Control exposes shared local Zone and Pace history', () => {
   assert.match(historyPage, /GoldilocksSessionHistory\.setMeasurement\(localStorage,/);
   assert.match(historyPage, /\bconfirm\s*\(/, 'history deletion must require confirmation');
 
-  for (const page of ['goldilocks-zone.html', 'goldilocks-cruise.html']) {
+  for (const page of ['goldilocks-zone.html', 'goldilocks-cruise.html', 'goldilocks-grid.html']) {
     const html = read(page);
     assert.match(html, /<script src="goldilocks-session-history\.js"><\/script>/);
     assert.match(html, /GoldilocksSessionHistory\.save\(localStorage,/);
     assert.match(html, /GoldilocksSessionHistory\.setMeasurement\(localStorage,/);
-    assert.match(html, /id:\s*`(?:zone|pace)-\$\{sessionStartTs\}`/);
+    assert.match(html, /id:\s*`(?:zone|pace|grid)-\$\{(?:sessionStartTs|session\.sessionStartTs)\}`/);
     assert.ok(openingTagWithId(html, 'measuredBac'), `${page} must expose a measured BAC input`);
     assert.ok(openingTagWithId(html, 'measuredAt'), `${page} must expose a measurement-time input`);
+  }
+});
+
+test('Grid provides an exact-time freeform log with warning-only BAC alerts', () => {
+  const landing = read('index.html');
+  const html = read('goldilocks-grid.html');
+  assert.match(landing, /href="goldilocks-grid\.html"/);
+  assert.match(landing, /<h3 class="mode-name">Grid<\/h3>/);
+  assert.match(html, /<script src="goldilocks-grid\.js"><\/script>/);
+  for (const id of [
+    'profileSelect', 'foodState', 'sessionStart', 'bacAlert', 'drinkPreset',
+    'drinkTime', 'currentBac', 'peakBac', 'eventList', 'undoButton',
+    'finishButton', 'measuredBac', 'measuredAt',
+  ]) {
+    assert.ok(openingTagWithId(html, id), `Grid must expose #${id}`);
+  }
+  assert.match(html, /GoldilocksGrid\.calculate\s*\(/);
+  assert.match(html, /GoldilocksGrid\.getAlertState\s*\(/);
+  assert.match(html, /GoldilocksSessionHistory\.findRecoveryWarning\s*\(/);
+  assert.match(html, /not a safe limit/i);
+  assert.match(html, /does not recommend another drink/i);
+  assert.match(html, /Never drive/i);
+});
+
+test('Settings & Data exposes full-device backup, preview, restore, and erasure controls', () => {
+  const settings = read('goldilocks-settings.html');
+  const backupStore = read('goldilocks-backup.js');
+  for (const id of [
+    'exportBackupBtn',
+    'backupFileInput',
+    'restorePreview',
+    'openRestoreDialogBtn',
+    'restoreDialog',
+    'confirmRestoreBtn',
+    'eraseDialog',
+    'eraseConfirmInput',
+    'confirmEraseBtn',
+  ]) {
+    assert.ok(openingTagWithId(settings, id), `Settings & Data must expose #${id}`);
+  }
+  const historyIndex = settings.indexOf('<script src="goldilocks-session-history.js"></script>');
+  const presetsIndex = settings.indexOf('<script src="goldilocks-presets.js"></script>');
+  const backupIndex = settings.indexOf('<script src="goldilocks-backup.js"></script>');
+  assert.ok(historyIndex >= 0 && presetsIndex > historyIndex && backupIndex > presetsIndex);
+  assert.match(settings, /navigator\.share\s*\(/);
+  assert.match(settings, /GoldilocksBackup\.parse\s*\(/);
+  assert.match(settings, /GoldilocksBackup\.restore\s*\(/);
+  assert.match(settings, /GoldilocksBackup\.erase\s*\(/);
+  assert.match(backupStore, /goldilocks_v2_session/);
+  assert.match(backupStore, /goldilocks_cruise_session/);
+  assert.match(backupStore, /goldilocks_training_session/);
+  assert.match(backupStore, /goldilocks_training_history/);
+  assert.match(backupStore, /goldilocks_session_history/);
+  assert.doesNotMatch(settings, /localStorage\.clear\s*\(/);
+
+  for (const page of [
+    'index.html',
+    'goldilocks-zone.html',
+    'goldilocks-cruise.html',
+    'goldilocks-training.html',
+    'goldilocks-history.html',
+  ]) {
+    assert.match(read(page), /href="goldilocks-settings\.html"/, `${page} must link to Settings & Data`);
   }
 });
 

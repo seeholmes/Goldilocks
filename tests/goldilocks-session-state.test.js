@@ -69,6 +69,30 @@ function paceFixture(overrides = {}) {
   };
 }
 
+function gridFixture(overrides = {}) {
+  const start = NOW - 45 * MINUTE;
+  return {
+    version: 1,
+    sessionStartTs: start,
+    completedAt: null,
+    sessionComplete: false,
+    profileName: profile.name,
+    profile: { ...profile },
+    foodState: 'meal',
+    bacAlert: 0.06,
+    drinkEvents: [{
+      id: 'grid-event-1',
+      name: 'Beer',
+      oz: 12,
+      abv: 5,
+      standardDrinks: 12 * 0.05 * 29.5735 * 0.789 / core.STD_DRINK_G,
+      loggedAt: start + 5 * MINUTE,
+    }],
+    undoEvents: null,
+    ...overrides,
+  };
+}
+
 function trainingFixture(overrides = {}) {
   const weight = 185;
   const drinkOz = 12;
@@ -113,7 +137,47 @@ test('publishes the session inspector as a browser global', () => {
   vm.createContext(browser);
   vm.runInContext(source, browser);
   assert.equal(browser.GoldilocksSessionState.KEYS.pace, 'goldilocks_cruise_session');
+  assert.equal(browser.GoldilocksSessionState.KEYS.grid, 'goldilocks_grid_session');
   assert.equal(typeof browser.GoldilocksSessionState.inspectStorage, 'function');
+});
+
+test('inspects active, completed, and expired Grid sessions with exact-time BAC metrics', () => {
+  const active = sessions.inspectGrid(gridFixture(), NOW);
+  assert.equal(active.health, 'valid');
+  assert.equal(active.state, 'active');
+  assert.equal(active.loggedDrinks, 1);
+  assert.ok(active.totalStandardDrinks > 1);
+  assert.ok(active.currentBac > 0);
+  assert.ok(active.peakBac > active.currentBac);
+  assert.equal(active.bacAlert, 0.06);
+
+  const start = NOW - HOUR;
+  const complete = sessions.inspectGrid(gridFixture({
+    sessionStartTs: start,
+    sessionComplete: true,
+    completedAt: NOW - 10 * MINUTE,
+    drinkEvents: [{
+      ...gridFixture().drinkEvents[0],
+      loggedAt: start + 5 * MINUTE,
+    }],
+  }), NOW);
+  assert.equal(complete.health, 'valid');
+  assert.equal(complete.state, 'complete');
+
+  const finalize = sessions.inspectGrid(gridFixture({
+    sessionStartTs: NOW - 25 * HOUR,
+    drinkEvents: [],
+  }), NOW);
+  assert.equal(finalize.health, 'valid');
+  assert.equal(finalize.state, 'needs-finalize');
+
+  const expired = sessions.inspectGrid(gridFixture({
+    sessionStartTs: NOW - 26 * HOUR,
+    sessionComplete: true,
+    completedAt: NOW - 25 * HOUR,
+    drinkEvents: [],
+  }), NOW);
+  assert.equal(expired.health, 'expired');
 });
 
 test('inspects canonical active, completed, and expired Zone sessions without a planned start field', () => {

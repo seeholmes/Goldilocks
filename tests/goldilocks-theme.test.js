@@ -41,12 +41,15 @@ test('provides one curated four-theme catalog for the original logo', () => {
 test('resolves accessible mode accents in dark and light themes', () => {
   const zone = themes.resolve('cosmos', 'zone');
   const pace = themes.resolve('cosmos', 'pace');
+  const grid = themes.resolve('cosmos', 'grid');
   const training = themes.resolve('cosmos', 'training');
   const history = themes.resolve('cosmos', 'history');
   const lightPace = themes.resolve('parchment', 'pace');
 
   assert.equal(zone.colors.accent, '#f5c842');
   assert.equal(pace.colors.accent, '#7eb8ff');
+  assert.equal(grid.colors.accent, '#c49aff');
+  assert.equal(grid.variables['--grid'], '#c49aff');
   assert.equal(training.colors.accent, '#52e09c');
   assert.equal(history.colors.accent, '#ff8c3a');
   assert.equal(lightPace.colors.accent, '#245f9e');

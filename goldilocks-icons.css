@@ -1,6 +1,7 @@
 :root {
   --zone-rgb: 245, 200, 66;
   --pace-rgb: 126, 184, 255;
+  --grid-rgb: 196, 154, 255;
   --training-rgb: 82, 224, 156;
   --history-rgb: 255, 140, 58;
 }
@@ -8,6 +9,7 @@
 :root:is([data-theme="parchment"], [data-theme="slate"]) {
   --zone-rgb: 118, 80, 0;
   --pace-rgb: 36, 95, 158;
+  --grid-rgb: 112, 72, 168;
   --training-rgb: 31, 107, 79;
   --history-rgb: 138, 63, 0;
 }
@@ -21,6 +23,35 @@
 
 .brand-lockup--mission {
   width: min(100%, 620px);
+}
+
+.settings-link {
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  color: var(--muted);
+  display: inline-flex;
+  font-family: 'Space Mono', monospace;
+  font-size: 8px;
+  gap: 6px;
+  justify-content: center;
+  letter-spacing: 0.1em;
+  margin-top: 10px;
+  padding: 6px 12px;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: border-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.settings-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.settings-link:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .brand-lockup .logo.logo--original {
@@ -85,9 +116,38 @@
 
 .mode-glyph--zone { --glyph-rgb: var(--zone-rgb); }
 .mode-glyph--pace { --glyph-rgb: var(--pace-rgb); }
+.mode-glyph--grid { --glyph-rgb: var(--grid-rgb); }
 .mode-glyph--training { --glyph-rgb: var(--training-rgb); }
 .mode-glyph--history { --glyph-rgb: var(--history-rgb); }
 .hero > .mode-glyph { margin: 0 auto 8px; }
+
+.grid-glyph {
+  background:
+    linear-gradient(rgb(var(--grid-rgb)), rgb(var(--grid-rgb))) 6px 13px / 24px 2px no-repeat,
+    linear-gradient(rgb(var(--grid-rgb)), rgb(var(--grid-rgb))) 13px 6px / 2px 24px no-repeat,
+    linear-gradient(rgb(var(--grid-rgb)), rgb(var(--grid-rgb))) 21px 6px / 2px 24px no-repeat;
+  height: 36px;
+  position: relative;
+  width: 36px;
+}
+
+.grid-glyph::before,
+.grid-glyph::after,
+.grid-glyph__node {
+  background: rgb(var(--grid-rgb));
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(var(--grid-rgb), 0.65);
+  content: '';
+  height: 8px;
+  position: absolute;
+  width: 8px;
+}
+
+.grid-glyph::before { left: 2px; top: 10px; }
+.grid-glyph::after { right: 2px; top: 10px; }
+.grid-glyph__node { bottom: 2px; left: 10px; }
+.grid-glyph__node:last-child { bottom: 2px; left: 18px; }
 
 .drink-log-action {
   align-items: center;
