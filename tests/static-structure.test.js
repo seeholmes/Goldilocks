@@ -472,7 +472,13 @@ test('all pages use the shared theme catalog while Settings exclusively owns the
     'goldilocks-history.html': 'mode-glyph--history',
   };
   for (const [page, className] of Object.entries(expectedIcons)) {
-    assert.match(read(page), new RegExp(className));
+    const html = read(page);
+    assert.match(html, new RegExp(className));
+    assert.match(
+      html,
+      new RegExp(`class="mode-glyph ${className} is-animated"`),
+      `${page} must keep its primary mode icon animated without hover`
+    );
   }
 });
 
