@@ -142,11 +142,65 @@
   </main>
 </div>
 
+<script src="goldilocks-core.js"></script>
 <script src="goldilocks-session-history.js"></script>
 <script>
 GoldilocksTheme.init({ mode:'history', pickerId:'themePicker' });
 
 let activeFilter = 'all';
+const DEFAULT_MODEL_PROFILE = Object.freeze({
+  name: 'seeholmes',
+  weightKg: 185 * 0.453592,
+  r: 0.68,
+  risePerStd: 0.02,
+  metab: 0.015,
+  useWidmark: false,
+});
+
+function getStoredModelProfiles() {
+  const profiles = new Map([[DEFAULT_MODEL_PROFILE.name.toLowerCase(), DEFAULT_MODEL_PROFILE]]);
+  try {
+    const stored = JSON.parse(localStorage.getItem('goldilocks_profiles') || '{}');
+    if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return profiles;
+    Object.values(stored).forEach(candidate => {
+      if (!candidate || typeof candidate !== 'object') return;
+      const name = typeof candidate.name === 'string' ? candidate.name.trim() : '';
+      const metab = Number(candidate.metab);
+      const useWidmark = typeof candidate.useWidmark === 'boolean'
+        ? candidate.useWidmark
+        : candidate.risePerStd == null;
+      const risePerStd = useWidmark
+        ? GoldilocksCore.widmarkRisePerStd(Number(candidate.weightKg), Number(candidate.r))
+        : Number(candidate.risePerStd);
+      if (!name || name.length > 40
+          || !Number.isFinite(risePerStd) || risePerStd < 0.001 || risePerStd > 0.2
+          || !Number.isFinite(metab) || metab < 0.001 || metab > 0.05) return;
+      profiles.set(name.toLowerCase(), {
+        name,
+        modelRisePerStd: risePerStd,
+        modelMetabPerHr: metab,
+      });
+    });
+  } catch (error) {}
+  return profiles;
+}
+
+function backfillHistoricalModelSnapshots() {
+  const profiles = getStoredModelProfiles();
+  const defaultSnapshot = {
+    modelRisePerStd: DEFAULT_MODEL_PROFILE.risePerStd,
+    modelMetabPerHr: DEFAULT_MODEL_PROFILE.metab,
+  };
+  try {
+    return GoldilocksSessionHistory.backfillModelSnapshots(localStorage, record => {
+      const profile = profiles.get(record.profileName.toLowerCase());
+      if (!profile) return null;
+      return profile === DEFAULT_MODEL_PROFILE ? defaultSnapshot : profile;
+    });
+  } catch (error) {
+    return GoldilocksSessionHistory.read(localStorage);
+  }
+}
 
 function formatDate(timestamp) {
   return new Intl.DateTimeFormat(undefined, { dateStyle:'medium', timeStyle:'short' }).format(new Date(timestamp));
@@ -417,6 +471,12 @@ function createRecordCard(record) {
   modelLabel.className = 'model-comparison-label';
   modelLabel.textContent = 'Planned model BAC / standard drink';
   modelCell.append(modelValue, modelLabel);
+  if (record.modelSnapshotSource === 'profile-backfill') {
+    const modelSource = document.createElement('div');
+    modelSource.className = 'model-comparison-delta';
+    modelSource.textContent = 'Recovered from current matching profile';
+    modelCell.appendChild(modelSource);
+  }
   const impliedCell = document.createElement('div');
   impliedCell.className = 'model-comparison-cell';
   const impliedValue = document.createElement('div');
@@ -429,7 +489,7 @@ function createRecordCard(record) {
   impliedDelta.className = 'model-comparison-delta';
   impliedDelta.textContent = Number.isFinite(impliedRise) && Number.isFinite(record.modelRisePerStd)
     ? `${impliedRise >= record.modelRisePerStd ? '+' : ''}${((impliedRise / record.modelRisePerStd - 1) * 100).toFixed(1)}% vs model`
-    : 'Requires an eligible measured BAC';
+    : 'Requires a measured BAC and matching model';
   impliedCell.append(impliedValue, impliedLabel, impliedDelta);
   comparisonPanel.append(modelCell, impliedCell);
 
@@ -448,7 +508,7 @@ function createRecordCard(record) {
 }
 
 function renderHistory() {
-  const records = GoldilocksSessionHistory.read(localStorage);
+  const records = backfillHistoricalModelSnapshots();
   const visible = activeFilter === 'all' ? records : records.filter(record => record.mode === activeFilter);
   const list = document.getElementById('historyList');
   list.replaceChildren();

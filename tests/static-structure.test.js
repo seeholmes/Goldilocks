@@ -496,6 +496,9 @@ test('Mission Control exposes shared local Zone and Pace history', () => {
 test('History exposes session-implied BAC and optional next-day recovery context', () => {
   const history = read('goldilocks-history.html');
   const historyStore = read('goldilocks-session-history.js');
+  assert.match(history, /<script src="goldilocks-core\.js"><\/script>/);
+  assert.match(history, /GoldilocksSessionHistory\.backfillModelSnapshots\s*\(/);
+  assert.match(history, /Recovered from current matching profile/);
   assert.match(history, /Planned model BAC \/ standard drink/);
   assert.match(history, /Session-implied BAC \/ standard drink/);
   assert.match(history, /Next-day recovery rating/);

@@ -15,6 +15,7 @@
   const MODES = new Set(['zone', 'pace']);
   const REASONS = new Set(['manual', 'elapsed']);
   const FOOD_STATES = new Set(['empty', 'light', 'meal', 'unknown']);
+  const MODEL_SNAPSHOT_SOURCES = new Set(['session', 'profile-backfill']);
   const MEASUREMENT_WINDOW_MS = 4 * 60 * 60 * 1000;
   const MIN_REFINEMENT_SESSIONS = 3;
   const RECOVERY_LEVELS = Object.freeze({
@@ -124,6 +125,11 @@
     const modelMetabPerHr = record.version < EVIDENCE_VERSION
       ? null
       : normalizeOptionalNumber(record.modelMetabPerHr, 0.001, 0.05);
+    const modelSnapshotSource = modelRisePerStd === null || modelMetabPerHr === null
+      ? null
+      : MODEL_SNAPSHOT_SOURCES.has(record.modelSnapshotSource)
+        ? record.modelSnapshotSource
+        : 'session';
     if (!id || !profileName || !completionReason || !detail || !foodState) return null;
     if (!finiteInRange(record.startedAt, 0, Number.MAX_SAFE_INTEGER)
         || !finiteInRange(record.completedAt, record.startedAt, Number.MAX_SAFE_INTEGER)
@@ -157,6 +163,7 @@
       foodState,
       modelRisePerStd,
       modelMetabPerHr,
+      modelSnapshotSource,
       detail,
     };
     normalized.measurement = normalizeMeasurement(normalized, record.measurement);
@@ -268,6 +275,52 @@
     return write(storage, records);
   }
 
+  function backfillModelSnapshots(storage, resolveSnapshot) {
+    if (typeof resolveSnapshot !== 'function') {
+      throw new TypeError('resolveSnapshot must be a function');
+    }
+    const records = read(storage);
+    let changed = false;
+    const updated = records.map(record => {
+      if (record.modelRisePerStd !== null && record.modelMetabPerHr !== null) return record;
+      let snapshot = null;
+      try {
+        snapshot = resolveSnapshot(record);
+      } catch (error) {
+        return record;
+      }
+      if (!isRecord(snapshot)) return record;
+      const modelRisePerStd = record.modelRisePerStd === null
+        ? snapshot.modelRisePerStd
+        : record.modelRisePerStd;
+      const modelMetabPerHr = record.modelMetabPerHr === null
+        ? snapshot.modelMetabPerHr
+        : record.modelMetabPerHr;
+      if (!finiteInRange(modelRisePerStd, 0.001, 0.2)
+          || !finiteInRange(modelMetabPerHr, 0.001, 0.05)) return record;
+
+      const measurement = record.measurement
+        ? {
+          ...record.measurement,
+          estimatedBac: Math.max(
+            0,
+            record.finalBac
+              - modelMetabPerHr * ((record.measurement.measuredAt - record.completedAt) / 3600000)
+          ),
+        }
+        : null;
+      changed = true;
+      return {
+        ...record,
+        modelRisePerStd,
+        modelMetabPerHr,
+        modelSnapshotSource: 'profile-backfill',
+        measurement,
+      };
+    });
+    return changed ? write(storage, updated) : records;
+  }
+
   function setRecoveryRating(storage, id, recoveryRating, recoveryRatedAt = Date.now()) {
     const records = read(storage);
     const index = records.findIndex(record => record.id === id);
@@ -294,7 +347,10 @@
 
   function getSessionImpliedRise(record) {
     const normalized = normalizeRecord(record);
-    if (!normalized?.measurement?.eligibleForRefinement) return null;
+    if (!normalized?.measurement
+        || !finiteInRange(normalized.modelRisePerStd, 0.001, 0.2)
+        || !finiteInRange(normalized.modelMetabPerHr, 0.001, 0.05)
+        || !finiteInRange(normalized.standardDrinks, 0.05, 200)) return null;
     const error = normalized.measurement.value - normalized.measurement.estimatedBac;
     const impliedRise = normalized.modelRisePerStd + error / normalized.standardDrinks;
     return finiteInRange(impliedRise, 0.001, 0.1) ? impliedRise : null;
@@ -402,6 +458,7 @@
     clear,
     setFoodState,
     setMeasurement,
+    backfillModelSnapshots,
     setRecoveryRating,
     getSessionImpliedRise,
     calculateRiseEvidence,

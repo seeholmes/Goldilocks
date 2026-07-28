@@ -147,6 +147,7 @@ test('migrates older summaries with safe evidence and recovery defaults', () => 
   assert.equal(normalized.foodState, 'unknown');
   assert.equal(normalized.modelRisePerStd, null);
   assert.equal(normalized.modelMetabPerHr, null);
+  assert.equal(normalized.modelSnapshotSource, null);
   assert.equal(normalized.measurement, null);
   assert.equal(normalized.recoveryRating, null);
   assert.equal(normalized.recoveryRatedAt, null);
@@ -155,7 +156,60 @@ test('migrates older summaries with safe evidence and recovery defaults', () => 
   assert.equal(evidence.version, history.VERSION);
   assert.equal(evidence.foodState, 'meal');
   assert.equal(evidence.modelRisePerStd, 0.02);
+  assert.equal(evidence.modelSnapshotSource, 'session');
   assert.equal(evidence.recoveryRating, null);
+});
+
+test('backfills missing legacy model snapshots and recomputes measured-BAC comparisons', () => {
+  const storage = new MemoryStorage();
+  const record = zoneRecord();
+  history.save(storage, record);
+  history.setFoodState(storage, record.id, 'meal');
+  history.setMeasurement(storage, record.id, {
+    value: 0.043,
+    measuredAt: record.completedAt + 3600000,
+    protocolFollowed: true,
+  });
+
+  let updated = history.read(storage)[0];
+  assert.equal(updated.modelRisePerStd, null);
+  assert.equal(updated.measurement.estimatedBac, record.finalBac);
+  assert.equal(updated.measurement.eligibilityReason, 'model-snapshot-unavailable');
+
+  const records = history.backfillModelSnapshots(storage, candidate => (
+    candidate.profileName === 'seeholmes'
+      ? { modelRisePerStd: 0.02, modelMetabPerHr: 0.015 }
+      : null
+  ));
+  updated = records[0];
+  assert.equal(updated.modelRisePerStd, 0.02);
+  assert.equal(updated.modelMetabPerHr, 0.015);
+  assert.equal(updated.modelSnapshotSource, 'profile-backfill');
+  assert.ok(Math.abs(updated.measurement.estimatedBac - 0.026) < 1e-12);
+  assert.equal(updated.measurement.eligibleForRefinement, true);
+  assert.ok(Math.abs(history.getSessionImpliedRise(updated) - 0.0285) < 1e-12);
+
+  const unchanged = history.backfillModelSnapshots(storage, () => ({
+    modelRisePerStd: 0.04,
+    modelMetabPerHr: 0.02,
+  }))[0];
+  assert.equal(unchanged.modelRisePerStd, 0.02);
+  assert.equal(unchanged.modelMetabPerHr, 0.015);
+});
+
+test('keeps session-implied BAC visible when a reading is not calibration eligible', () => {
+  const storage = new MemoryStorage();
+  const record = evidenceRecord(0);
+  history.save(storage, record);
+  history.setMeasurement(storage, record.id, {
+    value: 0.044,
+    measuredAt: record.completedAt,
+    protocolFollowed: false,
+  });
+  const updated = history.read(storage)[0];
+  assert.equal(updated.measurement.eligibleForRefinement, false);
+  assert.ok(Math.abs(history.getSessionImpliedRise(updated) - 0.022) < 1e-12);
+  assert.equal(history.calculateRiseEvidence([updated], updated.profileName).eligibleCount, 0);
 });
 
 test('adds food state and a qualifying timed BAC measurement', () => {
